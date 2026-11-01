@@ -8,10 +8,11 @@ import { hostname } from "node:os";
 import { basename, dirname, join, parse, resolve } from "node:path";
 import { types } from "node:util";
 import { parseArchiveEnvelope, type ArchiveKeyEnvelope } from "./archive-crypto.js";
+import { storageName } from "./storage-layout.js";
 
 export interface VaultGeneration { id: string; envelope: ArchiveKeyEnvelope | null }
 export interface VaultReady {
-	format: "pi-jarvis-archive-vault";
+	format: "pi-jarvis-archive-vault"; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 	version: 1;
 	phase: "ready";
 	revision: string;
@@ -21,7 +22,7 @@ export interface VaultReady {
 	retired: VaultGeneration[];
 }
 export interface VaultTransition {
-	format: "pi-jarvis-archive-vault";
+	format: "pi-jarvis-archive-vault"; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 	version: 1;
 	phase: "transition";
 	revision: string;
@@ -63,7 +64,7 @@ export class ArchiveVaultFilesError extends Error {
 		this.name = "ArchiveVaultFilesError";
 	}
 }
-const FORMAT = "pi-jarvis-archive-vault";
+const FORMAT = "pi-jarvis-archive-vault"; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const SQLITE = ["archive.sqlite", "archive.sqlite-wal", "archive.sqlite-shm", "archive.sqlite-journal"];
 const MAX_BYTES = 64 * 1024;
@@ -300,7 +301,7 @@ export class ArchiveVaultFiles {
 			this.anchor = anchor;
 			this.canonical = join(anchor, ...suffix);
 		}
-		const root = join(this.canonical, "extensions", "pi-jarvis-archive");
+		const root = join(this.canonical, "extensions", storageName(this.canonical, "pi-jarvis-archive")); // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 		return { agent: this.canonical, root, vaults: join(root, "vaults"), state: join(root, "archive.vault.json"), lock: join(root, "archive.vault.lock") };
 	}
 	/** Canonical selected root, with existing ancestors revalidated; never creates paths. */

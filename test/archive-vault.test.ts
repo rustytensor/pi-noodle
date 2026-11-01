@@ -69,7 +69,7 @@ class FakeKeychain implements ArchiveKeychain {
 	wipe() { for (const value of this.keys.values()) value.fill(0); this.keys.clear(); }
 }
 function fixture(t: TestContext) {
-	const root = fs.mkdtempSync(join(tmpdir(), "pi-jarvis-vault-controller-test-")); fs.chmodSync(root, 0o700);
+	const root = fs.mkdtempSync(join(tmpdir(), "pi-noodle-vault-controller-test-")); fs.chmodSync(root, 0o700);
 	const agent = join(root, "agent"), project = join(root, "project"); fs.mkdirSync(project, { mode: 0o700 });
 	let allowed = true, trusted = true, owner = "fixture-main", prompts = 0, changes = 0;
 	let prompt: NonNullable<ArchiveVaultOptions["prompt"]> = async () => PASSWORD;
@@ -1148,7 +1148,7 @@ test("poison registry never evicts unsafe roots on overflow and unknown root clo
 			import {ArchiveVault} from ${JSON.stringify(new URL("../archive-vault.ts", import.meta.url).href)};
 			import {ArchiveStore} from ${JSON.stringify(new URL("../archive-store.ts", import.meta.url).href)};
 			import {ArchiveVaultFiles} from ${JSON.stringify(new URL("../archive-vault-files.ts", import.meta.url).href)};
-			const root=fs.mkdtempSync(join(tmpdir(),'jarvis-poison-boundary-fixture-')); fs.chmodSync(root,0o700);
+			const root=fs.mkdtempSync(join(tmpdir(),'noodle-poison-boundary-fixture-')); fs.chmodSync(root,0o700);
 			let gets=0, prompts=0; const notices=[];
 			const ctx={cwd:root,hasUI:true,mode:'tui',isProjectTrusted:()=>true,sessionManager:{getSessionId:()=> 'fixture-main'},ui:{notify:m=>notices.push(m)}};
 			const options={isAllowed:()=>true,onChange:()=>{},prompt:async()=>{prompts++;return undefined;},keychain:{get:async()=>{gets++;return undefined;},set:async()=>{},delete:async()=>{}}};

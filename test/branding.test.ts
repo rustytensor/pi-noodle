@@ -3,8 +3,8 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { CURSOR_MARKER, stripTerminalSequences, styleText, visibleWidth, type TUI } from "@earendil-works/pi-tui";
-import { INTRO_DURATION_MS, INTRO_FRAME_MS, JARVIS_LOGO, JARVIS_TAGLINE, JarvisIntroAnimation, renderJarvisIntro } from "../jarvis-branding.js";
-import { JarvisOverlayBridge, JarvisOverlayComponent, type JarvisOverlayView } from "../overlay.js";
+import { INTRO_DURATION_MS, INTRO_FRAME_MS, NOODLE_LOGO, NOODLE_TAGLINE, NoodleIntroAnimation, renderNoodleIntro } from "../noodle-branding.js";
+import { NoodleOverlayBridge, NoodleOverlayComponent, type NoodleOverlayView } from "../overlay.js";
 
 const theme = {
 	appearance: "dark",
@@ -17,12 +17,12 @@ const plain = (lines: string[]) => lines.map(stripTerminalSequences).join("\n");
 function fixture() {
 	const saved = { motion: process.env.PI_JARVIS_NO_ANIMATION, color: process.env.NO_COLOR, term: process.env.TERM };
 	delete process.env.PI_JARVIS_NO_ANIMATION; delete process.env.NO_COLOR; process.env.TERM = "xterm-256color";
-	const bridge = new JarvisOverlayBridge();
+	const bridge = new NoodleOverlayBridge();
 	const terminal = { columns: 100, rows: 40 };
 	let closed = 0, toggled = 0, renders = 0;
 	const sent: string[] = [];
 	const host = { terminal, requestRender() { renders++; } } as unknown as TUI;
-	const view: JarvisOverlayView = {
+	const view: NoodleOverlayView = {
 		isReady: () => true, isStreaming: () => false,
 		getModelLabel: () => "test/side", getModelModeLabel: () => "follow main",
 		getMainStatusLabel: () => "idle", getMainModelLabel: () => "test/main",
@@ -34,7 +34,7 @@ function fixture() {
 		sendMessage: async (text) => { sent.push(text); },
 	};
 	const create = () => {
-		const overlay = new JarvisOverlayComponent(host, theme, bridge, view, () => { closed++; }, undefined, { showIntro: true });
+		const overlay = new NoodleOverlayComponent(host, theme, bridge, view, () => { closed++; }, undefined, { showIntro: true });
 		overlay.focused = true; overlay.attachBridge(); return overlay;
 	};
 	const overlay = create();
@@ -48,30 +48,32 @@ function fixture() {
 	};
 }
 
-test("ASCII frames share the README wordmark and stay bounded at every size", () => {
+test("ASCII frames stay bounded and README uses the licensed replacement banner", () => {
 	for (const width of [0, 1, 4, 12, 30, 36, 40, 60, 100]) for (const height of [0, 1, 2, 7, 8, 20]) {
 		for (const elapsed of [0, 700, INTRO_DURATION_MS]) {
-			const lines = renderJarvisIntro(theme, width, height, elapsed);
+			const lines = renderNoodleIntro(theme, width, height, elapsed);
 			assert.ok(lines.length <= height);
 			assert.ok(lines.every((line) => visibleWidth(line) <= width));
 		}
 	}
-	assert.ok(plain(renderJarvisIntro(theme, 80, 12, 0)).includes(JARVIS_TAGLINE));
-	assert.equal(stripTerminalSequences(renderJarvisIntro(theme, 80, 12, 0)[6]!),
-		" ".repeat(Math.floor((80 - JARVIS_TAGLINE.length) / 2)) + JARVIS_TAGLINE, "caption is centered, not padded to width before centering");
+	assert.ok(plain(renderNoodleIntro(theme, 80, 12, 0)).includes(NOODLE_TAGLINE));
+	assert.equal(stripTerminalSequences(renderNoodleIntro(theme, 80, 12, 0)[6]!),
+		" ".repeat(Math.floor((80 - NOODLE_TAGLINE.length) / 2)) + NOODLE_TAGLINE, "caption is centered, not padded to width before centering");
 	const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
-	assert.ok(readme.includes(JARVIS_LOGO.join("\n")), "README fallback must use the same ASCII wordmark");
+	assert.ok(readme.includes("noodle-neon-skull.png"), "README uses the requested banner");
+	assert.ok(readme.includes("noodle-dark-512.png"), "README uses the requested icon");
+	assert.ok(readme.includes("Logo adapted from 'Death Ramen Skull Bowl Logo' by gagavastard (Envato Elements)."));
 });
 
 test("chrome sweep changes color, never glyphs; light themes and 256-color terminals work", () => {
-	const first = renderJarvisIntro(theme, 80, 10, 0);
-	const middle = renderJarvisIntro(theme, 80, 10, 900);
+	const first = renderNoodleIntro(theme, 80, 10, 0);
+	const middle = renderNoodleIntro(theme, 80, 10, 900);
 	assert.notDeepEqual(first, middle);
 	assert.equal(plain(first), plain(middle));
 	const light = { ...theme, appearance: "light" } as Theme;
-	assert.notDeepEqual(renderJarvisIntro(light, 80, 10, 900), middle);
+	assert.notDeepEqual(renderNoodleIntro(light, 80, 10, 900), middle);
 	const indexed = { ...theme, style: (text: string, options: Parameters<typeof styleText>[1]) => styleText(text, options, "256color") } as unknown as Theme;
-	const lines = renderJarvisIntro(indexed, 80, 10, 900);
+	const lines = renderNoodleIntro(indexed, 80, 10, 900);
 	assert.equal(plain(lines), plain(middle));
 	assert.match(lines.join(""), /\x1b\[38;5;/);
 	assert.doesNotMatch(lines.join(""), /\x1b\[38;2;|\x1b\[5m|\x1b\[2J/);
@@ -80,7 +82,7 @@ test("chrome sweep changes color, never glyphs; light themes and 256-color termi
 test("intro timer starts only on draw, stops at deadline, and cannot revive", (t) => {
 	t.mock.timers.enable({ apis: ["setInterval"] });
 	let now = 0, redraws = 0;
-	const intro = new JarvisIntroAnimation(() => { redraws++; }, true, () => now);
+	const intro = new NoodleIntroAnimation(() => { redraws++; }, true, () => now);
 	t.mock.timers.tick(5000); assert.equal(redraws, 0);
 	assert.equal(intro.frame(), 0);
 	now = 800; t.mock.timers.tick(INTRO_FRAME_MS);
@@ -89,14 +91,14 @@ test("intro timer starts only on draw, stops at deadline, and cannot revive", (t
 	assert.equal(intro.frame(), undefined); assert.equal(redraws, 2);
 	t.mock.timers.tick(10000); assert.equal(redraws, 2);
 	intro.finish(); assert.equal(intro.frame(), undefined);
-	const cancelled = new JarvisIntroAnimation(() => { redraws++; }, true, () => now);
+	const cancelled = new NoodleIntroAnimation(() => { redraws++; }, true, () => now);
 	assert.equal(cancelled.frame(), 0);
 	cancelled.finish(); assert.equal(cancelled.frame(), undefined);
 	t.mock.timers.tick(10000); assert.equal(redraws, 2);
 });
 
 test("an actual intro timer is unreferenced and disposal stops future redraws", () => {
-	const intro = new JarvisIntroAnimation(() => {}, true);
+	const intro = new NoodleIntroAnimation(() => {}, true);
 	intro.frame();
 	const probe = intro as unknown as { timer?: NodeJS.Timeout };
 	try { assert.equal(probe.timer?.hasRef(), false); }
@@ -108,13 +110,13 @@ test("intro keeps permission controls and the editor visible; first input is not
 	const f = fixture();
 	try {
 		const first = f.overlay.render(80);
-		assert.match(plain(first), /A SECOND LANE OF THOUGHT/);
+		assert.match(plain(first), /your agent's inner voice/);
 		assert.match(plain(first), /Repo tools|Tools/);
 		assert.ok(first.some((line) => line.includes(CURSOR_MARKER)));
 		f.overlay.handleInput("h");
 		assert.equal(f.bridge.getDraft(), "h");
 		assert.match(plain(f.overlay.render(80)), /Existing conversation/);
-		assert.doesNotMatch(plain(f.overlay.render(80)), /A SECOND LANE OF THOUGHT/);
+		assert.doesNotMatch(plain(f.overlay.render(80)), /your agent's inner voice/);
 		f.overlay.handleInput("i"); f.overlay.handleInput("\r");
 		assert.deepEqual(f.sent, ["hi"]); assert.equal(f.toggled(), 0);
 	} finally { f.dispose(); }
@@ -125,7 +127,7 @@ test("key-release packets do not dismiss the intro", () => {
 	try {
 		f.overlay.render(80);
 		f.overlay.handleInput("\x1b[97;1:3u");
-		assert.match(plain(f.overlay.render(80)), /A SECOND LANE/);
+		assert.match(plain(f.overlay.render(80)), /inner voice/);
 		assert.equal(f.bridge.getDraft(), "");
 	} finally { f.dispose(); }
 });
@@ -139,7 +141,7 @@ test("paste skips decoration without executing pasted shortcuts or submitting", 
 		f.overlay.handleInput("\x1b[201~");
 		assert.equal(f.bridge.getDraft(), "hello\n  world");
 		assert.equal(f.toggled(), 0); assert.deepEqual(f.sent, []);
-		assert.doesNotMatch(plain(f.overlay.render(80)), /A SECOND LANE OF THOUGHT/);
+		assert.doesNotMatch(plain(f.overlay.render(80)), /your agent's inner voice/);
 		f.overlay.handleInput("\x1b"); assert.equal(f.closed(), 1);
 		assert.deepEqual(f.overlay.render(80), []);
 	} finally { f.dispose(); }
@@ -152,13 +154,13 @@ test("confirmation preempts intro and still requires visible review; errors pree
 		const confirmation = f.bridge.requestConfirmation("Review redirect", "Send this to main?");
 		f.overlay.handleInput("y"); assert.ok(f.bridge.hasPendingConfirmation());
 		const lines = plain(f.overlay.render(80));
-		assert.match(lines, /Review redirect/); assert.doesNotMatch(lines, /A SECOND LANE/);
+		assert.match(lines, /Review redirect/); assert.doesNotMatch(lines, /inner voice/);
 		f.overlay.handleInput("y"); assert.equal(await confirmation, true);
 		const next = f.create();
 		try {
 			next.render(80); f.bridge.notify("Provider unavailable", "error");
 			const output = plain(next.render(80));
-			assert.match(output, /Provider unavailable/); assert.doesNotMatch(output, /A SECOND LANE/);
+			assert.match(output, /Provider unavailable/); assert.doesNotMatch(output, /inner voice/);
 		} finally { next.dispose(); }
 	} finally { f.dispose(); }
 });
@@ -169,7 +171,7 @@ test("motion opt-out, NO_COLOR, and dumb terminals suppress intro", () => {
 		for (const [key, value] of [["PI_JARVIS_NO_ANIMATION", "1"], ["NO_COLOR", "1"], ["TERM", "dumb"]]) {
 			const previous = process.env[key!]; process.env[key!] = value;
 			const overlay = f.create();
-			try { assert.doesNotMatch(plain(overlay.render(80)), /A SECOND LANE/); }
+			try { assert.doesNotMatch(plain(overlay.render(80)), /inner voice/); }
 			finally { overlay.dispose(); if (previous === undefined) delete process.env[key!]; else process.env[key!] = previous; }
 		}
 	} finally { f.dispose(); }
@@ -185,7 +187,7 @@ test("resize never exceeds terminal bounds and a tiny terminal cancels decoratio
 			assert.ok(lines.length <= rows); assert.ok(lines.every((line) => visibleWidth(line) <= width));
 		}
 		f.terminal.rows = 40; f.terminal.columns = 100;
-		assert.doesNotMatch(plain(f.overlay.render(80)), /A SECOND LANE/);
+		assert.doesNotMatch(plain(f.overlay.render(80)), /inner voice/);
 	} finally { f.dispose(); }
 });
 
@@ -193,10 +195,10 @@ test("first PageUp or Alt+Up dismisses intro and scrolls instead of swallowing n
 	for (const key of ["\x1b[5~", "\x1b[1;3A"]) {
 		const f = fixture();
 		try {
-			assert.match(plain(f.overlay.render(80)), /A SECOND LANE/);
+			assert.match(plain(f.overlay.render(80)), /inner voice/);
 			f.overlay.handleInput(key);
 			const output = plain(f.overlay.render(80));
-			assert.doesNotMatch(output, /A SECOND LANE/);
+			assert.doesNotMatch(output, /inner voice/);
 			assert.match(output, /History ·/);
 			assert.equal(f.bridge.getDraft(), "");
 		} finally { f.dispose(); }

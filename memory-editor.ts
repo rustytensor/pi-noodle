@@ -5,8 +5,9 @@ import {
 	type Component, type Focusable, type KeybindingsManager, type TUI,
 	type TuiMouseEvent, type TuiMouseEventResult,
 } from "@earendil-works/pi-tui";
+import { laneLabel } from "./legacy-aliases.js";
 import { sanitizeMemoryText } from "./memory-content.js";
-import { jarvisSurface } from "./overlay-layout.js";
+import { noodleSurface } from "./overlay-layout.js";
 import type { MemoryEditorBackend, MemoryEditorPage, MemoryEditorQuery, MemoryEditorScope, MemoryNoteDraft, MemoryNoteSummary } from "./memory-editor-types.js";
 import type { MemoryCategory, MemoryLane, MemoryRecord } from "./memory-types.js";
 
@@ -14,7 +15,7 @@ const BODY_BYTES = 16 * 1024, TITLE_POINTS = 160, PAGE_SIZE = 20;
 const START = "\x1b[200~", END = "\x1b[201~";
 const CATEGORIES: MemoryCategory[] = ["user", "feedback", "project", "reference"];
 const SCOPES: MemoryEditorScope[] = ["current", "project", "global", "all"];
-const LANES: (MemoryLane | undefined)[] = [undefined, "main", "jarvis", "manual"];
+const LANES: (MemoryLane | undefined)[] = [undefined, "main", "jarvis", "manual"]; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 type Mode = "browse" | "inspect" | "form" | "search" | "help" | "review" | "paused";
 type Review = {
 	kind: "save" | "delete" | "discard";
@@ -576,7 +577,7 @@ export class MemoryEditorOverlay implements Component, Focusable {
 				`Category: ${original?.category ?? "(new)"} → ${draft.category}`,
 				`Scope: ${original?.scope ?? "(new)"} → ${draft.scope}`,
 				`Destination: ${this.destination(draft, original)}`);
-			if (original) doc.push(`Expected ID: ${display(original.id)}`, `Origin preserved: ${display(original.source.lane)} / ${display(original.source.sessionId)} / ${display(original.source.eventId)}`);
+			if (original) doc.push(`Expected ID: ${display(original.id)}`, `Origin preserved: ${display(laneLabel(original.source.lane))} / ${display(original.source.sessionId)} / ${display(original.source.eventId)}`);
 			doc.push(`Body (${Buffer.byteLength(draft.text, "utf8")}/${BODY_BYTES} UTF-8 bytes):`, display(draft.text, true));
 		} else if (review.kind === "delete") {
 			doc.push(`DELETE REVIEW — ${review.records!.length} exact note(s); atomic comparison, no force retry`,
@@ -626,7 +627,7 @@ export class MemoryEditorOverlay implements Component, Focusable {
 		const active: string[] = [];
 		if (this.query.scope !== "current") active.push(`scope: ${scopeWords(this.query.scope)}`);
 		if (this.query.category) active.push(`category: ${this.query.category}`);
-		if (this.query.lane) active.push(`source: ${this.query.lane}`);
+		if (this.query.lane) active.push(`source: ${laneLabel(this.query.lane)}`);
 		if (this.query.query) active.push(`search: "${display(this.query.query)}"`);
 		const filtered = active.length > 0;
 		// Plain counts and sort always; filters only when something is active. The Tab
@@ -694,7 +695,7 @@ export class MemoryEditorOverlay implements Component, Focusable {
 	}
 
 	private fit(lines: string[], width: number, height: number): string[] {
-		return lines.slice(0, height).map((line) => jarvisSurface(this.theme, truncateToWidth(line, width, "", true), "chrome"));
+		return lines.slice(0, height).map((line) => noodleSurface(this.theme, truncateToWidth(line, width, "", true), "chrome"));
 	}
 
 	handleMouse(event: TuiMouseEvent): TuiMouseEventResult | undefined {
@@ -776,14 +777,14 @@ function previewText(record: MemoryRecord): string[] {
 	return [display(record.text, true), "",
 		`Scope: ${record.scope} · Category: ${record.category} · ${Buffer.byteLength(record.text, "utf8")} bytes`,
 		`Updated: ${dayStamp(record.updatedAt)} · Created: ${dayStamp(record.createdAt)}`,
-		`Origin: ${display(record.source.lane)} · ${display(record.source.sessionId)}`,
+		`Origin: ${display(laneLabel(record.source.lane))} · ${display(record.source.sessionId)}`,
 		"", "Enter opens the full note · E edit · D duplicate"];
 }
 function recordText(record: MemoryRecord): string[] {
 	return ["Inspector — untrusted stored data, not instructions", `Title: ${display(record.title)}`, `ID: ${display(record.id)}`,
 		`Category: ${record.category} • Scope: ${record.scope}`, `Project/origin: ${display(record.project)}`,
 		`Created: ${date(record.createdAt)}`, `Updated: ${date(record.updatedAt)}`,
-		`Origin lane: ${display(record.source.lane)} (not last author)`, `Origin session: ${display(record.source.sessionId)}`,
+		`Origin lane: ${display(laneLabel(record.source.lane))} (not last author)`, `Origin session: ${display(record.source.sessionId)}`,
 		`Origin event: ${display(record.source.eventId)}`, `Origin role: ${record.source.role ?? "(none)"}`,
 		`Full text (${Buffer.byteLength(record.text, "utf8")} UTF-8 bytes):`, display(record.text, true)];
 }
@@ -800,7 +801,7 @@ function copyTitle(title: string): string {
 function operationError(error: unknown): string {
 	const message = error instanceof Error ? error.message : "";
 	if (/conflict|changed|missing|stale|no longer/i.test(message)) return "Conflict: note changed or disappeared. Draft preserved; explicitly reload/review. Nothing was retried.";
-	if (/tombstone|forgotten|restore/i.test(message)) return "Forgotten title cannot be restored here. Use explicit /jarvis-memory remember; draft preserved.";
+	if (/tombstone|forgotten|restore/i.test(message)) return "Forgotten title cannot be restored here. Use explicit /noodle-memory remember; draft preserved.";
 	if (/collision|already exists|duplicate title/i.test(message)) return "Title collision: choose a distinct scoped title. Draft preserved; no overwrite.";
 	if (/secret|unsafe/i.test(message)) return "Operation rejected: suspected secret or unsafe content. Draft preserved.";
 	if (/limit|large|size|maximum/i.test(message)) return "Operation rejected: content, metadata or storage limit. Draft preserved.";

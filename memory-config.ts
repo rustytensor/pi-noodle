@@ -5,6 +5,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { basename, dirname, join, parse, resolve } from "node:path";
 import type { MemoryPolicy } from "./memory-types.js";
+import { storageName } from "./storage-layout.js";
 
 type Scope = "global" | "project";
 type Config = Record<string, unknown>;
@@ -18,7 +19,7 @@ const noFollow = constants.O_NOFOLLOW ?? 0;
 /** Caller-spelled settings path, without I/O. Access canonicalizes only the chosen root. */
 export function memoryConfigPath(cwd: string, agentDir: string, scope: Scope): string {
 	if (scope !== "global" && scope !== "project") throw new Error("Invalid memory settings scope.");
-	return scope === "global" ? join(agentDir, "extensions", "pi-jarvis.json") : join(cwd, ".pi", "jarvis.json");
+	return scope === "global" ? join(agentDir, "extensions", storageName(agentDir, "pi-jarvis.json")) : join(cwd, ".pi", storageName(cwd, "jarvis.json", "project")); // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 }
 
 /** Reads settings only. Defaults are on; untrusted projects and read/validation failures pause all memory. */
@@ -113,7 +114,7 @@ function settingsPath(cwd: string, agentDir: string, scope: Scope): string {
 	// Validate scope before choosing/canonicalizing a root.
 	memoryConfigPath(cwd, agentDir, scope);
 	const root = canonicalRoot(scope === "global" ? agentDir : cwd);
-	return scope === "global" ? join(root, "extensions", "pi-jarvis.json") : join(root, ".pi", "jarvis.json");
+	return scope === "global" ? join(root, "extensions", storageName(root, "pi-jarvis.json")) : join(root, ".pi", storageName(root, "jarvis.json", "project")); // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 }
 
 /** Missing roots inherit the real path of their nearest existing directory ancestor. */

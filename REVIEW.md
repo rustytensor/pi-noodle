@@ -2,10 +2,10 @@
 
 ## Baseline and scope
 
-- Prepared `pi-jarvis` 1.4.0 for Pi 1.0.0 (`@earendil-works`) and Node.js >=22.19.0.
+- Prepared `pi-noodle` 1.4.0 for Pi 1.0.0 (`@earendil-works`) and Node.js >=22.19.0.
 - Four review/implementation workers used `openai-codex/gpt-6.1-sol:high`; no OpenRouter agents were used.
 - Original tests/build/release checks passed on old Pi 0.69.0 dependencies, but masked current SDK incompatibilities.
-- This review was completed before release publishing. The existing `pi-jarvis-1.3.1.tgz` was left untouched.
+- This review was completed before release publishing. The existing `pi-noodle-1.3.1.tgz` was left untouched.
 
 ## Fixed
 
@@ -56,8 +56,8 @@
 ## Explicit limitations / proposed next improvements
 
 1. **Native MCP lifecycle hardening.** The 1.6.0 integration covers native direct/deferred/nested/resource gates, late registration, trust, and best-effort teardown. Strict cancellation during native connection/authentication initialization needs upstream public lifecycle hooks; neither reaching into private transports nor reviving the unsupported legacy adapter is acceptable.
-2. **Virtual/router models (high priority).** The public extension registry does not expose session-aware virtual routing. These models reject explicitly; pin Jarvis to a physical model. Prefer an upstream supported runtime bridge rather than reaching into private fields.
+2. **Virtual/router models (high priority).** The public extension registry does not expose session-aware virtual routing. These models reject explicitly; pin Noodle to a physical model. Prefer an upstream supported runtime bridge rather than reaching into private fields.
 3. **Cross-process configuration locking.** Atomic replacement prevents partial files, but two processes can still overwrite concurrent changes. Add a portable lock/recovery protocol and multiprocess tests before claiming concurrent-writer support.
 4. **Large-history performance.** The 1.5.0 UX pass adds bounded scrollback, wrapped-block caching, and a multiline draft editor. Main-context projection caching remains a follow-up; profile long sessions before expanding incremental caches.
 5. **Broader release coverage.** The release workflows validate Node 22.19.0/24 and produce GitHub release packages. Add broader OS coverage, a reusable clean-host tarball smoke test, manual terminal acceptance checks, and repository protection rules. Keep npm publication manual unless separately authorized.
-6. **Upstream development dependency advisory.** `npm audit --omit=dev` is clean. Full audit retains a high-severity `brace-expansion` advisory through Pi 1.0.0's published shrinkwrap (`5.0.9`, patched in `5.0.12`). Other reported development advisories were resolved through lockfile updates. A root override did not supersede that shrinkwrap and was not retained. This dependency is not shipped by Jarvis; update the validated Pi host when an upstream corrected release is available.
+6. **Upstream development dependency advisory.** `npm audit --omit=dev` is clean. Full audit retains a high-severity `brace-expansion` advisory through Pi 1.0.0's published shrinkwrap (`5.0.9`, patched in `5.0.12`). Other reported development advisories were resolved through lockfile updates. A root override did not supersede that shrinkwrap and was not retained. This dependency is not shipped by Noodle; update the validated Pi host when an upstream corrected release is available.

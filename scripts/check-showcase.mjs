@@ -21,12 +21,12 @@ try {
 } catch (error) {
 	throw new Error("Optional Playwright unavailable. Supply --playwright-module PATH (existing module directory or entry file). No installation is performed.", { cause: error });
 }
-const outDir = options["--out-dir"] ? resolve(options["--out-dir"]) : mkdtempSync(resolve(tmpdir(), "jarvis-showcase-qa-"));
+const outDir = options["--out-dir"] ? resolve(options["--out-dir"]) : mkdtempSync(resolve(tmpdir(), "noodle-showcase-qa-"));
 mkdirSync(outDir, { recursive: true });
 const assetDir = resolve(dirname(fileURLToPath(import.meta.url)), "../docs/assets");
 const names = ["workspace", "history", "access"];
-const assets = new Map(names.map((name) => [`/jarvis-${name}.svg`, readFileSync(resolve(assetDir, `jarvis-${name}.svg`))]));
-const html = (dark) => `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/favicon.ico"><title>Jarvis conceptual documentation diagrams — QA</title><style>html{color-scheme:${dark ? "dark" : "light"};background:${dark ? "#0d1117" : "#ffffff"};color:${dark ? "#f0f6fc" : "#1f2328"};font-family:Arial,Helvetica,sans-serif}body{margin:0;padding:24px 8px}main{max-width:640px;margin:auto}h1{font-size:24px;line-height:1.4;margin:0 0 12px}p{font-size:16px;line-height:1.5;margin:0 0 24px}figure{margin:0 0 24px}img{display:block;width:100%;height:auto;border-radius:14px}figcaption{font-size:16px;line-height:1.5;margin-top:8px}</style><main><h1>Pi + Jarvis: two lanes, shared memory</h1><p>README-like fixture. Conceptual artwork, not live UI captures.</p>${names.map((name) => `<figure><img src="/jarvis-${name}.svg" alt="Jarvis ${name} conceptual diagram" data-name="${name}"><figcaption>${name[0].toUpperCase() + name.slice(1)} · local documentation fixture</figcaption></figure>`).join("")}</main></html>`;
+const assets = new Map(names.map((name) => [`/noodle-${name}.svg`, readFileSync(resolve(assetDir, `noodle-${name}.svg`))]));
+const html = (dark) => `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/favicon.ico"><title>Noodle conceptual documentation diagrams — QA</title><style>html{color-scheme:${dark ? "dark" : "light"};background:${dark ? "#0d1117" : "#ffffff"};color:${dark ? "#f0f6fc" : "#1f2328"};font-family:Arial,Helvetica,sans-serif}body{margin:0;padding:24px 8px}main{max-width:640px;margin:auto}h1{font-size:24px;line-height:1.4;margin:0 0 12px}p{font-size:16px;line-height:1.5;margin:0 0 24px}figure{margin:0 0 24px}img{display:block;width:100%;height:auto;border-radius:14px}figcaption{font-size:16px;line-height:1.5;margin-top:8px}</style><main><h1>Pi + Noodle: two lanes, shared memory</h1><p>README-like fixture. Conceptual artwork, not live UI captures.</p>${names.map((name) => `<figure><img src="/noodle-${name}.svg" alt="Noodle ${name} conceptual diagram" data-name="${name}"><figcaption>${name[0].toUpperCase() + name.slice(1)} · local documentation fixture</figcaption></figure>`).join("")}</main></html>`;
 const server = createServer((req, res) => {
 	const url = new URL(req.url, "http://127.0.0.1");
 	res.setHeader("Cache-Control", "no-store");
@@ -91,7 +91,7 @@ try {
 		const ctx = await context({ width: 640, height: 1500 }, "dark");
 		try {
 			const page = await ctx.newPage();
-			await page.goto(`${origin}/jarvis-${name}.svg`, { waitUntil: "networkidle" });
+			await page.goto(`${origin}/noodle-${name}.svg`, { waitUntil: "networkidle" });
 			const result = await page.evaluate(() => {
 				const svg = document.documentElement;
 				if (svg.localName !== "svg") return { failures: ["Invalid SVG/XML document"], textCount: 0 };

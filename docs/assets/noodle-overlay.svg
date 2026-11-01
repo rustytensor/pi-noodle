@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="796" height="536" viewBox="0 0 796 536" role="img" aria-labelledby="title desc">
-<title id="title">Jarvis compact overlay preview</title><desc id="desc">Actual Jarvis renderer with deterministic demo conversation and a custom dark palette. Not a live provider session.</desc>
+<title id="title">Noodle compact overlay preview</title><desc id="desc">Actual Noodle renderer with deterministic demo conversation and a custom dark palette. Not a live provider session.</desc>
 <defs><linearGradient id="edge"><stop stop-color="#5de2ff"/><stop offset="0.5" stop-color="#bd8aff"/><stop offset="1" stop-color="#ff70cd"/></linearGradient></defs>
 <rect width="796" height="536" rx="14" fill="#100c1e"/>
 <rect x="1" y="1" width="794" height="534" rx="13" fill="none" stroke="#3f305d" stroke-width="2"/>
@@ -93,12 +93,12 @@
 <text x="758.8000000000001" y="28" fill="rgb(255,112,205)">╮</text>
 <text x="28" y="48" fill="rgb(119,101,154)">│</text>
 <rect x="44.8" y="33" width="50.400000000000006" height="20" fill="rgb(36,36,49)"/>
-<text x="44.8" y="48" fill="rgb(93,226,255)">J</text>
-<text x="53.2" y="48" fill="rgb(93,226,255)">a</text>
-<text x="61.6" y="48" fill="rgb(93,226,255)">r</text>
-<text x="70" y="48" fill="rgb(93,226,255)">v</text>
-<text x="78.4" y="48" fill="rgb(93,226,255)">i</text>
-<text x="86.80000000000001" y="48" fill="rgb(93,226,255)">s</text>
+<text x="44.8" y="48" fill="rgb(93,226,255)">N</text>
+<text x="53.2" y="48" fill="rgb(93,226,255)">o</text>
+<text x="61.6" y="48" fill="rgb(93,226,255)">o</text>
+<text x="70" y="48" fill="rgb(93,226,255)">d</text>
+<text x="78.4" y="48" fill="rgb(93,226,255)">l</text>
+<text x="86.80000000000001" y="48" fill="rgb(93,226,255)">e</text>
 <rect x="95.2" y="33" width="25.200000000000003" height="20" fill="rgb(36,36,49)"/>
 <text x="103.60000000000001" y="48" fill="rgb(143,131,167)">·</text>
 <rect x="120.4" y="33" width="33.6" height="20" fill="rgb(36,36,49)"/>
@@ -372,12 +372,12 @@
 <text x="44.8" y="208" fill="rgb(119,101,154)">│</text>
 <rect x="53.2" y="193" width="16.8" height="20" fill="rgb(43,42,56)"/>
 <rect x="70" y="193" width="58.800000000000004" height="20" fill="rgb(43,42,56)"/>
-<text x="70" y="208" fill="rgb(112,226,188)">J</text>
-<text x="78.4" y="208" fill="rgb(112,226,188)">a</text>
-<text x="86.80000000000001" y="208" fill="rgb(112,226,188)">r</text>
-<text x="95.2" y="208" fill="rgb(112,226,188)">v</text>
-<text x="103.60000000000001" y="208" fill="rgb(112,226,188)">i</text>
-<text x="112" y="208" fill="rgb(112,226,188)">s</text>
+<text x="70" y="208" fill="rgb(112,226,188)">N</text>
+<text x="78.4" y="208" fill="rgb(112,226,188)">o</text>
+<text x="86.80000000000001" y="208" fill="rgb(112,226,188)">o</text>
+<text x="95.2" y="208" fill="rgb(112,226,188)">d</text>
+<text x="103.60000000000001" y="208" fill="rgb(112,226,188)">l</text>
+<text x="112" y="208" fill="rgb(112,226,188)">e</text>
 <text x="120.4" y="208" fill="rgb(112,226,188)">:</text>
 <rect x="128.8" y="193" width="84" height="20" fill="rgb(43,42,56)"/>
 <text x="145.60000000000002" y="208" fill="rgb(119,101,154)">─</text>
@@ -505,12 +505,12 @@
 <text x="44.8" y="288" fill="rgb(119,101,154)">│</text>
 <rect x="53.2" y="273" width="16.8" height="20" fill="rgb(43,42,56)"/>
 <rect x="70" y="273" width="58.800000000000004" height="20" fill="rgb(43,42,56)"/>
-<text x="70" y="288" fill="rgb(112,226,188)">J</text>
-<text x="78.4" y="288" fill="rgb(112,226,188)">a</text>
-<text x="86.80000000000001" y="288" fill="rgb(112,226,188)">r</text>
-<text x="95.2" y="288" fill="rgb(112,226,188)">v</text>
-<text x="103.60000000000001" y="288" fill="rgb(112,226,188)">i</text>
-<text x="112" y="288" fill="rgb(112,226,188)">s</text>
+<text x="70" y="288" fill="rgb(112,226,188)">N</text>
+<text x="78.4" y="288" fill="rgb(112,226,188)">o</text>
+<text x="86.80000000000001" y="288" fill="rgb(112,226,188)">o</text>
+<text x="95.2" y="288" fill="rgb(112,226,188)">d</text>
+<text x="103.60000000000001" y="288" fill="rgb(112,226,188)">l</text>
+<text x="112" y="288" fill="rgb(112,226,188)">e</text>
 <text x="120.4" y="288" fill="rgb(112,226,188)">:</text>
 <rect x="128.8" y="273" width="84" height="20" fill="rgb(43,42,56)"/>
 <text x="145.60000000000002" y="288" fill="rgb(119,101,154)">─</text>
@@ -813,12 +813,12 @@
 <text x="758.8000000000001" y="388" fill="rgb(119,101,154)">│</text>
 <text x="28" y="408" fill="rgb(119,101,154)">│</text>
 <rect x="44.8" y="393" width="75.60000000000001" height="20" fill="rgb(33,30,47)"/>
-<text x="44.8" y="408" fill="rgb(93,226,255)">j</text>
-<text x="53.2" y="408" fill="rgb(93,226,255)">a</text>
-<text x="61.6" y="408" fill="rgb(93,226,255)">r</text>
-<text x="70" y="408" fill="rgb(93,226,255)">v</text>
-<text x="78.4" y="408" fill="rgb(93,226,255)">i</text>
-<text x="86.80000000000001" y="408" fill="rgb(93,226,255)">s</text>
+<text x="44.8" y="408" fill="rgb(93,226,255)">n</text>
+<text x="53.2" y="408" fill="rgb(93,226,255)">o</text>
+<text x="61.6" y="408" fill="rgb(93,226,255)">o</text>
+<text x="70" y="408" fill="rgb(93,226,255)">d</text>
+<text x="78.4" y="408" fill="rgb(93,226,255)">l</text>
+<text x="86.80000000000001" y="408" fill="rgb(93,226,255)">e</text>
 <text x="103.60000000000001" y="408" fill="rgb(93,226,255)">&gt;</text>
 <rect x="120.4" y="393" width="8.4" height="20" fill="rgb(33,30,47)"/>
 <rect x="128.8" y="393" width="621.6" height="20" fill="rgb(33,30,47)"/>

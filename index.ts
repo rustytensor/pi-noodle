@@ -7,25 +7,25 @@ import {
 	type ExtensionCommandContext,
 	type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import { JarvisModelPicker } from "./model-picker.js";
+import { NoodleModelPicker } from "./model-picker.js";
 import { buildMainSessionContext, type MainSessionContextPayload } from "./main-context.js";
 import { MainSessionTracker } from "./main-session-state.js";
-import { attachOverlayBridge, JarvisOverlayBridge, JarvisOverlayComponent, type JarvisDisplayEntry, type JarvisOverlayView } from "./overlay.js";
-import { createJarvisSessionRef, readJarvisSessionRef, JARVIS_SESSION_REF_CUSTOM_TYPE, type JarvisSessionRef } from "./session-ref.js";
+import { attachOverlayBridge, NoodleOverlayBridge, NoodleOverlayComponent, type NoodleDisplayEntry, type NoodleOverlayView } from "./overlay.js";
+import { createNoodleSessionRef, readNoodleSessionRef, NOODLE_SESSION_REF_CUSTOM_TYPE, type NoodleSessionRef } from "./session-ref.js";
 import {
-	MalformedJarvisConfigError,
-	clearJarvisModelSelectionSetting,
-	clearJarvisThinkingSelectionSetting,
-	loadJarvisModelSelectionSetting,
-	loadJarvisThinkingSelectionSetting,
-	saveJarvisModelSelectionSetting,
-	saveJarvisThinkingSelectionSetting,
-	type JarvisModelSelectionScope,
-	type JarvisThinkingLevel,
-	type StoredJarvisModelSelection,
-	type StoredJarvisThinkingSelection,
-} from "./jarvis-config.js";
-import { JarvisSideSessionRuntime, createSideSessionFile } from "./side-session.js";
+	MalformedNoodleConfigError,
+	clearNoodleModelSelectionSetting,
+	clearNoodleThinkingSelectionSetting,
+	loadNoodleModelSelectionSetting,
+	loadNoodleThinkingSelectionSetting,
+	saveNoodleModelSelectionSetting,
+	saveNoodleThinkingSelectionSetting,
+	type NoodleModelSelectionScope,
+	type NoodleThinkingLevel,
+	type StoredNoodleModelSelection,
+	type StoredNoodleThinkingSelection,
+} from "./noodle-config.js";
+import { NoodleSideSessionRuntime, createSideSessionFile } from "./side-session.js";
 import { SharedMemoryService } from "./memory-service.js";
 import { createMemoryExtensionFactory } from "./memory-extension.js";
 import { invalidateMemoryEditor, openMemoryEditor } from "./memory-editor-controller.js";
@@ -34,58 +34,58 @@ import { createArchiveExtensionFactory } from "./archive-extension.js";
 import { abandonArchiveSecretPrompt, isArchiveSecretPromptActive, revokeArchiveSecretPrompt } from "./archive-secret-input.js";
 import { createWatcherExtension } from "./watchers-extension.js";
 
-type JarvisModelSelection =
+type NoodleModelSelection =
 	| { mode: "follow-main" }
 	| { mode: "pinned"; model: Model<any> };
 
-type JarvisModelSelectionSource = JarvisModelSelectionScope | "default";
-type JarvisThinkingSelectionSource = JarvisModelSelectionScope | "default";
+type NoodleModelSelectionSource = NoodleModelSelectionScope | "default";
+type NoodleThinkingSelectionSource = NoodleModelSelectionScope | "default";
 
-type JarvisThinkingSelection = StoredJarvisThinkingSelection;
+type NoodleThinkingSelection = StoredNoodleThinkingSelection;
 
-type ParsedJarvisModelCommand = {
+type ParsedNoodleModelCommand = {
 	request: string;
-	scope: JarvisModelSelectionScope;
+	scope: NoodleModelSelectionScope;
 	clearScope: boolean;
 };
 
-type ParsedJarvisThinkingCommand = {
+type ParsedNoodleThinkingCommand = {
 	request: string;
-	scope: JarvisModelSelectionScope;
+	scope: NoodleModelSelectionScope;
 	clearScope: boolean;
 };
 
-type ResolvedJarvisModelSelection = {
-	selection: JarvisModelSelection;
-	source: JarvisModelSelectionSource;
+type ResolvedNoodleModelSelection = {
+	selection: NoodleModelSelection;
+	source: NoodleModelSelectionSource;
 	unavailable?: {
-		scope: JarvisModelSelectionScope;
+		scope: NoodleModelSelectionScope;
 		modelReference: string;
 	};
 };
 
-type ResolvedJarvisThinkingSelection = {
-	selection: JarvisThinkingSelection;
-	source: JarvisThinkingSelectionSource;
+type ResolvedNoodleThinkingSelection = {
+	selection: NoodleThinkingSelection;
+	source: NoodleThinkingSelectionSource;
 };
 
-type JarvisSideCommand =
+type NoodleSideCommand =
 	| { name: "compact"; customInstructions?: string }
 	| { name: "new" }
 	| { name: "tree"; targetId?: string; summarize: boolean; customInstructions?: string };
 
 type MainState = {
-	bridge: JarvisOverlayBridge;
+	bridge: NoodleOverlayBridge;
 	memory: SharedMemoryService;
 	archive: SharedArchiveService;
 	mainArchiveSnapshot?: () => void;
 	watchers?: ReturnType<typeof createWatcherExtension>;
 	mainSession: MainSessionTracker;
 	mainContext: MainSessionContextPayload;
-	lastJarvisSeenMainContext?: MainSessionContextPayload;
-	sessionRef?: JarvisSessionRef;
-	runtime?: JarvisSideSessionRuntime;
-	bootPromise?: Promise<JarvisSideSessionRuntime>;
+	lastNoodleSeenMainContext?: MainSessionContextPayload;
+	sessionRef?: NoodleSessionRef;
+	runtime?: NoodleSideSessionRuntime;
+	bootPromise?: Promise<NoodleSideSessionRuntime>;
 	bootGeneration: number;
 	flushPromise?: Promise<void>;
 	stopPromise?: Promise<void>;
@@ -105,10 +105,10 @@ type MainState = {
 	memoryEditorDirty?: () => boolean;
 	queuedMessages: string[];
 	model?: Model<any>;
-	jarvisModelSelection: JarvisModelSelection;
-	jarvisModelSelectionSource: JarvisModelSelectionSource;
-	jarvisThinkingSelection: JarvisThinkingSelection;
-	jarvisThinkingSelectionSource: JarvisThinkingSelectionSource;
+	noodleModelSelection: NoodleModelSelection;
+	noodleModelSelectionSource: NoodleModelSelectionSource;
+	noodleThinkingSelection: NoodleThinkingSelection;
+	noodleThinkingSelectionSource: NoodleThinkingSelectionSource;
 	thinkingLevel?: string;
 	systemPrompt: string;
 	themeProvider: () => ExtensionContext["ui"]["theme"];
@@ -117,18 +117,21 @@ type MainState = {
 	allowSteerToMain: boolean;
 };
 
-class StaleJarvisBootError extends Error {
+class StaleNoodleBootError extends Error {
 	constructor() {
-		super("/jarvis startup was superseded by a newer session lifecycle event.");
-		this.name = "StaleJarvisBootError";
+		super("/noodle startup was superseded by a newer session lifecycle event.");
+		this.name = "StaleNoodleBootError";
 	}
 }
 
-function isStaleJarvisBootError(error: unknown): error is StaleJarvisBootError {
-	return error instanceof StaleJarvisBootError;
+function isStaleNoodleBootError(error: unknown): error is StaleNoodleBootError {
+	return error instanceof StaleNoodleBootError;
 }
 
-export default function jarvisExtension(pi: ExtensionAPI): void {
+import { withLegacyAliases, canonicalCommand, LEGACY_COMMAND_NOTICE } from "./legacy-aliases.js";
+
+export default function noodleExtension(pi: ExtensionAPI): void {
+	pi = withLegacyAliases(pi);
 	// Presentation-only memory, keyed by MAIN identity, never by the side tree.
 	// Reopening or returning to a session does not replay the intro.
 	const introSeenSessions = new Set<string>();
@@ -138,12 +141,12 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 	let embeddedThinkingRequest: object | undefined;
 	const mainSession = new MainSessionTracker();
 	const state: MainState = {
-		bridge: new JarvisOverlayBridge(() => Boolean(state.overlayOpen) && !state.memoryEditorOwner && !isArchiveSecretPromptActive()),
+		bridge: new NoodleOverlayBridge(() => Boolean(state.overlayOpen) && !state.memoryEditorOwner && !isArchiveSecretPromptActive()),
 		memory: new SharedMemoryService(getAgentDir()),
 		archive: new SharedArchiveService(getAgentDir(), {
 			beforeSecretPrompt: async () => {
 				if (state.modelPickerOpen || state.memoryReviewOpen || state.memoryEditorOwner || state.watchers?.hasPendingSetup()) {
-					throw new Error("Finish the current Jarvis picker, memory review or editor before entering an archive password.");
+					throw new Error("Finish the current Noodle picker, memory review or editor before entering an archive password.");
 				}
 				// Password preparation explicitly revokes access BEFORE closing/yielding.
 				// Ordinary presentation close deliberately preserves these grants.
@@ -154,15 +157,15 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 		}),
 		mainSession,
 		mainContext: buildMainSessionContext(mainSession.snapshot()),
-		lastJarvisSeenMainContext: undefined,
+		lastNoodleSeenMainContext: undefined,
 		queuedMessages: [],
-		jarvisModelSelection: { mode: "follow-main" },
-		jarvisModelSelectionSource: "default",
-		jarvisThinkingSelection: { mode: "auto" },
-		jarvisThinkingSelectionSource: "default",
+		noodleModelSelection: { mode: "follow-main" },
+		noodleModelSelectionSource: "default",
+		noodleThinkingSelection: { mode: "auto" },
+		noodleThinkingSelectionSource: "default",
 		systemPrompt: "",
 		themeProvider: () => {
-			throw new Error("/jarvis theme requested before UI was available.");
+			throw new Error("/noodle theme requested before UI was available.");
 		},
 		allowSideTools: false,
 		allowFollowUpToMain: false,
@@ -173,17 +176,17 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 
 	state.bridge.onChange(() => refreshMainStatus(state));
 
-	pi.registerCommand("jarvis", {
-		description: "Open Jarvis; status, stop, or access off control background work locally",
+	pi.registerCommand("noodle", {
+		description: "Open Noodle; status, stop, or access off control background work locally",
 		handler: async (args, ctx) => {
 			const localControl = parseLocalControl(args, true);
 			if (localControl) { await dispatchLocalControl(state, localControl, ctx, Boolean(state.overlayOpen)); return; }
 			if (ctx.mode !== "tui") {
-				ctx.ui.notify("/jarvis requires Pi's interactive terminal UI.", "warning");
+				ctx.ui.notify("/noodle requires Pi's interactive terminal UI.", "warning");
 				return;
 			}
 			if (isArchiveSecretPromptActive()) {
-				ctx.ui.notify("Finish the private archive password/exit verification before opening Jarvis.", "warning");
+				ctx.ui.notify("Finish the private archive password/exit verification before opening Noodle.", "warning");
 				return;
 			}
 			const archiveRequest = parseArchiveCommand(args);
@@ -197,15 +200,15 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 				return;
 			}
 			if (state.memoryEditorOwner || state.modelPickerOpen || state.memoryReviewOpen || state.watchers?.hasPendingSetup()) {
-				ctx.ui.notify("Finish the current Jarvis picker, memory review or editor before opening Jarvis.", "warning");
+				ctx.ui.notify("Finish the current Noodle picker, memory review or editor before opening Noodle.", "warning");
 				return;
 			}
 			if (state.overlayOpen) {
-				ctx.ui.notify("/jarvis is already open.", "info");
+				ctx.ui.notify("/noodle is already open.", "info");
 				return;
 			}
 			if (state.configuring) {
-				ctx.ui.notify("Wait for /jarvis configuration to finish, then reopen.", "warning");
+				ctx.ui.notify("Wait for /noodle configuration to finish, then reopen.", "warning");
 				return;
 			}
 			updateContextState(pi, state, ctx);
@@ -218,7 +221,7 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 			state.bridge.refresh();
 
 			void ensureRuntime(pi, state, ctx).catch((error) => {
-				if (isStaleJarvisBootError(error)) {
+				if (isStaleNoodleBootError(error)) {
 					return;
 				}
 				state.bridge.notify(error instanceof Error ? error.message : String(error), "error");
@@ -236,7 +239,7 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 			let terminalColumns: (() => number) | undefined;
 			let closed = false, abandoned = false, finished = false, factoryUsed = false;
 			let handoff: object | undefined;
-			let component: JarvisOverlayComponent | undefined, handle: OverlayHandle | undefined;
+			let component: NoodleOverlayComponent | undefined, handle: OverlayHandle | undefined;
 			let finishOverlay: (() => void) | undefined;
 			let resolveOverlayClosed!: () => void;
 			const overlayClosed = new Promise<void>(resolve => { resolveOverlayClosed = resolve; });
@@ -272,7 +275,7 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 			const complete = (privatePreparation = false) => {
 				if (!closed || finished || abandoned) return;
 				// A private prompt reserves its gate BEFORE closing the current
-				// mounted Jarvis window. This synchronous close capability is not
+				// mounted Noodle window. This synchronous close capability is not
 				// retained by deferred factories/onHandle callbacks.
 				const canComplete = () => admitted() || (privatePreparation && current() && !abandoned
 					&& !state.modelPickerOpen && !state.memoryReviewOpen && !state.memoryEditorOwner);
@@ -318,7 +321,7 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 						state.themeProvider = () => theme;
 						const sessionId = ctx.sessionManager.getSessionId();
 						component = attachOverlayBridge(
-							new JarvisOverlayComponent(tui, theme, state.bridge, overlayView, closeOverlay, keybindings,
+							new NoodleOverlayComponent(tui, theme, state.bridge, overlayView, closeOverlay, keybindings,
 								{ showIntro: !introSeenSessions.has(sessionId) }),
 							state.bridge,
 							tui,
@@ -369,58 +372,58 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 		};
 		const assertOwner = () => {
 			if (state.queuedMessages !== owner || isArchiveSecretPromptActive() || state.memoryEditorOwner || (embedded && (superseded() || state.overlayOwner !== interaction || !state.overlayOpen))) {
-				throw new Error("/jarvis configuration owner changed; submit again in the current session.");
+				throw new Error("/noodle configuration owner changed; submit again in the current session.");
 			}
 		};
 		updateContextState(pi, state, ctx);
 		if (isArchiveSecretPromptActive() || state.memoryEditorOwner || state.watchers?.hasPendingSetup()) {
-			notify("Finish private input, memory editing, or watcher launch review before configuring Jarvis.", "warning");
+			notify("Finish private input, memory editing, or watcher launch review before configuring Noodle.", "warning");
 			return;
 		}
 
-		let parsedCommand: ParsedJarvisModelCommand;
+		let parsedCommand: ParsedNoodleModelCommand;
 		try {
-			parsedCommand = parseJarvisModelCommand(args);
+			parsedCommand = parseNoodleModelCommand(args);
 		} catch (error) {
 			notify(error instanceof Error ? error.message : String(error), "error");
 			return;
 		}
 
 		const { request, scope, clearScope } = parsedCommand;
-		const scopeLabel = formatJarvisModelSelectionScope(scope);
-		if ((request || (ctx.mode === "tui" && !embedded)) && isJarvisBusy(state)) {
-			notify("/jarvis is busy. Wait or use /jarvis stop, then retry model/thinking selection.", "warning");
+		const scopeLabel = formatNoodleModelSelectionScope(scope);
+		if ((request || (ctx.mode === "tui" && !embedded)) && isNoodleBusy(state)) {
+			notify("/noodle is busy. Wait or use /noodle stop, then retry model/thinking selection.", "warning");
 			return;
 		}
 		if (embedded) { embeddedModelRequest = requestToken; accepted = true; }
 
 		const loadModels = async (): Promise<readonly Model<any>[]> => {
 			try {
-				return await getAvailableJarvisModels(ctx.modelRegistry);
+				return await getAvailableNoodleModels(ctx.modelRegistry);
 			} catch (error) {
-				notify(`Failed to refresh /jarvis models: ${error instanceof Error ? error.message : String(error)}`, "error");
+				notify(`Failed to refresh /noodle models: ${error instanceof Error ? error.message : String(error)}`, "error");
 				return [];
 			}
 		};
 		const selectModelFromMenu = async (models: readonly Model<any>[], initialSearchInput?: string): Promise<Model<any> | undefined> => {
 			if (embedded) {
-				notify("Select an exact physical provider/model inside Jarvis.", "warning");
+				notify("Select an exact physical provider/model inside Noodle.", "warning");
 				return undefined;
 			}
 			if (state.queuedMessages !== owner) return undefined;
 			models = models.filter((model) => model.api !== "pi-virtual");
 			if (models.length === 0) {
-				notify("No /jarvis models are currently available from the main model registry.", "warning");
+				notify("No /noodle models are currently available from the main model registry.", "warning");
 				return undefined;
 			}
 			if (isArchiveSecretPromptActive() || state.modelPickerOpen || state.memoryReviewOpen || state.memoryEditorOwner || state.overlayOpen || state.watchers?.hasPendingSetup()) {
-				notify("Finish the current private archive prompt or Jarvis dialog before opening the model picker.", "warning");
+				notify("Finish the current private archive prompt or Noodle dialog before opening the model picker.", "warning");
 				return undefined;
 			}
 			state.modelPickerOpen = true;
 			try {
 				return await ctx.ui.custom<Model<any> | undefined>(
-					(tui, theme, keybindings, done) => new JarvisModelPicker(
+					(tui, theme, keybindings, done) => new NoodleModelPicker(
 						tui, theme, keybindings, models, (model) => done(model), () => done(undefined), initialSearchInput,
 					),
 				);
@@ -428,51 +431,51 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 		};
 
 		const rollbackSelection = async (
-			previousSelection: JarvisModelSelection,
-			previousSource: JarvisModelSelectionSource,
+			previousSelection: NoodleModelSelection,
+			previousSource: NoodleModelSelectionSource,
 		): Promise<void> => {
-			await applyJarvisModelSelection(state, previousSelection);
+			await applyNoodleModelSelection(state, previousSelection);
 			if (state.queuedMessages !== owner) return;
-			state.jarvisModelSelectionSource = previousSource;
+			state.noodleModelSelectionSource = previousSource;
 		};
 
-		const persistSelection = async (selection: JarvisModelSelection): Promise<void> => withIdleConfiguration(state, async (guard) => {
+		const persistSelection = async (selection: NoodleModelSelection): Promise<void> => withIdleConfiguration(state, async (guard) => {
 			assertOwner();
-			const previousSelection = state.jarvisModelSelection;
-			const previousSource = state.jarvisModelSelectionSource;
-			const stored = toStoredJarvisModelSelection(selection);
-			const resolved = resolveJarvisModelSelectionFromSettings(
-				scope === "project" ? stored : loadJarvisModelSelectionForClear(ctx.cwd, "project", ctx),
-				scope === "global" ? stored : loadJarvisModelSelectionForClear(ctx.cwd, "global", ctx),
+			const previousSelection = state.noodleModelSelection;
+			const previousSource = state.noodleModelSelectionSource;
+			const stored = toStoredNoodleModelSelection(selection);
+			const resolved = resolveNoodleModelSelectionFromSettings(
+				scope === "project" ? stored : loadNoodleModelSelectionForClear(ctx.cwd, "project", ctx),
+				scope === "global" ? stored : loadNoodleModelSelectionForClear(ctx.cwd, "global", ctx),
 				ctx.modelRegistry,
 			);
 			assertOwner();
-			await applyJarvisModelSelection(state, resolved.selection);
+			await applyNoodleModelSelection(state, resolved.selection);
 			try {
 				assertOwner();
 				guard();
-				saveJarvisModelSelectionSetting(ctx.cwd, scope, stored);
-				state.jarvisModelSelectionSource = resolved.source;
+				saveNoodleModelSelectionSetting(ctx.cwd, scope, stored);
+				state.noodleModelSelectionSource = resolved.source;
 			} catch (error) {
 				if (state.queuedMessages === owner) await rollbackSelection(previousSelection, previousSource);
 				throw error;
 			}
 		});
 
-		const clearScopedSelection = async (): Promise<ResolvedJarvisModelSelection> => withIdleConfiguration(state, async (guard) => {
+		const clearScopedSelection = async (): Promise<ResolvedNoodleModelSelection> => withIdleConfiguration(state, async (guard) => {
 			assertOwner();
-			const previousSelection = state.jarvisModelSelection;
-			const previousSource = state.jarvisModelSelectionSource;
-			const projectSelection = scope === "project" ? undefined : loadJarvisModelSelectionForClear(ctx.cwd, "project", ctx);
-			const globalSelection = scope === "global" ? undefined : loadJarvisModelSelectionForClear(ctx.cwd, "global", ctx);
-			const resolvedSelection = resolveJarvisModelSelectionFromSettings(projectSelection, globalSelection, ctx.modelRegistry);
+			const previousSelection = state.noodleModelSelection;
+			const previousSource = state.noodleModelSelectionSource;
+			const projectSelection = scope === "project" ? undefined : loadNoodleModelSelectionForClear(ctx.cwd, "project", ctx);
+			const globalSelection = scope === "global" ? undefined : loadNoodleModelSelectionForClear(ctx.cwd, "global", ctx);
+			const resolvedSelection = resolveNoodleModelSelectionFromSettings(projectSelection, globalSelection, ctx.modelRegistry);
 			assertOwner();
-			await applyJarvisModelSelection(state, resolvedSelection.selection);
+			await applyNoodleModelSelection(state, resolvedSelection.selection);
 			try {
 				assertOwner();
 				guard();
-				clearJarvisModelSelectionSetting(ctx.cwd, scope);
-				state.jarvisModelSelectionSource = resolvedSelection.source;
+				clearNoodleModelSelectionSetting(ctx.cwd, scope);
+				state.noodleModelSelectionSource = resolvedSelection.source;
 				return resolvedSelection;
 			} catch (error) {
 				if (state.queuedMessages === owner) await rollbackSelection(previousSelection, previousSource);
@@ -485,25 +488,25 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 				await persistSelection({ mode: "pinned", model });
 			} catch (error) {
 				notify(
-					`Failed to pin /jarvis to ${formatModelLabel(model)} ${scopeLabel}: ${error instanceof Error ? error.message : String(error)}`,
+					`Failed to pin /noodle to ${formatModelLabel(model)} ${scopeLabel}: ${error instanceof Error ? error.message : String(error)}`,
 					"error",
 				);
 				return;
 			}
 
 			notify(
-				`Saved /jarvis model ${formatModelLabel(model)} ${scopeLabel}. /jarvis is ${describeJarvisModelSelection(state)}. The main model is still ${formatModelLabel(state.model)}.`,
+				`Saved /noodle model ${formatModelLabel(model)} ${scopeLabel}. /noodle is ${describeNoodleModelSelection(state)}. The main model is still ${formatModelLabel(state.model)}.`,
 				"info",
 			);
 		};
 
 		if (clearScope) {
-			let resolvedSelection: ResolvedJarvisModelSelection;
+			let resolvedSelection: ResolvedNoodleModelSelection;
 			try {
 				resolvedSelection = await clearScopedSelection();
 			} catch (error) {
 				notify(
-					`Failed to clear the /jarvis model setting ${scopeLabel}: ${error instanceof Error ? error.message : String(error)}`,
+					`Failed to clear the /noodle model setting ${scopeLabel}: ${error instanceof Error ? error.message : String(error)}`,
 					"error",
 				);
 				return;
@@ -511,12 +514,12 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 
 			if (resolvedSelection.unavailable) {
 				notify(
-					`Configured /jarvis model ${resolvedSelection.unavailable.modelReference} from the ${resolvedSelection.unavailable.scope} setting is unavailable. Falling back to follow-main.`,
+					`Configured /noodle model ${resolvedSelection.unavailable.modelReference} from the ${resolvedSelection.unavailable.scope} setting is unavailable. Falling back to follow-main.`,
 					"warning",
 				);
 			}
 
-			notify(`Cleared the /jarvis model setting ${scopeLabel}. /jarvis is now ${describeJarvisModelSelection(state)}.`, "info");
+			notify(`Cleared the /noodle model setting ${scopeLabel}. /noodle is now ${describeNoodleModelSelection(state)}.`, "info");
 			return;
 		}
 
@@ -525,19 +528,19 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 				await persistSelection({ mode: "follow-main" });
 			} catch (error) {
 				notify(
-					`Failed to switch /jarvis back to follow-main ${scopeLabel}: ${error instanceof Error ? error.message : String(error)}`,
+					`Failed to switch /noodle back to follow-main ${scopeLabel}: ${error instanceof Error ? error.message : String(error)}`,
 					"error",
 				);
 				return;
 			}
-			notify(`Saved follow-main ${scopeLabel}. /jarvis is ${describeJarvisModelSelection(state)}.`, "info");
+			notify(`Saved follow-main ${scopeLabel}. /noodle is ${describeNoodleModelSelection(state)}.`, "info");
 			return;
 		}
 
 		if (!request) {
 			if (ctx.mode !== "tui") {
 				notify(
-					`/jarvis is ${describeJarvisModelSelection(state)}. Use /jarvis-model [--project|--global] clear, /jarvis-model [--project|--global] follow-main, or /jarvis-model [--project|--global] <provider/model>.`,
+					`/noodle is ${describeNoodleModelSelection(state)}. Use /noodle-model [--project|--global] clear, /noodle-model [--project|--global] follow-main, or /noodle-model [--project|--global] <provider/model>.`,
 					"info",
 				);
 				return;
@@ -562,8 +565,8 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 		if (ctx.mode !== "tui") {
 			const errorMessage =
 				availableModels.length === 0
-					? "No /jarvis models are currently available from the main model registry."
-					: `Unknown /jarvis model "${request}". Use /jarvis-model [--project|--global] clear, /jarvis-model [--project|--global] follow-main, or an exact provider/model from the current model registry.`;
+					? "No /noodle models are currently available from the main model registry."
+					: `Unknown /noodle model "${request}". Use /noodle-model [--project|--global] clear, /noodle-model [--project|--global] follow-main, or an exact provider/model from the current model registry.`;
 			notify(errorMessage, "error");
 			return;
 		}
@@ -575,8 +578,8 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 		await pinSelectedModel(selectedModel);
 	};
 
-	pi.registerCommand("jarvis-model", {
-		description: "Set the model used by /jarvis without changing the main agent model",
+	pi.registerCommand("noodle-model", {
+		description: "Set the model used by /noodle without changing the main agent model",
 		handler: configureModel,
 	});
 
@@ -591,75 +594,75 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 		};
 		const assertOwner = () => {
 			if (state.queuedMessages !== owner || isArchiveSecretPromptActive() || state.memoryEditorOwner || (embedded && (superseded() || state.overlayOwner !== interaction || !state.overlayOpen))) {
-				throw new Error("/jarvis configuration owner changed; submit again in the current session.");
+				throw new Error("/noodle configuration owner changed; submit again in the current session.");
 			}
 		};
 		updateContextState(pi, state, ctx);
 		if (isArchiveSecretPromptActive() || state.memoryEditorOwner || state.watchers?.hasPendingSetup()) {
-			notify("Finish private input, memory editing, or watcher launch review before configuring Jarvis.", "warning");
+			notify("Finish private input, memory editing, or watcher launch review before configuring Noodle.", "warning");
 			return;
 		}
 
-		let parsedCommand: ParsedJarvisThinkingCommand;
+		let parsedCommand: ParsedNoodleThinkingCommand;
 		try {
-			parsedCommand = parseJarvisThinkingCommand(args);
+			parsedCommand = parseNoodleThinkingCommand(args);
 		} catch (error) {
 			notify(error instanceof Error ? error.message : String(error), "error");
 			return;
 		}
 
 		const { request, scope, clearScope } = parsedCommand;
-		const scopeLabel = formatJarvisModelSelectionScope(scope);
-		if (request && isJarvisBusy(state)) {
-			notify("/jarvis is busy. Wait or use /jarvis stop, then retry model/thinking selection.", "warning");
+		const scopeLabel = formatNoodleModelSelectionScope(scope);
+		if (request && isNoodleBusy(state)) {
+			notify("/noodle is busy. Wait or use /noodle stop, then retry model/thinking selection.", "warning");
 			return;
 		}
 		if (embedded) { embeddedThinkingRequest = requestToken; accepted = true; }
 
 		const rollbackSelection = async (
-			previousSelection: JarvisThinkingSelection,
-			previousSource: JarvisThinkingSelectionSource,
+			previousSelection: NoodleThinkingSelection,
+			previousSource: NoodleThinkingSelectionSource,
 		): Promise<void> => {
-			await applyJarvisThinkingSelection(state, previousSelection);
+			await applyNoodleThinkingSelection(state, previousSelection);
 			if (state.queuedMessages !== owner) return;
-			state.jarvisThinkingSelectionSource = previousSource;
+			state.noodleThinkingSelectionSource = previousSource;
 		};
 
-		const persistSelection = async (selection: JarvisThinkingSelection): Promise<void> => withIdleConfiguration(state, async (guard) => {
+		const persistSelection = async (selection: NoodleThinkingSelection): Promise<void> => withIdleConfiguration(state, async (guard) => {
 			assertOwner();
-			const previousSelection = state.jarvisThinkingSelection;
-			const previousSource = state.jarvisThinkingSelectionSource;
-			const resolved = resolveJarvisThinkingSelectionFromSettings(
-				scope === "project" ? selection : loadJarvisThinkingSelectionForClear(ctx.cwd, "project", ctx),
-				scope === "global" ? selection : loadJarvisThinkingSelectionForClear(ctx.cwd, "global", ctx),
+			const previousSelection = state.noodleThinkingSelection;
+			const previousSource = state.noodleThinkingSelectionSource;
+			const resolved = resolveNoodleThinkingSelectionFromSettings(
+				scope === "project" ? selection : loadNoodleThinkingSelectionForClear(ctx.cwd, "project", ctx),
+				scope === "global" ? selection : loadNoodleThinkingSelectionForClear(ctx.cwd, "global", ctx),
 			);
 			assertOwner();
-			await applyJarvisThinkingSelection(state, resolved.selection);
+			await applyNoodleThinkingSelection(state, resolved.selection);
 			try {
 				assertOwner();
 				guard();
-				saveJarvisThinkingSelectionSetting(ctx.cwd, scope, selection);
-				state.jarvisThinkingSelectionSource = resolved.source;
+				saveNoodleThinkingSelectionSetting(ctx.cwd, scope, selection);
+				state.noodleThinkingSelectionSource = resolved.source;
 			} catch (error) {
 				if (state.queuedMessages === owner) await rollbackSelection(previousSelection, previousSource);
 				throw error;
 			}
 		});
 
-		const clearScopedSelection = async (): Promise<ResolvedJarvisThinkingSelection> => withIdleConfiguration(state, async (guard) => {
+		const clearScopedSelection = async (): Promise<ResolvedNoodleThinkingSelection> => withIdleConfiguration(state, async (guard) => {
 			assertOwner();
-			const previousSelection = state.jarvisThinkingSelection;
-			const previousSource = state.jarvisThinkingSelectionSource;
-			const projectSelection = scope === "project" ? undefined : loadJarvisThinkingSelectionForClear(ctx.cwd, "project", ctx);
-			const globalSelection = scope === "global" ? undefined : loadJarvisThinkingSelectionForClear(ctx.cwd, "global", ctx);
-			const resolvedSelection = resolveJarvisThinkingSelectionFromSettings(projectSelection, globalSelection);
+			const previousSelection = state.noodleThinkingSelection;
+			const previousSource = state.noodleThinkingSelectionSource;
+			const projectSelection = scope === "project" ? undefined : loadNoodleThinkingSelectionForClear(ctx.cwd, "project", ctx);
+			const globalSelection = scope === "global" ? undefined : loadNoodleThinkingSelectionForClear(ctx.cwd, "global", ctx);
+			const resolvedSelection = resolveNoodleThinkingSelectionFromSettings(projectSelection, globalSelection);
 			assertOwner();
-			await applyJarvisThinkingSelection(state, resolvedSelection.selection);
+			await applyNoodleThinkingSelection(state, resolvedSelection.selection);
 			try {
 				assertOwner();
 				guard();
-				clearJarvisThinkingSelectionSetting(ctx.cwd, scope);
-				state.jarvisThinkingSelectionSource = resolvedSelection.source;
+				clearNoodleThinkingSelectionSetting(ctx.cwd, scope);
+				state.noodleThinkingSelectionSource = resolvedSelection.source;
 				return resolvedSelection;
 			} catch (error) {
 				if (state.queuedMessages === owner) await rollbackSelection(previousSelection, previousSource);
@@ -672,28 +675,28 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 				await clearScopedSelection();
 			} catch (error) {
 				notify(
-					`Failed to clear the /jarvis thinking setting ${scopeLabel}: ${error instanceof Error ? error.message : String(error)}`,
+					`Failed to clear the /noodle thinking setting ${scopeLabel}: ${error instanceof Error ? error.message : String(error)}`,
 					"error",
 				);
 				return;
 			}
-			notify(`Cleared the /jarvis thinking setting ${scopeLabel}. /jarvis is now ${describeJarvisThinkingSelection(state)}.`, "info");
+			notify(`Cleared the /noodle thinking setting ${scopeLabel}. /noodle is now ${describeNoodleThinkingSelection(state)}.`, "info");
 			return;
 		}
 
 		const normalizedRequest = request.toLowerCase();
-		let selection: JarvisThinkingSelection | undefined;
+		let selection: NoodleThinkingSelection | undefined;
 		if (normalizedRequest === "auto") {
 			selection = { mode: "auto" };
 		} else if (normalizedRequest === "follow-main") {
 			selection = { mode: "follow-main" };
-		} else if (isJarvisThinkingLevel(normalizedRequest)) {
+		} else if (isNoodleThinkingLevel(normalizedRequest)) {
 			selection = { mode: "pinned", thinkingLevel: normalizedRequest };
 		}
 
 		if (!selection) {
 			notify(
-				`/jarvis is ${describeJarvisThinkingSelection(state)}. Use /jarvis-thinking [--project|--global] clear, auto, follow-main, off, minimal, low, medium, high, xhigh, or max.`,
+				`/noodle is ${describeNoodleThinkingSelection(state)}. Use /noodle-thinking [--project|--global] clear, auto, follow-main, off, minimal, low, medium, high, xhigh, or max.`,
 				request ? "error" : "info",
 			);
 			return;
@@ -703,27 +706,27 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 			await persistSelection(selection);
 		} catch (error) {
 			notify(
-				`Failed to set /jarvis thinking ${scopeLabel}: ${error instanceof Error ? error.message : String(error)}`,
+				`Failed to set /noodle thinking ${scopeLabel}: ${error instanceof Error ? error.message : String(error)}`,
 				"error",
 			);
 			return;
 		}
 
-		notify(`Set /jarvis thinking to ${formatJarvisThinkingSelection(selection)} ${scopeLabel}. Effective /jarvis thinking is ${state.runtime?.getThinkingLevel?.() ?? getDesiredJarvisThinkingLevel(state) ?? "off"}.`, "info");
+		notify(`Set /noodle thinking to ${formatNoodleThinkingSelection(selection)} ${scopeLabel}. Effective /noodle thinking is ${state.runtime?.getThinkingLevel?.() ?? getDesiredNoodleThinkingLevel(state) ?? "off"}.`, "info");
 	};
 
-	pi.registerCommand("jarvis-thinking", {
-		description: "Set the thinking level used by /jarvis without changing the main agent thinking level",
+	pi.registerCommand("noodle-thinking", {
+		description: "Set the thinking level used by /noodle without changing the main agent thinking level",
 		handler: configureThinking,
 	});
 
-	pi.registerCommand("jarvis-archive", {
+	pi.registerCommand("noodle-archive", {
 		description: "Optional full-session archive: controls, indexed search, explicit import and deletion (help for syntax)",
 		handler: async (args, ctx) => { await dispatchArchiveCommand(state, args, ctx, false); },
 	});
 
-	pi.registerCommand("jarvis-memory", {
-		description: "Shared main Pi/Jarvis memory: editor, status, on/off, capture/recall, search, remember, edit, forget (help for syntax)",
+	pi.registerCommand("noodle-memory", {
+		description: "Shared main Pi/Noodle memory: editor, status, on/off, capture/recall, search, remember, edit, forget (help for syntax)",
 		handler: async (args, ctx) => { await dispatchMemoryCommand(state, args, ctx, false); },
 	});
 
@@ -763,38 +766,38 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 		state.configuring = undefined;
 		state.queuedMessages = [];
 		state.bridge.refresh();
-		state.lastJarvisSeenMainContext = undefined;
+		state.lastNoodleSeenMainContext = undefined;
 		state.allowSideTools = false;
 		state.allowFollowUpToMain = false;
 		state.allowSteerToMain = false;
 		state.mainSession.reset(formatModelLabel(ctx.model));
 		const branchEntries = ctx.sessionManager.getBranch();
-		state.sessionRef = readJarvisSessionRef(branchEntries);
+		state.sessionRef = readNoodleSessionRef(branchEntries, getAgentDir());
 
-		let resolvedSelection: ResolvedJarvisModelSelection = {
+		let resolvedSelection: ResolvedNoodleModelSelection = {
 			selection: { mode: "follow-main" },
 			source: "default",
 		};
-		let resolvedThinkingSelection: ResolvedJarvisThinkingSelection = {
+		let resolvedThinkingSelection: ResolvedNoodleThinkingSelection = {
 			selection: { mode: "auto" },
 			source: "default",
 		};
-		resolvedSelection = resolveConfiguredJarvisModelSelection(ctx.cwd, ctx.modelRegistry, (scope, error) => {
-			ctx.ui.notify(`Failed to load the ${scope} /jarvis model setting: ${error instanceof Error ? error.message : String(error)}`, "error");
+		resolvedSelection = resolveConfiguredNoodleModelSelection(ctx.cwd, ctx.modelRegistry, (scope, error) => {
+			ctx.ui.notify(`Failed to load the ${scope} /noodle model setting: ${error instanceof Error ? error.message : String(error)}`, "error");
 		});
-		resolvedThinkingSelection = resolveConfiguredJarvisThinkingSelection(ctx.cwd, (scope, error) => {
-			ctx.ui.notify(`Failed to load the ${scope} /jarvis thinking setting: ${error instanceof Error ? error.message : String(error)}`, "error");
+		resolvedThinkingSelection = resolveConfiguredNoodleThinkingSelection(ctx.cwd, (scope, error) => {
+			ctx.ui.notify(`Failed to load the ${scope} /noodle thinking setting: ${error instanceof Error ? error.message : String(error)}`, "error");
 		});
 
-		state.jarvisModelSelection = resolvedSelection.selection;
-		state.jarvisModelSelectionSource = resolvedSelection.source;
-		state.jarvisThinkingSelection = resolvedThinkingSelection.selection;
-		state.jarvisThinkingSelectionSource = resolvedThinkingSelection.source;
+		state.noodleModelSelection = resolvedSelection.selection;
+		state.noodleModelSelectionSource = resolvedSelection.source;
+		state.noodleThinkingSelection = resolvedThinkingSelection.selection;
+		state.noodleThinkingSelectionSource = resolvedThinkingSelection.source;
 		updateContextState(pi, state, ctx);
 		enforceCompatibilityGuard(state);
 		if (resolvedSelection.unavailable) {
 			ctx.ui.notify(
-				`Configured /jarvis model ${resolvedSelection.unavailable.modelReference} from the ${resolvedSelection.unavailable.scope} setting is unavailable. /jarvis is now ${describeJarvisModelSelection(state)}.`,
+				`Configured /noodle model ${resolvedSelection.unavailable.modelReference} from the ${resolvedSelection.unavailable.scope} setting is unavailable. /noodle is now ${describeNoodleModelSelection(state)}.`,
 				"warning",
 			);
 		}
@@ -822,7 +825,7 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 
 	pi.on("session_tree", async (_event, ctx) => {
 		invalidateMemoryEditor(state);
-		const sessionRef = readJarvisSessionRef(ctx.sessionManager.getBranch());
+		const sessionRef = readNoodleSessionRef(ctx.sessionManager.getBranch(), getAgentDir());
 		if (sessionRef?.file !== state.sessionRef?.file) {
 			state.archive.cancelImports();
 			state.runtime?.flushArchive?.();
@@ -836,7 +839,7 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 			state.configuring = undefined;
 			state.queuedMessages = [];
 			state.bridge.refresh();
-			state.lastJarvisSeenMainContext = undefined;
+			state.lastNoodleSeenMainContext = undefined;
 			state.sessionRef = sessionRef;
 			resetTransientAccessControls(state);
 			state.bridge.reset();
@@ -883,14 +886,14 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 		enforceCompatibilityGuard(state);
 		if (
 			!state.runtime ||
-			(state.jarvisModelSelection.mode !== "follow-main" && state.jarvisThinkingSelection.mode !== "follow-main")
+			(state.noodleModelSelection.mode !== "follow-main" && state.noodleThinkingSelection.mode !== "follow-main")
 		) {
 			return;
 		}
 		try {
 			await syncRuntimeModelSelection(state);
 		} catch (error) {
-			state.bridge.notify(`Failed to sync /jarvis model: ${error instanceof Error ? error.message : String(error)}`, "error");
+			state.bridge.notify(`Failed to sync /noodle model: ${error instanceof Error ? error.message : String(error)}`, "error");
 		}
 	});
 
@@ -899,7 +902,7 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 		try {
 			await syncRuntimeModelSelection(state);
 		} catch (error) {
-			state.bridge.notify(`Failed to sync /jarvis thinking: ${error instanceof Error ? error.message : String(error)}`, "error");
+			state.bridge.notify(`Failed to sync /noodle thinking: ${error instanceof Error ? error.message : String(error)}`, "error");
 		}
 	});
 
@@ -924,11 +927,11 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 		state.configuring = undefined;
 		state.queuedMessages = [];
 		state.bridge.refresh();
-		state.lastJarvisSeenMainContext = undefined;
-		state.jarvisModelSelection = { mode: "follow-main" };
-		state.jarvisModelSelectionSource = "default";
-		state.jarvisThinkingSelection = { mode: "auto" };
-		state.jarvisThinkingSelectionSource = "default";
+		state.lastNoodleSeenMainContext = undefined;
+		state.noodleModelSelection = { mode: "follow-main" };
+		state.noodleModelSelectionSource = "default";
+		state.noodleThinkingSelection = { mode: "auto" };
+		state.noodleThinkingSelectionSource = "default";
 		state.allowSideTools = false;
 		state.allowFollowUpToMain = false;
 		state.allowSteerToMain = false;
@@ -968,7 +971,7 @@ export default function jarvisExtension(pi: ExtensionAPI): void {
 	// awaited dispatch boundary; optional watchers must never precede it.
 	state.watchers = createWatcherExtension(pi, getAgentDir(), {
 		available: () => !isArchiveSecretPromptActive() && !state.memoryEditorOwner && !state.modelPickerOpen && !state.memoryReviewOpen && !state.overlayOpen,
-		notify: (text, level, ctx) => { if (state.overlayOpen) state.bridge.notify(text, level); else if (ctx.hasUI) ctx.ui.notify(text, level); else process.stderr.write(`[pi-jarvis] ${text}\n`); },
+		notify: (text, level, ctx) => { if (state.overlayOpen) state.bridge.notify(text, level); else if (ctx.hasUI) ctx.ui.notify(text, level); else process.stderr.write(`[pi-noodle] ${text}\n`); },
 	});
 }
 
@@ -1010,7 +1013,7 @@ function checkTransientTrust(state: MainState): boolean {
 	return trusted;
 }
 
-const MAIN_STATUS_KEY = "jarvis-background";
+const MAIN_STATUS_KEY = "noodle-background";
 function clearMainStatus(state: MainState): void {
 	try { state.statusContext?.ui.setStatus?.(MAIN_STATUS_KEY, undefined); } catch { /* Retired UI may be unavailable. */ }
 	state.statusContext = undefined;
@@ -1019,9 +1022,9 @@ function bindMainStatus(state: MainState, ctx: ExtensionContext): void {
 	if (state.statusContext && state.statusContext.ui !== ctx.ui) clearMainStatus(state);
 	state.statusContext = ctx;
 }
-function describeJarvisActivity(state: MainState): string {
+function describeNoodleActivity(state: MainState): string {
 	const activity = state.stopPromise ? "stopping" : state.bootPromise ? "starting" : state.flushPromise || state.runtime?.isStreaming() ? "working" : "idle";
-	return `Jarvis ${state.overlayOpen ? "open" : "closed"} · ${activity} · ${state.queuedMessages.length} queued · Repo tools ${state.allowSideTools ? "ON" : "off"} · Note main ${state.allowFollowUpToMain ? "ON" : "off"} · Redirect ${state.allowSteerToMain ? "ON (foreground confirm)" : "off"}`;
+	return `Noodle ${state.overlayOpen ? "open" : "closed"} · ${activity} · ${state.queuedMessages.length} queued · Repo tools ${state.allowSideTools ? "ON" : "off"} · Note main ${state.allowFollowUpToMain ? "ON" : "off"} · Redirect ${state.allowSteerToMain ? "ON (foreground confirm)" : "off"}`;
 }
 function refreshMainStatus(state: MainState): void {
 	if (!state.statusContext) return;
@@ -1031,22 +1034,22 @@ function refreshMainStatus(state: MainState): void {
 		if (typeof state.statusContext.ui.setStatus === "function") {
 			const activity = state.stopPromise ? "stopping" : state.bootPromise ? "starting" : state.flushPromise || state.runtime?.isStreaming() ? "working" : "idle";
 			// Prioritize all three grants before optional controls on an 80-column footer.
-			const footer = `Jarvis ${state.overlayOpen ? "open" : "bg"} ${activity} · q${state.queuedMessages.length} · repo ${state.allowSideTools ? "ON" : "off"} · note ${state.allowFollowUpToMain ? "ON" : "off"} · redirect ${state.allowSteerToMain ? "ASK" : "off"} · /jarvis stop`;
+			const footer = `Noodle ${state.overlayOpen ? "open" : "bg"} ${activity} · q${state.queuedMessages.length} · repo ${state.allowSideTools ? "ON" : "off"} · note ${state.allowFollowUpToMain ? "ON" : "off"} · redirect ${state.allowSteerToMain ? "ASK" : "off"} · /noodle stop`;
 			state.statusContext.ui.setStatus(MAIN_STATUS_KEY, visible ? footer : undefined);
 		}
 	} catch { /* Footer presentation must not interfere with running work. */ }
 }
 
-function isJarvisBusy(state: MainState): boolean {
+function isNoodleBusy(state: MainState): boolean {
 	return Boolean(state.bootPromise || state.flushPromise || state.stopPromise || state.configuring || state.runtime?.isStreaming() || state.queuedMessages.length);
 }
 async function withIdleConfiguration<T>(state: MainState, operation: (guard: () => void) => Promise<T>): Promise<T> {
-	if (isJarvisBusy(state)) throw new Error("/jarvis is busy. Wait or use /jarvis stop, then retry model/thinking selection.");
+	if (isNoodleBusy(state)) throw new Error("/noodle is busy. Wait or use /noodle stop, then retry model/thinking selection.");
 	const owner = state.queuedMessages, token = {};
 	state.configuring = token;
 	const guard = () => {
-		if (state.queuedMessages !== owner || state.configuring !== token) throw new Error("/jarvis configuration owner changed.");
-		if (state.bootPromise || state.flushPromise || state.stopPromise || state.runtime?.isStreaming()) throw new Error("/jarvis became busy. Stop/wait, then retry configuration.");
+		if (state.queuedMessages !== owner || state.configuring !== token) throw new Error("/noodle configuration owner changed.");
+		if (state.bootPromise || state.flushPromise || state.stopPromise || state.runtime?.isStreaming()) throw new Error("/noodle became busy. Stop/wait, then retry configuration.");
 	};
 	try { guard(); return await operation(guard); }
 	finally { if (state.configuring === token) { state.configuring = undefined; state.bridge.refresh(); } }
@@ -1055,7 +1058,7 @@ async function withIdleConfiguration<T>(state: MainState, operation: (guard: () 
 type LocalControl = "status" | "stop" | "access off";
 function parseLocalControl(text: string, allowBare = false): LocalControl | undefined {
 	const input = text.trim().replace(/\s+/g, " ").toLowerCase();
-	const match = /^\/(?:jarvis )?(status|stop|access off)$/.exec(input);
+	const match = /^\/(?:noodle )?(status|stop|access off)$/.exec(input);
 	if (match) return match[1] as LocalControl;
 	return allowBare && ["status", "stop", "access off"].includes(input) ? input as LocalControl : undefined;
 }
@@ -1067,13 +1070,13 @@ async function dispatchLocalControl(state: MainState, control: LocalControl, ctx
 	let text: string;
 	try {
 		if (control === "stop") {
-			await cancelJarvisWork(state);
-			text = "Stopped /jarvis work; waiting inputs discarded. Already-started external effects cannot be rolled back.";
+			await cancelNoodleWork(state);
+			text = "Stopped /noodle work; waiting inputs discarded. Already-started external effects cannot be rolled back.";
 		} else if (control === "access off") {
 			resetTransientAccessControls(state);
-			text = "Jarvis Repo tools, Note main and Redirect access off; pending confirmations cancelled. Already-started external effects cannot be rolled back.";
+			text = "Noodle Repo tools, Note main and Redirect access off; pending confirmations cancelled. Already-started external effects cannot be rolled back.";
 		} else {
-			text = `${describeJarvisActivity(state)}. Close/reopen preserves work and access for this owner. /jarvis stop cancels work; /jarvis access off revokes the three grants. Background work ends on owner replacement/reload/quit, not a daemon.\nMain watchers (independent): ${state.watchers?.status() ?? "unavailable"}`;
+			text = `${describeNoodleActivity(state)}. Close/reopen preserves work and access for this owner. /noodle stop cancels work; /noodle access off revokes the three grants. Background work ends on owner replacement/reload/quit, not a daemon.\nMain watchers (independent): ${state.watchers?.status() ?? "unavailable"}`;
 		}
 		if (state.queuedMessages !== owner) return;
 		if (overlay) state.bridge.notify(text, "info");
@@ -1081,14 +1084,14 @@ async function dispatchLocalControl(state: MainState, control: LocalControl, ctx
 		else process.stderr.write(`${text}\n`);
 	} catch (error) {
 		if (state.queuedMessages !== owner) return;
-		const message = `Failed to stop /jarvis: ${error instanceof Error ? error.message : String(error)}. Waiting inputs were discarded; nothing was retried.`;
+		const message = `Failed to stop /noodle: ${error instanceof Error ? error.message : String(error)}. Waiting inputs were discarded; nothing was retried.`;
 		if (overlay) state.bridge.notify(message, "error");
 		else if (ctx.hasUI) ctx.ui.notify(message, "error");
 		else process.stderr.write(`${message}\n`);
 	}
 	state.bridge.refresh();
 }
-function cancelJarvisWork(state: MainState): Promise<void> {
+function cancelNoodleWork(state: MainState): Promise<void> {
 	if (state.stopPromise) return state.stopPromise;
 	const owner = state.queuedMessages, boot = state.bootPromise, flush = state.flushPromise;
 	state.workGeneration += 1;
@@ -1114,31 +1117,31 @@ function cancelJarvisWork(state: MainState): Promise<void> {
 	return stopping;
 }
 
-function getDesiredJarvisModel(state: MainState): Model<any> | undefined {
-	return state.jarvisModelSelection.mode === "pinned" ? state.jarvisModelSelection.model : state.model;
+function getDesiredNoodleModel(state: MainState): Model<any> | undefined {
+	return state.noodleModelSelection.mode === "pinned" ? state.noodleModelSelection.model : state.model;
 }
 
-function getDesiredJarvisThinkingLevel(state: MainState): string | undefined {
-	const desiredModel = getDesiredJarvisModel(state);
+function getDesiredNoodleThinkingLevel(state: MainState): string | undefined {
+	const desiredModel = getDesiredNoodleModel(state);
 	if (desiredModel?.provider === "xai") {
 		return "off";
 	}
-	if (state.jarvisThinkingSelection.mode === "pinned") {
-		return state.jarvisThinkingSelection.thinkingLevel;
+	if (state.noodleThinkingSelection.mode === "pinned") {
+		return state.noodleThinkingSelection.thinkingLevel;
 	}
-	if (state.jarvisThinkingSelection.mode === "follow-main") {
+	if (state.noodleThinkingSelection.mode === "follow-main") {
 		return state.thinkingLevel;
 	}
-	return state.jarvisModelSelection.mode === "follow-main" ? state.thinkingLevel : "off";
+	return state.noodleModelSelection.mode === "follow-main" ? state.thinkingLevel : "off";
 }
 
-function toStoredJarvisModelSelection(selection: JarvisModelSelection): StoredJarvisModelSelection {
+function toStoredNoodleModelSelection(selection: NoodleModelSelection): StoredNoodleModelSelection {
 	return selection.mode === "follow-main"
 		? { mode: "follow-main" }
 		: { mode: "pinned", provider: selection.model.provider, modelId: selection.model.id };
 }
 
-function formatJarvisModelSelectionSource(source: JarvisModelSelectionSource): string {
+function formatNoodleModelSelectionSource(source: NoodleModelSelectionSource): string {
 	if (source === "project") {
 		return "project setting";
 	}
@@ -1148,13 +1151,13 @@ function formatJarvisModelSelectionSource(source: JarvisModelSelectionSource): s
 	return "default";
 }
 
-function formatJarvisModelSelectionScope(scope: JarvisModelSelectionScope): string {
+function formatNoodleModelSelectionScope(scope: NoodleModelSelectionScope): string {
 	return scope === "project" ? "for this project" : "globally";
 }
 
-function parseJarvisModelCommand(args: string): ParsedJarvisModelCommand {
+function parseNoodleModelCommand(args: string): ParsedNoodleModelCommand {
 	const tokens = args.trim().split(/\s+/).filter(Boolean);
-	let scope: JarvisModelSelectionScope = "project";
+	let scope: NoodleModelSelectionScope = "project";
 	let scopeExplicitlySet = false;
 	const requestTokens: string[] = [];
 
@@ -1178,8 +1181,8 @@ function parseJarvisModelCommand(args: string): ParsedJarvisModelCommand {
 	};
 }
 
-function parseJarvisThinkingCommand(args: string): ParsedJarvisThinkingCommand {
-	const parsed = parseJarvisModelCommand(args);
+function parseNoodleThinkingCommand(args: string): ParsedNoodleThinkingCommand {
+	const parsed = parseNoodleModelCommand(args);
 	return {
 		request: parsed.request,
 		scope: parsed.scope,
@@ -1187,11 +1190,11 @@ function parseJarvisThinkingCommand(args: string): ParsedJarvisThinkingCommand {
 	};
 }
 
-function isJarvisThinkingLevel(value: string): value is JarvisThinkingLevel {
+function isNoodleThinkingLevel(value: string): value is NoodleThinkingLevel {
 	return value === "off" || value === "minimal" || value === "low" || value === "medium" || value === "high" || value === "xhigh" || value === "max";
 }
 
-function formatJarvisThinkingSelection(selection: JarvisThinkingSelection): string {
+function formatNoodleThinkingSelection(selection: NoodleThinkingSelection): string {
 	if (selection.mode === "auto") {
 		return "auto";
 	}
@@ -1201,16 +1204,16 @@ function formatJarvisThinkingSelection(selection: JarvisThinkingSelection): stri
 	return selection.thinkingLevel;
 }
 
-function describeJarvisThinkingSelection(state: MainState): string {
-	const sourceLabel = formatJarvisModelSelectionSource(state.jarvisThinkingSelectionSource);
-	return `thinking ${formatJarvisThinkingSelection(state.jarvisThinkingSelection)} (effective ${state.runtime?.getThinkingLevel?.() ?? getDesiredJarvisThinkingLevel(state) ?? "off"}; ${sourceLabel})`;
+function describeNoodleThinkingSelection(state: MainState): string {
+	const sourceLabel = formatNoodleModelSelectionSource(state.noodleThinkingSelectionSource);
+	return `thinking ${formatNoodleThinkingSelection(state.noodleThinkingSelection)} (effective ${state.runtime?.getThinkingLevel?.() ?? getDesiredNoodleThinkingLevel(state) ?? "off"}; ${sourceLabel})`;
 }
 
-function resolveStoredJarvisModelSelection(
-	storedSelection: StoredJarvisModelSelection,
-	source: JarvisModelSelectionSource,
+function resolveStoredNoodleModelSelection(
+	storedSelection: StoredNoodleModelSelection,
+	source: NoodleModelSelectionSource,
 	modelRegistry: ExtensionContext["modelRegistry"],
-): ResolvedJarvisModelSelection {
+): ResolvedNoodleModelSelection {
 	if (storedSelection.mode === "follow-main") {
 		return {
 			selection: { mode: "follow-main" },
@@ -1236,18 +1239,18 @@ function resolveStoredJarvisModelSelection(
 	};
 }
 
-function resolveJarvisModelSelectionFromSettings(
-	projectSelection: StoredJarvisModelSelection | undefined,
-	globalSelection: StoredJarvisModelSelection | undefined,
+function resolveNoodleModelSelectionFromSettings(
+	projectSelection: StoredNoodleModelSelection | undefined,
+	globalSelection: StoredNoodleModelSelection | undefined,
 	modelRegistry: ExtensionContext["modelRegistry"],
-): ResolvedJarvisModelSelection {
+): ResolvedNoodleModelSelection {
 	if (projectSelection) {
-		const resolvedProjectSelection = resolveStoredJarvisModelSelection(projectSelection, "project", modelRegistry);
+		const resolvedProjectSelection = resolveStoredNoodleModelSelection(projectSelection, "project", modelRegistry);
 		if (!resolvedProjectSelection.unavailable) {
 			return resolvedProjectSelection;
 		}
 		if (globalSelection) {
-			const resolvedGlobalSelection = resolveStoredJarvisModelSelection(globalSelection, "global", modelRegistry);
+			const resolvedGlobalSelection = resolveStoredNoodleModelSelection(globalSelection, "global", modelRegistry);
 			if (!resolvedGlobalSelection.unavailable) {
 				return {
 					...resolvedGlobalSelection,
@@ -1258,7 +1261,7 @@ function resolveJarvisModelSelectionFromSettings(
 		return resolvedProjectSelection;
 	}
 	if (globalSelection) {
-		return resolveStoredJarvisModelSelection(globalSelection, "global", modelRegistry);
+		return resolveStoredNoodleModelSelection(globalSelection, "global", modelRegistry);
 	}
 	return {
 		selection: { mode: "follow-main" },
@@ -1266,33 +1269,33 @@ function resolveJarvisModelSelectionFromSettings(
 	};
 }
 
-function resolveConfiguredJarvisModelSelection(
+function resolveConfiguredNoodleModelSelection(
 	cwd: string,
 	modelRegistry: ExtensionContext["modelRegistry"],
-	onScopeError?: (scope: JarvisModelSelectionScope, error: unknown) => void,
-): ResolvedJarvisModelSelection {
-	let projectSelection: StoredJarvisModelSelection | undefined;
-	let globalSelection: StoredJarvisModelSelection | undefined;
+	onScopeError?: (scope: NoodleModelSelectionScope, error: unknown) => void,
+): ResolvedNoodleModelSelection {
+	let projectSelection: StoredNoodleModelSelection | undefined;
+	let globalSelection: StoredNoodleModelSelection | undefined;
 
 	try {
-		projectSelection = loadJarvisModelSelectionSetting(cwd, "project");
+		projectSelection = loadNoodleModelSelectionSetting(cwd, "project");
 	} catch (error) {
 		onScopeError?.("project", error);
 	}
 
 	try {
-		globalSelection = loadJarvisModelSelectionSetting(cwd, "global");
+		globalSelection = loadNoodleModelSelectionSetting(cwd, "global");
 	} catch (error) {
 		onScopeError?.("global", error);
 	}
 
-	return resolveJarvisModelSelectionFromSettings(projectSelection, globalSelection, modelRegistry);
+	return resolveNoodleModelSelectionFromSettings(projectSelection, globalSelection, modelRegistry);
 }
 
-function resolveJarvisThinkingSelectionFromSettings(
-	projectSelection: StoredJarvisThinkingSelection | undefined,
-	globalSelection: StoredJarvisThinkingSelection | undefined,
-): ResolvedJarvisThinkingSelection {
+function resolveNoodleThinkingSelectionFromSettings(
+	projectSelection: StoredNoodleThinkingSelection | undefined,
+	globalSelection: StoredNoodleThinkingSelection | undefined,
+): ResolvedNoodleThinkingSelection {
 	if (projectSelection) {
 		return { selection: projectSelection, source: "project" };
 	}
@@ -1302,52 +1305,52 @@ function resolveJarvisThinkingSelectionFromSettings(
 	return { selection: { mode: "auto" }, source: "default" };
 }
 
-function resolveConfiguredJarvisThinkingSelection(
+function resolveConfiguredNoodleThinkingSelection(
 	cwd: string,
-	onScopeError?: (scope: JarvisModelSelectionScope, error: unknown) => void,
-): ResolvedJarvisThinkingSelection {
-	let projectSelection: StoredJarvisThinkingSelection | undefined;
-	let globalSelection: StoredJarvisThinkingSelection | undefined;
+	onScopeError?: (scope: NoodleModelSelectionScope, error: unknown) => void,
+): ResolvedNoodleThinkingSelection {
+	let projectSelection: StoredNoodleThinkingSelection | undefined;
+	let globalSelection: StoredNoodleThinkingSelection | undefined;
 
 	try {
-		projectSelection = loadJarvisThinkingSelectionSetting(cwd, "project");
+		projectSelection = loadNoodleThinkingSelectionSetting(cwd, "project");
 	} catch (error) {
 		onScopeError?.("project", error);
 	}
 
 	try {
-		globalSelection = loadJarvisThinkingSelectionSetting(cwd, "global");
+		globalSelection = loadNoodleThinkingSelectionSetting(cwd, "global");
 	} catch (error) {
 		onScopeError?.("global", error);
 	}
 
-	return resolveJarvisThinkingSelectionFromSettings(projectSelection, globalSelection);
+	return resolveNoodleThinkingSelectionFromSettings(projectSelection, globalSelection);
 }
 
-function loadJarvisModelSelectionForClear(
+function loadNoodleModelSelectionForClear(
 	cwd: string,
-	scope: JarvisModelSelectionScope,
+	scope: NoodleModelSelectionScope,
 	ctx: ExtensionCommandContext,
-): StoredJarvisModelSelection | undefined {
+): StoredNoodleModelSelection | undefined {
 	try {
-		return loadJarvisModelSelectionSetting(cwd, scope);
+		return loadNoodleModelSelectionSetting(cwd, scope);
 	} catch (error) {
-		if (!(error instanceof MalformedJarvisConfigError)) throw error;
-		ctx.ui.notify(`Ignoring malformed ${scope} /jarvis model setting while resolving settings: ${error instanceof Error ? error.message : String(error)}`, "warning");
+		if (!(error instanceof MalformedNoodleConfigError)) throw error;
+		ctx.ui.notify(`Ignoring malformed ${scope} /noodle model setting while resolving settings: ${error instanceof Error ? error.message : String(error)}`, "warning");
 		return undefined;
 	}
 }
 
-function loadJarvisThinkingSelectionForClear(
+function loadNoodleThinkingSelectionForClear(
 	cwd: string,
-	scope: JarvisModelSelectionScope,
+	scope: NoodleModelSelectionScope,
 	ctx: ExtensionCommandContext,
-): StoredJarvisThinkingSelection | undefined {
+): StoredNoodleThinkingSelection | undefined {
 	try {
-		return loadJarvisThinkingSelectionSetting(cwd, scope);
+		return loadNoodleThinkingSelectionSetting(cwd, scope);
 	} catch (error) {
-		if (!(error instanceof MalformedJarvisConfigError)) throw error;
-		ctx.ui.notify(`Ignoring malformed ${scope} /jarvis thinking setting while resolving settings: ${error instanceof Error ? error.message : String(error)}`, "warning");
+		if (!(error instanceof MalformedNoodleConfigError)) throw error;
+		ctx.ui.notify(`Ignoring malformed ${scope} /noodle thinking setting while resolving settings: ${error instanceof Error ? error.message : String(error)}`, "warning");
 		return undefined;
 	}
 }
@@ -1363,7 +1366,7 @@ function isModelBridgeCompatible(model: Model<any> | undefined): boolean {
 }
 
 function enforceCompatibilityGuard(state: MainState): void {
-	const desired = getDesiredJarvisModel(state);
+	const desired = getDesiredNoodleModel(state);
 	if (!isModelBridgeCompatible(desired)) {
 		state.allowFollowUpToMain = false;
 		state.allowSteerToMain = false;
@@ -1372,19 +1375,19 @@ function enforceCompatibilityGuard(state: MainState): void {
 	state.runtime?.setToolAccessEnabled(state.allowSideTools);
 }
 
-function getJarvisModelModeLabel(selection: JarvisModelSelection): string {
+function getNoodleModelModeLabel(selection: NoodleModelSelection): string {
 	return selection.mode === "follow-main" ? "follow main" : "pinned";
 }
 
-function describeJarvisModelSelection(state: MainState): string {
-	const activeModelLabel = formatModelLabel(getDesiredJarvisModel(state));
-	const sourceLabel = formatJarvisModelSelectionSource(state.jarvisModelSelectionSource);
-	return state.jarvisModelSelection.mode === "follow-main"
+function describeNoodleModelSelection(state: MainState): string {
+	const activeModelLabel = formatModelLabel(getDesiredNoodleModel(state));
+	const sourceLabel = formatNoodleModelSelectionSource(state.noodleModelSelectionSource);
+	return state.noodleModelSelection.mode === "follow-main"
 		? `following the main model (${activeModelLabel}; ${sourceLabel})`
 		: `pinned to ${activeModelLabel} (${sourceLabel})`;
 }
 
-async function getAvailableJarvisModels(modelRegistry: ExtensionContext["modelRegistry"]): Promise<readonly Model<any>[]> {
+async function getAvailableNoodleModels(modelRegistry: ExtensionContext["modelRegistry"]): Promise<readonly Model<any>[]> {
 	await modelRegistry.refresh();
 	return modelRegistry.getAvailable().filter((model) => model.api !== "pi-virtual");
 }
@@ -1437,23 +1440,23 @@ async function syncRuntimeModelSelection(state: MainState): Promise<void> {
 	if (!state.runtime) {
 		return;
 	}
-	await state.runtime.syncModel(getDesiredJarvisModel(state), getDesiredJarvisThinkingLevel(state));
+	await state.runtime.syncModel(getDesiredNoodleModel(state), getDesiredNoodleThinkingLevel(state));
 }
 
-async function applyJarvisModelSelection(state: MainState, selection: JarvisModelSelection): Promise<void> {
+async function applyNoodleModelSelection(state: MainState, selection: NoodleModelSelection): Promise<void> {
 	if (selection.mode === "pinned" && selection.model.api === "pi-virtual") {
-		throw new Error("/jarvis requires a physical model; Pi's public registry does not expose virtual routing.");
+		throw new Error("/noodle requires a physical model; Pi's public registry does not expose virtual routing.");
 	}
 	const owner = state.queuedMessages;
-	const previousSelection = state.jarvisModelSelection;
-	state.jarvisModelSelection = selection;
+	const previousSelection = state.noodleModelSelection;
+	state.noodleModelSelection = selection;
 	try {
 		await syncRuntimeModelSelection(state);
-		if (state.queuedMessages !== owner) throw new Error("/jarvis configuration owner changed.");
+		if (state.queuedMessages !== owner) throw new Error("/noodle configuration owner changed.");
 		enforceCompatibilityGuard(state);
 	} catch (error) {
 		if (state.queuedMessages !== owner) throw error;
-		state.jarvisModelSelection = previousSelection;
+		state.noodleModelSelection = previousSelection;
 		try {
 			await syncRuntimeModelSelection(state);
 			if (state.queuedMessages === owner) enforceCompatibilityGuard(state);
@@ -1464,16 +1467,16 @@ async function applyJarvisModelSelection(state: MainState, selection: JarvisMode
 	}
 }
 
-async function applyJarvisThinkingSelection(state: MainState, selection: JarvisThinkingSelection): Promise<void> {
+async function applyNoodleThinkingSelection(state: MainState, selection: NoodleThinkingSelection): Promise<void> {
 	const owner = state.queuedMessages;
-	const previousSelection = state.jarvisThinkingSelection;
-	state.jarvisThinkingSelection = selection;
+	const previousSelection = state.noodleThinkingSelection;
+	state.noodleThinkingSelection = selection;
 	try {
 		await syncRuntimeModelSelection(state);
-		if (state.queuedMessages !== owner) throw new Error("/jarvis configuration owner changed.");
+		if (state.queuedMessages !== owner) throw new Error("/noodle configuration owner changed.");
 	} catch (error) {
 		if (state.queuedMessages !== owner) throw error;
-		state.jarvisThinkingSelection = previousSelection;
+		state.noodleThinkingSelection = previousSelection;
 		try {
 			await syncRuntimeModelSelection(state);
 		} catch {
@@ -1483,15 +1486,15 @@ async function applyJarvisThinkingSelection(state: MainState, selection: JarvisT
 	}
 }
 
-async function executeJarvisSideCommand(
+async function executeNoodleSideCommand(
 	pi: ExtensionAPI,
 	state: MainState,
 	ctx: ExtensionCommandContext,
-	runtime: JarvisSideSessionRuntime,
-	command: JarvisSideCommand,
-): Promise<JarvisSideSessionRuntime> {
+	runtime: NoodleSideSessionRuntime,
+	command: NoodleSideCommand,
+): Promise<NoodleSideSessionRuntime> {
 	if (command.name === "compact") {
-		await runtime.compactJarvisContext(command.customInstructions);
+		await runtime.compactNoodleContext(command.customInstructions);
 		return runtime;
 	}
 	if (command.name === "tree") {
@@ -1519,16 +1522,16 @@ async function executeJarvisSideCommand(
 	finally { generation = ++state.bootGeneration; }
 	state.runtime = undefined;
 	state.bootPromise = undefined;
-	state.lastJarvisSeenMainContext = undefined;
+	state.lastNoodleSeenMainContext = undefined;
 	resetTransientAccessControls(state);
 	state.bridge.reset();
 	const sessionFile = await createSideSessionFile(ctx.cwd);
-	if (generation !== state.bootGeneration) throw new StaleJarvisBootError();
-	const sessionRef = createJarvisSessionRef(sessionFile);
+	if (generation !== state.bootGeneration) throw new StaleNoodleBootError();
+	const sessionRef = createNoodleSessionRef(sessionFile);
 	state.sessionRef = sessionRef;
-	pi.appendEntry(JARVIS_SESSION_REF_CUSTOM_TYPE, sessionRef);
+	pi.appendEntry(NOODLE_SESSION_REF_CUSTOM_TYPE, sessionRef);
 	const nextRuntime = await ensureRuntime(pi, state, ctx);
-	nextRuntime.addSystemMessage("Started a new /jarvis side session.");
+	nextRuntime.addSystemMessage("Started a new /noodle side session.");
 	return nextRuntime;
 }
 
@@ -1543,7 +1546,7 @@ function queueMessage(state: MainState, message: string): void {
 }
 
 function parseArchiveCommand(message: string): string | undefined {
-	const match = /^\/(?:jarvis-archive|archive)(?:\s+([\s\S]*))?$/.exec(message.trim());
+	const match = /^\/(?:noodle-archive|archive)(?:\s+([\s\S]*))?$/.exec(message.trim());
 	return match ? match[1] ?? "" : undefined;
 }
 
@@ -1567,14 +1570,14 @@ async function dispatchArchiveCommand(state: MainState, args: string, ctx: Exten
 }
 
 function parseMemoryCommand(message: string): string | undefined {
-	const match = /^\/(?:jarvis-memory|memory)(?:\s+([\s\S]*))?$/.exec(message.trim());
+	const match = /^\/(?:noodle-memory|memory)(?:\s+([\s\S]*))?$/.exec(message.trim());
 	return match ? match[1] ?? "" : undefined;
 }
 
 async function dispatchMemoryCommand(state: MainState, args: string, ctx: ExtensionContext, overlay: boolean): Promise<void> {
 	if (/^editor(?:\s|$)/.test(args.trim())) {
 		if (args.trim() !== "editor") {
-			ctx.ui.notify("Use /jarvis-memory editor without arguments; choose search and scope inside the editor.", "warning");
+			ctx.ui.notify("Use /noodle-memory editor without arguments; choose search and scope inside the editor.", "warning");
 			return;
 		}
 		if (state.watchers?.hasPendingSetup()) { ctx.ui.notify("Finish watcher launch permission review before opening the memory editor.", "warning"); return; }
@@ -1595,7 +1598,7 @@ async function dispatchMemoryCommand(state: MainState, args: string, ctx: Extens
 	}
 }
 
-function parseJarvisSideCommand(message: string): JarvisSideCommand | undefined {
+function parseNoodleSideCommand(message: string): NoodleSideCommand | undefined {
 	const text = message.trim();
 	if (text === "/new") {
 		return { name: "new" };
@@ -1633,7 +1636,7 @@ function createOverlayView(
 	pi: ExtensionAPI, state: MainState, ctx: ExtensionCommandContext,
 	configureModel: (request: string, ctx: ExtensionCommandContext, embedded?: boolean) => Promise<void>,
 	configureThinking: (request: string, ctx: ExtensionCommandContext, embedded?: boolean) => Promise<void>,
-): JarvisOverlayView {
+): NoodleOverlayView {
 	const queue = state.queuedMessages, interaction = state.overlayOwner;
 	const ownsPresentation = () => state.queuedMessages === queue && state.overlayOwner === interaction && state.overlayOpen && !state.memoryEditorOwner && !isArchiveSecretPromptActive();
 	const syncToolAccess = () => {
@@ -1646,11 +1649,11 @@ function createOverlayView(
 		isStreaming: () => state.runtime?.isStreaming() ?? false,
 		getQueuedMessageCount: () => state.queuedMessages === queue ? queue.length : 0,
 		getIsProcessing: () => state.queuedMessages === queue && Boolean(state.bootPromise || state.flushPromise || state.stopPromise),
-		getModelLabel: () => state.runtime?.getModelLabel() ?? formatModelLabel(getDesiredJarvisModel(state)),
-		getModelModeLabel: () => getJarvisModelModeLabel(state.jarvisModelSelection),
-		getThinkingLabel: () => describeJarvisThinkingSelection(state),
+		getModelLabel: () => state.runtime?.getModelLabel() ?? formatModelLabel(getDesiredNoodleModel(state)),
+		getModelModeLabel: () => getNoodleModelModeLabel(state.noodleModelSelection),
+		getThinkingLabel: () => describeNoodleThinkingSelection(state),
 		getModelChoices: async () => {
-			const models = await getAvailableJarvisModels(ctx.modelRegistry);
+			const models = await getAvailableNoodleModels(ctx.modelRegistry);
 			if (!ownsPresentation()) return [];
 			return [
 				{ value: "follow-main", label: "Follow main model" },
@@ -1664,7 +1667,7 @@ function createOverlayView(
 		getMainStatusLabel: () => state.mainContext.summary.mainStatus,
 		getMainModelLabel: () => state.mainContext.summary.mainModelLabel,
 		getMainFocusLabel: () => state.mainContext.summary.workState.currentAction,
-		getMainDeltaLabel: () => formatMainContextDeltaLabel(state.lastJarvisSeenMainContext, state.mainContext),
+		getMainDeltaLabel: () => formatMainContextDeltaLabel(state.lastNoodleSeenMainContext, state.mainContext),
 		getRepoToolsDetailLabel: () => state.runtime?.getRepoToolsDetailLabel() ?? (state.allowSideTools ? "local tools only" : "repo tools off"),
 		isToolAccessEnabled: () => state.allowSideTools,
 		isFollowUpToMainEnabled: () => state.allowFollowUpToMain,
@@ -1676,8 +1679,8 @@ function createOverlayView(
 		},
 		toggleFollowUpToMain: () => {
 			if (!ownsPresentation() || !checkTransientTrust(state)) return;
-			if (!isModelBridgeCompatible(getDesiredJarvisModel(state))) {
-				state.bridge.notify("Follow-up is not supported by the current /jarvis model.", "warning");
+			if (!isModelBridgeCompatible(getDesiredNoodleModel(state))) {
+				state.bridge.notify("Follow-up is not supported by the current /noodle model.", "warning");
 				return;
 			}
 			state.allowFollowUpToMain = !state.allowFollowUpToMain;
@@ -1685,8 +1688,8 @@ function createOverlayView(
 		},
 		toggleSteerToMain: () => {
 			if (!ownsPresentation() || !checkTransientTrust(state)) return;
-			if (!isModelBridgeCompatible(getDesiredJarvisModel(state))) {
-				state.bridge.notify("Steer is not supported by the current /jarvis model.", "warning");
+			if (!isModelBridgeCompatible(getDesiredNoodleModel(state))) {
+				state.bridge.notify("Steer is not supported by the current /noodle model.", "warning");
 				return;
 			}
 			state.allowSteerToMain = !state.allowSteerToMain;
@@ -1695,9 +1698,12 @@ function createOverlayView(
 		getDisplayEntries: () => getOverlayEntries(state),
 		sendMessage: async (text: string) => {
 			if (state.queuedMessages !== queue || isArchiveSecretPromptActive()) return;
+			const canonical = canonicalCommand(text.trim());
+			if (canonical !== text.trim()) state.bridge.notify(LEGACY_COMMAND_NOTICE, "info");
+			text = canonical;
 			const localControl = parseLocalControl(text);
 			if (localControl) { await dispatchLocalControl(state, localControl, ctx, true); return; }
-			const watchersCommand = /^\/(?:jarvis-watchers|watchers)(?:\s+([\s\S]*))?$/.exec(text.trim());
+			const watchersCommand = /^\/(?:noodle-watchers|watchers)(?:\s+([\s\S]*))?$/.exec(text.trim());
 			if (watchersCommand) { await state.watchers?.command(watchersCommand[1] ?? "status", ctx); return; }
 			const archiveCommand = parseArchiveCommand(text);
 			if (archiveCommand !== undefined) {
@@ -1712,7 +1718,7 @@ function createOverlayView(
 			}
 			if (state.queuedMessages !== queue) return;
 			if (state.stopPromise || state.configuring) {
-				state.bridge.notify("Wait for /jarvis stop/configuration to finish, then submit again. Input was not queued.", "warning");
+				state.bridge.notify("Wait for /noodle stop/configuration to finish, then submit again. Input was not queued.", "warning");
 				return;
 			}
 			queueMessage(state, text);
@@ -1722,8 +1728,8 @@ function createOverlayView(
 	};
 }
 
-function getOverlayEntries(state: MainState): JarvisDisplayEntry[] {
-	let entries: JarvisDisplayEntry[];
+function getOverlayEntries(state: MainState): NoodleDisplayEntry[] {
+	let entries: NoodleDisplayEntry[];
 	if (state.runtime) {
 		// Do not append per-render UI status to runtime-owned transcript arrays.
 		entries = [...state.runtime.getDisplayEntries()];
@@ -1733,14 +1739,14 @@ function getOverlayEntries(state: MainState): JarvisDisplayEntry[] {
 			{
 				kind: "system",
 				text: hasRestorableSessionRef
-					? "Connecting to your prior /jarvis conversation…"
-					: "Starting /jarvis side conversation…",
+					? "Connecting to your prior /noodle conversation…"
+					: "Starting /noodle side conversation…",
 			},
 		];
 	}
 
-	if (!isModelBridgeCompatible(getDesiredJarvisModel(state))) {
-		entries.push({ kind: "status", text: "Relay disabled: current /jarvis model is incompatible with bridge tools" });
+	if (!isModelBridgeCompatible(getDesiredNoodleModel(state))) {
+		entries.push({ kind: "status", text: "Relay disabled: current /noodle model is incompatible with bridge tools" });
 	}
 
 	return entries;
@@ -1751,7 +1757,7 @@ function formatMainContextDeltaLabel(
 	currentContext: MainSessionContextPayload,
 ): string {
 	if (!previousContext) {
-		return "first /jarvis turn";
+		return "first /noodle turn";
 	}
 	if (currentContext.summary.workState.currentAction !== previousContext.summary.workState.currentAction) {
 		return `focus → ${currentContext.summary.workState.currentAction}`;
@@ -1802,28 +1808,28 @@ async function flushQueuedMessages(pi: ExtensionAPI, state: MainState, ctx: Exte
 				state.bridge.refresh();
 				if (!isCurrent()) return;
 				try {
-					const command = parseJarvisSideCommand(message);
+					const command = parseNoodleSideCommand(message);
 					if (command) {
-						runtime = await executeJarvisSideCommand(pi, state, ctx, runtime, command);
+						runtime = await executeNoodleSideCommand(pi, state, ctx, runtime, command);
 					} else {
-						await runtime.syncModel(getDesiredJarvisModel(state), getDesiredJarvisThinkingLevel(state));
+						await runtime.syncModel(getDesiredNoodleModel(state), getDesiredNoodleThinkingLevel(state));
 						if (!isCurrent()) return;
 						const seenContext = state.mainContext;
 						await runtime.sendMessage(message);
-						if (isCurrent()) state.lastJarvisSeenMainContext = seenContext;
+						if (isCurrent()) state.lastNoodleSeenMainContext = seenContext;
 					}
 					if (!isCurrent()) return;
 				} catch (error) {
-					if (!isCurrent() || isStaleJarvisBootError(error)) return;
-					state.bridge.notify(`Failed to process /jarvis input: ${error instanceof Error ? error.message : String(error)}. Input was not retried.`, "error");
+					if (!isCurrent() || isStaleNoodleBootError(error)) return;
+					state.bridge.notify(`Failed to process /noodle input: ${error instanceof Error ? error.message : String(error)}. Input was not retried.`, "error");
 				}
 			}
 		} catch (error) {
-			if (!isCurrent() || isStaleJarvisBootError(error)) return;
+			if (!isCurrent() || isStaleNoodleBootError(error)) return;
 			queue.length = 0;
 			state.bridge.refresh();
 			if (!isCurrent()) return;
-			state.bridge.notify(`/jarvis startup failed: ${error instanceof Error ? error.message : String(error)}. Please submit again.`, "error");
+			state.bridge.notify(`/noodle startup failed: ${error instanceof Error ? error.message : String(error)}. Please submit again.`, "error");
 		}
 	}).finally(() => {
 		if (state.flushPromise === flushPromise) {
@@ -1836,7 +1842,7 @@ async function flushQueuedMessages(pi: ExtensionAPI, state: MainState, ctx: Exte
 	return flushPromise;
 }
 
-async function ensureRuntime(pi: ExtensionAPI, state: MainState, ctx: ExtensionCommandContext): Promise<JarvisSideSessionRuntime> {
+async function ensureRuntime(pi: ExtensionAPI, state: MainState, ctx: ExtensionCommandContext): Promise<NoodleSideSessionRuntime> {
 	if (state.runtime) {
 		return state.runtime;
 	}
@@ -1846,21 +1852,21 @@ async function ensureRuntime(pi: ExtensionAPI, state: MainState, ctx: ExtensionC
 
 	const bootGeneration = state.bootGeneration;
 	const isCurrentBoot = () => state.bootGeneration === bootGeneration;
-	state.bridge.setWorkingMessage("Starting /jarvis…");
-	let bootPromise: Promise<JarvisSideSessionRuntime>;
+	state.bridge.setWorkingMessage("Starting /noodle…");
+	let bootPromise: Promise<NoodleSideSessionRuntime>;
 	bootPromise = (async () => {
 		let sessionFile = state.sessionRef?.file;
 		if (!sessionFile || !existsSync(sessionFile)) {
 			sessionFile = await createSideSessionFile(ctx.cwd);
 			if (!isCurrentBoot()) {
-				throw new StaleJarvisBootError();
+				throw new StaleNoodleBootError();
 			}
-			const sessionRef = createJarvisSessionRef(sessionFile);
+			const sessionRef = createNoodleSessionRef(sessionFile);
 			state.sessionRef = sessionRef;
-			pi.appendEntry(JARVIS_SESSION_REF_CUSTOM_TYPE, sessionRef);
+			pi.appendEntry(NOODLE_SESSION_REF_CUSTOM_TYPE, sessionRef);
 		}
 
-		const runtime = await JarvisSideSessionRuntime.create({
+		const runtime = await NoodleSideSessionRuntime.create({
 			bridge: state.bridge,
 			cwd: ctx.cwd,
 			projectTrusted: ctx.isProjectTrusted(),
@@ -1869,9 +1875,9 @@ async function ensureRuntime(pi: ExtensionAPI, state: MainState, ctx: ExtensionC
 			archive: state.archive,
 			archiveTrustProvider: () => isCurrentBoot() && ctx.isProjectTrusted(),
 			modelRegistry: ctx.modelRegistry,
-			model: getDesiredJarvisModel(state),
-			jarvisModelModeProvider: () => state.jarvisModelSelection.mode,
-			thinkingLevel: getDesiredJarvisThinkingLevel(state),
+			model: getDesiredNoodleModel(state),
+			noodleModelModeProvider: () => state.noodleModelSelection.mode,
+			thinkingLevel: getDesiredNoodleThinkingLevel(state),
 			sessionFile,
 			systemPromptProvider: () => state.systemPrompt,
 			mainContextProvider: () => state.mainContext,
@@ -1881,22 +1887,22 @@ async function ensureRuntime(pi: ExtensionAPI, state: MainState, ctx: ExtensionC
 				return { allowFollowUpToMain: permitted && state.allowFollowUpToMain, allowSteerToMain: permitted && state.allowSteerToMain };
 			},
 			sendFollowUpToMain: (message: string) => {
-				if (!isCurrentBoot() || !checkTransientTrust(state) || !state.allowFollowUpToMain) throw new Error("/jarvis follow-up permission expired.");
+				if (!isCurrentBoot() || !checkTransientTrust(state) || !state.allowFollowUpToMain) throw new Error("/noodle follow-up permission expired.");
 				pi.sendUserMessage(message, { deliverAs: "followUp" });
 			},
-			// Route the confirmation through the /jarvis overlay itself via the
+			// Route the confirmation through the /noodle overlay itself via the
 			// bridge. The main session's UI confirm would otherwise render inside
 			// the base layer (the pi editor container) and sit hidden behind the
-			// /jarvis overlay, leaving the side-session tool execute hung on a
+			// /noodle overlay, leaving the side-session tool execute hung on a
 			// promise the user could never answer.
 			confirmSteerToMain: (message: string, signal?: AbortSignal) =>
 				state.bridge.requestConfirmation(
-					"Send /jarvis steer to main?",
+					"Send /noodle steer to main?",
 					`This will steer the main agent with:\n\n${message}`,
 					signal,
 				),
 			sendSteerToMain: (message: string) => {
-				if (!isCurrentBoot() || !checkTransientTrust(state) || !state.overlayOpen || state.memoryEditorOwner || isArchiveSecretPromptActive() || !state.allowSteerToMain) throw new Error("/jarvis redirect permission expired.");
+				if (!isCurrentBoot() || !checkTransientTrust(state) || !state.overlayOpen || state.memoryEditorOwner || isArchiveSecretPromptActive() || !state.allowSteerToMain) throw new Error("/noodle redirect permission expired.");
 				pi.sendUserMessage(message, { deliverAs: "steer" });
 			},
 			themeProvider: state.themeProvider,
@@ -1904,14 +1910,14 @@ async function ensureRuntime(pi: ExtensionAPI, state: MainState, ctx: ExtensionC
 
 		if (!isCurrentBoot()) {
 			runtime.dispose();
-			throw new StaleJarvisBootError();
+			throw new StaleNoodleBootError();
 		}
 
 		state.runtime = runtime;
 		state.bridge.setWorkingMessage(undefined);
 		return runtime;
 	})().catch((error) => {
-		if (!isCurrentBoot()) throw new StaleJarvisBootError();
+		if (!isCurrentBoot()) throw new StaleNoodleBootError();
 		state.bridge.setWorkingMessage(undefined);
 		throw error;
 	}).finally(() => {

@@ -44,7 +44,7 @@ input.on("line", async (line) => {
 	if (method === "initialize") {
 		while (release && !existsSync(release)) await new Promise((resolve) => setTimeout(resolve, 10));
 		record("initialized");
-		reply(id, { protocolVersion: params.protocolVersion, capabilities: { tools: { listChanged: true }, resources: { listChanged: false } }, serverInfo: { name: "pi-jarvis-local-fixture", version: "1.0.0" }, instructions: "Deterministic fixture, no credentials or network." });
+		reply(id, { protocolVersion: params.protocolVersion, capabilities: { tools: { listChanged: true }, resources: { listChanged: false } }, serverInfo: { name: "pi-noodle-local-fixture", version: "1.0.0" }, instructions: "Deterministic fixture, no credentials or network." });
 	} else if (method === "notifications/initialized") {
 		initialized = true;
 	} else if (method === "tools/list") {

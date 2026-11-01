@@ -9,7 +9,7 @@ import { ArchiveStore } from "../archive-store.js";
 
 // Component interoperability only: no runtime activation, credential store or migration.
 test("password envelopes unlock the encrypted archive and rewrap without rewriting its data", async () => {
-	const root = mkdtempSync(join(tmpdir(), "jarvis-encryption-composition-"));
+	const root = mkdtempSync(join(tmpdir(), "noodle-encryption-composition-"));
 	const agent = join(root, "agent"), project = join(root, "project");
 	mkdirSync(agent); mkdirSync(project);
 	const marker = "fixtureunencryptedcanary7a9f";

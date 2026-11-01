@@ -17,7 +17,7 @@ const normalized = (text: string) => text.normalize("NFKC").toLowerCase().replac
 const id = (input: MemoryInput) => createHash("sha256").update(JSON.stringify(["note", input.scope,
 	input.scope === "project" ? input.project : "", normalized(input.title)])).digest("hex");
 function fixture(t: TestContext) {
-	const root = mkdtempSync(join(tmpdir(), "pi-jarvis-editor-store-"));
+	const root = mkdtempSync(join(tmpdir(), "pi-noodle-editor-store-"));
 	const agent = join(root, "agent"), a = join(root, "workspace-a"), b = join(root, "workspace-b");
 	for (const path of [agent, a, b]) mkdirSync(path);
 	const stores: MemoryStore[] = [];

@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 import { TranscriptViewport } from "../transcript-viewport.js";
 
-const rows = (count: number) => Array.from({ length: count }, (_, i) => `Jarvis: row ${i}`);
+const rows = (count: number) => Array.from({ length: count }, (_, i) => `Noodle: row ${i}`);
 
 const emptyStatus = {
 	following: true, hiddenBelow: 0, totalLines: 0, startLine: 0, endLine: 0,
@@ -17,7 +17,7 @@ test("viewport starts at the tail and follows appended and streaming rows", () =
 	assert.deepEqual(viewport.getStatus(), {
 		following: true, hiddenBelow: 0, totalLines: 10, startLine: 7, endLine: 10,
 	});
-	lines.push("Jarvis: streaming");
+	lines.push("Noodle: streaming");
 	assert.deepEqual(viewport.render(lines, 3, 40), lines.slice(-3));
 	lines[10] += " update";
 	assert.deepEqual(viewport.render(lines, 3, 40), lines.slice(-3));
@@ -47,7 +47,7 @@ test("bounded source rollover retains a paused top row when it remains available
 	viewport.pageUp();
 	const reading = viewport.render(lines, 5, 40);
 	lines.shift();
-	lines.push("Jarvis: newest");
+	lines.push("Noodle: newest");
 	assert.deepEqual(viewport.render(lines, 5, 40), reading);
 	assert.equal(viewport.getStatus().startLine, 19);
 	assert.equal(viewport.getStatus().following, false);
@@ -86,7 +86,7 @@ test("page limits clamp, PageDown resumes at the tail, and toLatest is explicit"
 	viewport.toLatest();
 	assert.equal(viewport.getStatus().following, true);
 	assert.equal(viewport.getStatus().hiddenBelow, 0);
-	lines.push("Jarvis: newest");
+	lines.push("Noodle: newest");
 	assert.deepEqual(viewport.render(lines, 4, 40), lines.slice(-4));
 });
 
@@ -132,7 +132,7 @@ test("same-width content shrink clamps a paused viewport without silently resumi
 	assert.deepEqual(viewport.getStatus(), {
 		following: false, hiddenBelow: 0, totalLines: 8, startLine: 4, endLine: 8,
 	});
-	smaller.push("Jarvis: additional row");
+	smaller.push("Noodle: additional row");
 	assert.deepEqual(viewport.render(smaller, 4, 40), smaller.slice(4, 8));
 	assert.equal(viewport.getStatus().hiddenBelow, 1);
 	viewport.pageDown();
@@ -204,7 +204,7 @@ test("zero and invalid dimensions render nothing and do not lose a paused positi
 test("visible rows always fit width, including ANSI, CJK, emoji and combining marks", () => {
 	const viewport = new TranscriptViewport();
 	const lines = [
-		"Jarvis: " + "very long text ".repeat(30),
+		"Noodle: " + "very long text ".repeat(30),
 		"\x1b[32m中文🙂👨‍👩‍👧‍👦🇯🇵e\u0301 content\x1b[0m",
 		"two\nphysical\rrows",
 		"",
@@ -217,7 +217,7 @@ test("visible rows always fit width, including ANSI, CJK, emoji and combining ma
 			assert.ok(!/[\r\n]/.test(line));
 		}
 	}
-	const plain = ["User: hello", "Jarvis: reply"];
+	const plain = ["User: hello", "Noodle: reply"];
 	assert.deepEqual(viewport.render(plain, 10, 80), plain, "no added themes or padding");
 });
 
@@ -229,14 +229,14 @@ test("all history is reachable and ordinary rendering reads only visible source 
 			if (property === "length") return count;
 			if (typeof property === "string" && /^\d+$/.test(property)) {
 				reads++;
-				return `Jarvis: row ${property}`;
+				return `Noodle: row ${property}`;
 			}
 			throw new Error(`unexpected history access: ${String(property)}`);
 		},
 	});
 	const viewport = new TranscriptViewport();
 	assert.deepEqual(viewport.render(virtualLines, 4, 40), [
-		"Jarvis: row 999996", "Jarvis: row 999997", "Jarvis: row 999998", "Jarvis: row 999999",
+		"Noodle: row 999996", "Noodle: row 999997", "Noodle: row 999998", "Noodle: row 999999",
 	]);
 	assert.equal(reads, 4, "no full-history copy, layout or cache");
 	for (let i = 0; i < count / 4; i++) viewport.pageUp();
@@ -270,6 +270,6 @@ test("bounded source anchors retain the read character through simultaneous larg
 	const expanded = Array.from({ length: 500 }, (_, i) => `text ${i}`);
 	const reflowed = [...lines.slice(0, 92).flatMap(line => [line, "continuation"]), ...lines.slice(92), ...expanded];
 	const newAnchors = [...anchors.slice(0, 92).flatMap(anchor => [anchor, { ...anchor, offset: 10 }]), ...anchors.slice(92), ...expanded.map((_, i) => ({ key: `new-${i}`, offset: 0 }))];
-	assert.equal(viewport.render(reflowed, 4, 20, newAnchors)[0], "Jarvis: row 92");
+	assert.equal(viewport.render(reflowed, 4, 20, newAnchors)[0], "Noodle: row 92");
 	assert.equal(viewport.getStatus().following, false);
 });

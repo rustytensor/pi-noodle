@@ -11,8 +11,8 @@ import {
 	DefaultResourceLoader, ModelRegistry, ModelRuntime,
 	type AgentSession, type AgentSessionEvent, type ExtensionContext, type ExtensionFactory, type ExtensionToolContext,
 } from "@earendil-works/pi-coding-agent";
-import { JarvisOverlayBridge } from "../overlay.js";
-import { createSideModelRuntime, createSideSessionFile, JarvisSideSessionRuntime } from "../side-session.js";
+import { NoodleOverlayBridge } from "../overlay.js";
+import { createSideModelRuntime, createSideSessionFile, NoodleSideSessionRuntime } from "../side-session.js";
 import type { MainSessionContextPayload } from "../main-context.js";
 
 const model: Model<any> = {
@@ -82,27 +82,27 @@ async function hostRegistry(
 }
 
 // Test-only probe of our own wrapper; the SDK session below uses public APIs.
-function sessionOf(runtime: JarvisSideSessionRuntime): AgentSession {
+function sessionOf(runtime: NoodleSideSessionRuntime): AgentSession {
 	return (runtime as unknown as { session: AgentSession }).session;
 }
 
 async function fixture(run: (f: {
-	cwd: string; agentDir: string; bridge: JarvisOverlayBridge;
-	create: (overrides?: Partial<Parameters<typeof JarvisSideSessionRuntime.create>[0]>) => Promise<JarvisSideSessionRuntime>;
+	cwd: string; agentDir: string; bridge: NoodleOverlayBridge;
+	create: (overrides?: Partial<Parameters<typeof NoodleSideSessionRuntime.create>[0]>) => Promise<NoodleSideSessionRuntime>;
 }) => Promise<void>, stream?: Provider["streamSimple"], beforeAuth?: (signal: AbortSignal) => Promise<void>) {
-	const root = mkdtempSync(join(tmpdir(), "pi-jarvis-side-runtime-"));
+	const root = mkdtempSync(join(tmpdir(), "pi-noodle-side-runtime-"));
 	const cwd = join(root, "workspace");
 	const agentDir = join(root, "agent");
 	mkdirSync(cwd); mkdirSync(agentDir);
 	writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ retry: { enabled: false }, compaction: { enabled: false }, cacheWarming: "off" }));
 	const prior = process.env.PI_CODING_AGENT_DIR;
 	process.env.PI_CODING_AGENT_DIR = agentDir;
-	const runtimes: JarvisSideSessionRuntime[] = [];
+	const runtimes: NoodleSideSessionRuntime[] = [];
 	try {
 		const { host } = await hostRegistry(stream, beforeAuth);
-		const bridge = new JarvisOverlayBridge();
+		const bridge = new NoodleOverlayBridge();
 		await run({ cwd, agentDir, bridge, create: async (overrides = {}) => {
-			const runtime = await JarvisSideSessionRuntime.create({
+			const runtime = await NoodleSideSessionRuntime.create({
 				bridge, cwd, modelRegistry: host, model, thinkingLevel: "off", sessionFile: await createSideSessionFile(cwd),
 				systemPromptProvider: () => "You are Main.", mainContextProvider: () => mainContext,
 				toolAccessProvider: () => false,
@@ -247,9 +247,9 @@ test("declined trust protects SDK settings/resources/MCP; trusted MCP still requ
 	});
 });
 
-async function executeSteer(runtime: JarvisSideSessionRuntime, signal?: AbortSignal) {
+async function executeSteer(runtime: NoodleSideSessionRuntime, signal?: AbortSignal) {
 	const session = sessionOf(runtime);
-	const tool = session.getToolDefinition("jarvis_send_steer_to_main")!;
+	const tool = session.getToolDefinition("noodle_send_steer_to_main")!;
 	const ctx = session.extensionRunner.createContext() as ExtensionToolContext;
 	return tool.execute("test-steer", { message: "redirect" }, signal, undefined, ctx);
 }
@@ -266,7 +266,7 @@ test("redirect confirmation revalidates permissions and cancels on signal or dis
 			sendFollowUpToMain: () => { sends++; },
 		});
 		const session = sessionOf(runtime);
-		for (const name of ["jarvis_send_follow_up_to_main", "jarvis_send_steer_to_main"]) {
+		for (const name of ["noodle_send_follow_up_to_main", "noodle_send_steer_to_main"]) {
 			for (const message of ["visible\x1b]hidden instruction\x07", "visible\u009bhidden instruction"]) {
 				const result = await session.getToolDefinition(name)!.execute("unsafe-send", { message }, undefined, undefined,
 					session.extensionRunner.createContext() as ExtensionToolContext);
@@ -368,7 +368,7 @@ test("retry/compaction events preserve working state until settlement and expose
 		assert.equal(bridge.snapshot().workingMessage, "Thinking…");
 		handle({ type: "compaction_start", reason: "overflow" });
 		handle({ type: "compaction_end", reason: "overflow", result: undefined, aborted: false, willRetry: true });
-		assert.equal(bridge.snapshot().workingMessage, "Compacting /jarvis…");
+		assert.equal(bridge.snapshot().workingMessage, "Compacting /noodle…");
 		handle({ type: "auto_retry_start", attempt: 1, maxAttempts: 2, delayMs: 1, errorMessage: "overloaded" });
 		assert.match(bridge.snapshot().workingMessage!, /Retrying/);
 		handle({ type: "auto_retry_end", success: false, attempt: 2, finalError: "terminal failure" });
@@ -425,7 +425,7 @@ test("stop uses public SDK abort/clearQueue and keeps the side owner, grants and
 test("foreground-only confirmation blocks closed redirects but does not revoke separately granted Note main", async () => {
 	await fixture(async ({ create }) => {
 		let foreground = true, notes = 0, redirects = 0;
-		const bridge = new JarvisOverlayBridge(() => foreground);
+		const bridge = new NoodleOverlayBridge(() => foreground);
 		const runtime = await create({
 			bridge,
 			communicationPermissionsProvider: () => ({ allowFollowUpToMain: true, allowSteerToMain: true }),
@@ -438,7 +438,7 @@ test("foreground-only confirmation blocks closed redirects but does not revoke s
 		assert.equal(((await executeSteer(runtime)).details as { status: string }).status, "cancelled");
 		assert.equal(bridge.hasPendingConfirmation(), false, "closed tools never hang awaiting an invisible review");
 		const session = sessionOf(runtime);
-		await session.getToolDefinition("jarvis_send_follow_up_to_main")!.execute("background-note", { message: "user-authorized note" }, undefined, undefined,
+		await session.getToolDefinition("noodle_send_follow_up_to_main")!.execute("background-note", { message: "user-authorized note" }, undefined, undefined,
 			session.extensionRunner.createContext() as ExtensionToolContext);
 		assert.equal(notes, 1); assert.equal(redirects, 0);
 		foreground = true;

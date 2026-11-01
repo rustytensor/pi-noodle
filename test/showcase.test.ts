@@ -8,7 +8,7 @@ import { test } from "node:test";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const generator = resolve(root, "scripts/render-showcase.mjs");
-const files = ["jarvis-access.svg", "jarvis-history.svg", "jarvis-workspace.svg"];
+const files = ["noodle-access.svg", "noodle-history.svg", "noodle-workspace.svg"];
 const readAsset = (file: string) => readFileSync(resolve(root, "docs/assets", file), "utf8");
 const run = (...args: string[]) => {
 	const result = spawnSync(process.execPath, args, { cwd: tmpdir(), encoding: "utf8", timeout: 10_000 });
@@ -63,7 +63,7 @@ const assetText = (file: string) => flatten(parseSvg(readAsset(file))).filter((n
 const visibleText = (file: string) => flatten(parseSvg(readAsset(file))).filter(node => node.name === "text").map(node => node.text).join("\n");
 
 test("showcase generation is deterministic, isolated and matches all three checked-in assets", () => {
-	const temp = mkdtempSync(resolve(tmpdir(), "jarvis-showcase-test-"));
+	const temp = mkdtempSync(resolve(tmpdir(), "noodle-showcase-test-"));
 	try {
 		const first = resolve(temp, "first"), second = resolve(temp, "nested", "second");
 		run(generator, "--out-dir", first);
@@ -128,15 +128,15 @@ test("accessible self-contained SVGs have safe XML, legible fonts and card/basel
 });
 
 test("workspace accurately separates lanes, shared memory and authority", () => {
-	assert.ok(visibleText("jarvis-workspace.svg").includes("Recalls may reach your model/provider."), "provider disclosure must be visible, not only alt/description text");
-	const text = assetText("jarvis-workspace.svg");
-	for (const phrase of ["Main Pi / primary session", "Jarvis / isolated side session", "Main context → Jarvis only", "Summary + delta, not a full copy", "ON in trusted projects • plaintext", "Bounded recall: global + this project", "Facts are context, not instructions.", "No automatic steering or task handoff", "separate controls"]) assert.ok(text.includes(phrase), phrase);
+	assert.ok(visibleText("noodle-workspace.svg").includes("Recalls may reach your model/provider."), "provider disclosure must be visible, not only alt/description text");
+	const text = assetText("noodle-workspace.svg");
+	for (const phrase of ["Main Pi / primary session", "Noodle / isolated side session", "Main context → Noodle only", "Summary + delta, not a full copy", "ON in trusted projects • plaintext", "Bounded recall: global + this project", "Facts are context, not instructions.", "No automatic steering or task handoff", "separate controls"]) assert.ok(text.includes(phrase), phrase);
 });
 
 test("history is explicit and preserves the archive encryption/privacy boundary", () => {
-	const visible = visibleText("jarvis-history.svg");
+	const visible = visibleText("noodle-history.svg");
 	for (const phrase of ["Plaintext • unredacted • may hold secrets", "Provider may see reads—even encrypted."]) assert.ok(visible.includes(phrase), "privacy boundary must be visible: " + phrase);
-	const text = assetText("jarvis-history.svg");
+	const text = assetText("noodle-history.svg");
 	for (const phrase of ["Archive: OFF by default", "Review files & metadata only", "Approve the exact reviewed set", "Skip duplicates • per-file reports", "Browse sessions • see provenance", "Sources are not modified.", "No startup scan or automatic import.", "Human search ≠ model access", "Model reads: a separate opt-in.", "OFF by default • archive only", "Protects active DB, index & journals.", "Not original Pi transcripts, memory,", "retained plaintext backups", "Pause capture before safe setup."]) assert.ok(text.includes(phrase), phrase);
 	const positions = ["Preview", "Confirm", "Import", "Search"].map((step) => text.indexOf(`\n${step}\n`));
 	assert.ok(positions.every((position) => position >= 0));
@@ -144,8 +144,8 @@ test("history is explicit and preserves the archive encryption/privacy boundary"
 });
 
 test("permissions use fresh-owner OFF, close-not-stop, visible confirmation and explicit revocation", () => {
-	const text = assetText("jarvis-access.svg");
-	for (const phrase of ["Fresh owner → three OFF gates", "read • bash • edit • write", "Native MCP • configured, side-owned", "Quiet follow-up to the main lane", "Visible confirmation for every send", "Close hides. Work continues.", "Same owner: enabled grants stay on.", "No new invisible Redirect approvals.", "/jarvis stop", "Clear queue • request cancellation", "/jarvis access off", "Revoke Repo tools, Note & Redirect.", "/jarvis status → visible in main Pi", "Main replacement • side /new", "Reload / quit • trust denial", "Background work is not a daemon.", "Memory & archive: separate controls."]) assert.ok(text.includes(phrase), phrase);
-	assert.equal(flatten(parseSvg(readAsset("jarvis-access.svg"))).filter((n) => n.name === "text" && n.text === "OFF").length, 3);
+	const text = assetText("noodle-access.svg");
+	for (const phrase of ["Fresh owner → three OFF gates", "read • bash • edit • write", "Native MCP • configured, side-owned", "Quiet follow-up to the main lane", "Visible confirmation for every send", "Close hides. Work continues.", "Same owner: enabled grants stay on.", "No new invisible Redirect approvals.", "/noodle stop", "Clear queue • request cancellation", "/noodle access off", "Revoke Repo tools, Note & Redirect.", "/noodle status → visible in main Pi", "Main replacement • side /new", "Reload / quit • trust denial", "Background work is not a daemon.", "Memory & archive: separate controls."]) assert.ok(text.includes(phrase), phrase);
+	assert.equal(flatten(parseSvg(readAsset("noodle-access.svg"))).filter((n) => n.name === "text" && n.text === "OFF").length, 3);
 	assert.doesNotMatch(text, /closing revokes|close revokes|sandbox|forensic erasure|guaranteed rollback/i);
 });

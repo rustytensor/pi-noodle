@@ -4,9 +4,9 @@ This is the step-one source investigation, not a claim that watchers are impleme
 
 ## Versions and scope
 
-Inspected the installed Pi 1.1.0 extension documentation, public declarations, and compiled implementation. Compared the relevant API/implementation with pi-jarvis's Pi 1.0.0 development dependency. No providers, user MCP servers, archives, passwords, or credentials were used. No tests or live watcher commands were run in this step.
+Inspected the installed Pi 1.1.0 extension documentation, public declarations, and compiled implementation. Compared the relevant API/implementation with pi-noodle's Pi 1.0.0 development dependency. No providers, user MCP servers, archives, passwords, or credentials were used. No tests or live watcher commands were run in this step.
 
-Larra located the Jarvis entrypoint, but its branch index did not cover main and did not provide the installed host sources. Ordinary read-only tools supplied those gaps.
+Larra located the Noodle entrypoint, but its branch index did not cover main and did not provide the installed host sources. Ordinary read-only tools supplied those gaps.
 
 ## Result: use launch-time approval, not a retained tool context
 
@@ -24,7 +24,7 @@ Retaining a tool context after its tool returns would rely on undocumented lifet
 
 The user approved this fallback:
 
-1. During `jarvis_watcher_set`, show the complete check command and run the first check through `ctx.executeTool("bash", ...)` while the setting tool is still executing.
+1. During `noodle_watcher_set`, show the complete check command and run the first check through `ctx.executeTool("bash", ...)` while the setting tool is still executing.
 2. If bash is unavailable, execution is denied/cancelled, or the outcome cannot be safely classified, refuse registration. Do not schedule a repeat after denial.
 3. Fix the approved execution command, cwd, deadline, interval, and limits before scheduling. Never change the command after setup; condition-generated commands are equally immutable.
 4. Run later checks with public `pi.exec` in that same cwd. These checks do **not** rerun bash permission or result hooks. Recheck live watcher policy, trust, ownership, cancellation, and deadlines at boundaries.

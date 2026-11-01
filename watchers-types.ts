@@ -42,5 +42,5 @@ export const WATCHER_CLOCK: WatcherClock = {
 	setTimer(callback, ms) { const timer = setTimeout(callback, ms); timer.unref(); return timer; },
 	clearTimer(handle) { clearTimeout(handle as ReturnType<typeof setTimeout>); },
 };
-export const WATCHER_STATE_TYPE = "jarvis.watchers-state";
-export const WATCHER_MESSAGE_TYPE = "jarvis.watcher";
+export const WATCHER_STATE_TYPE = "jarvis.watchers-state"; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
+export const WATCHER_MESSAGE_TYPE = "jarvis.watcher"; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).

@@ -10,6 +10,7 @@ import { openEncryptedArchiveDatabase } from "./archive-sqlite.js";
 import { ArchiveStore } from "./archive-store.js";
 import { ArchiveUnlockLease, type ArchiveUnlockMode } from "./archive-unlock.js";
 import { ArchiveVaultFiles, ArchiveVaultFilesError, type ArchiveVaultLocked, type VaultGeneration, type VaultReady, type VaultState, type VaultTransition } from "./archive-vault-files.js";
+import { storageName, selectedStorageLayout } from "./storage-layout.js";
 
 /** Main commands/start use the main context; execute also accepts the side SDK context. */
 export type ArchiveVaultContext = Pick<ExtensionContext,
@@ -18,19 +19,19 @@ export interface ArchiveVaultOptions {
 	/** Live trusted && archive.enabled; capture/modelAccess are separate caller gates. */
 	isAllowed(ctx: ArchiveVaultContext): boolean;
 	onChange(): void;
-	/** Caller closes Jarvis before the default non-overlay masked prompt. */
+	/** Caller closes Noodle before the default non-overlay masked prompt. */
 	prompt?(ctx: ArchiveVaultContext, title: string, signal: AbortSignal): Promise<string | undefined>;
 	keychain?: ArchiveKeychain;
 }
 
-const FORMAT = "pi-jarvis-archive-vault";
-const HANDOFF = Symbol.for("pi-jarvis.archive-vault.handoff.v1");
+const FORMAT = "pi-jarvis-archive-vault"; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
+const HANDOFF = Symbol.for("pi-jarvis.archive-vault.handoff.v1"); // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 const MAX_HANDOFFS = 64;
 // Separate from transferable grants: never cleared by a logical shutdown or
 // module reload. Only a real process restart establishes that leaked native
 // handles are gone. Bounded without unsafe eviction: overflow/unknown root
 // poisons the process globally. This registry contains no keys or contexts.
-const POISON = Symbol.for("pi-jarvis.archive-vault.poison.v1");
+const POISON = Symbol.for("pi-jarvis.archive-vault.poison.v1"); // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 const MAX_POISON_ROOTS = 64;
 const UNSAFE = "Archive vault unavailable. Resource cleanup failed or storage publication/release is uncertain; stop Pi and inspect, then restart the Pi process before further archive access or storage changes.";
 type PoisonRegistry = { roots: Set<string>; all: boolean };
@@ -156,7 +157,7 @@ export class ArchiveVault {
 		this.#legacy = legacyStore;
 		this.#options = options;
 		this.#prompt = options.prompt ?? promptArchiveSecret;
-		this.#keychain = options.keychain ?? new NativeArchiveKeychain(); // inert/lazy
+		this.#keychain = options.keychain ?? new NativeArchiveKeychain(undefined, () => storageName(this.#agentDir, "pi-jarvis-archive")); // inert/lazy; stored service identity
 		const handoffs = registry(), owned = handoffs?.get(this.#registryKey);
 		if (owned) {
 			handoffs!.delete(this.#registryKey);
@@ -380,7 +381,7 @@ export class ArchiveVault {
 	}
 	#managedStore(state: VaultReady): ArchiveStore {
 		if (!this.#core.store) {
-			this.#core.store = new ArchiveStore(this.#core.files.agentRootPath, {
+			this.#core.store = new ArchiveStore(this.#core.files.agentRootPath, { layout: () => selectedStorageLayout(this.#agentDir),
 				managed: true, ...(state.active.id === "legacy" ? {} : { storageId: state.active.id }),
 				guard: () => { const permit = this.#permit; if (!permit) fail("Archive operation has ended."); this.#guardPermit(permit); },
 				...(state.active.envelope ? { databaseFactory: (path: string) =>
@@ -497,7 +498,7 @@ export class ArchiveVault {
 	#authenticate(generation: VaultGeneration, key: Buffer, guard: () => void): void {
 		guard();
 		const root = this.#core.files.agentRootPath, epoch = this.#epoch, owner = this.#owner;
-		const store = new ArchiveStore(root, { managed: true,
+		const store = new ArchiveStore(root, { layout: () => selectedStorageLayout(root), managed: true,
 			...(generation.id === "legacy" ? {} : { storageId: generation.id }), guard,
 			databaseFactory: (path, options) => {
 				guard();
@@ -736,13 +737,13 @@ export class ArchiveVault {
 					const guard = () => { this.#check(pending, locked); checkSource(); };
 					guard();
 					locked.ensureStorageDir(active.id);
-					const source = new ArchiveStore(this.#core.files.agentRootPath, { managed: true,
+					const source = new ArchiveStore(this.#core.files.agentRootPath, { layout: () => selectedStorageLayout(this.#agentDir), managed: true,
 						...(sourceGeneration.id === "legacy" ? {} : { storageId: sourceGeneration.id }), guard,
 						...(sourceKey ? { databaseFactory: (path: string, options: { create: boolean }) => {
 							guard(); if (options.create) fail("Migration source cannot be created.");
 							return openEncryptedArchiveDatabase(path, sourceKey!, { create: false });
 						} } : {}) });
-					const target = new ArchiveStore(this.#core.files.agentRootPath, { managed: true, storageId: active.id, guard,
+					const target = new ArchiveStore(this.#core.files.agentRootPath, { layout: () => selectedStorageLayout(this.#agentDir), managed: true, storageId: active.id, guard,
 						...(targetKey ? { databaseFactory: (path: string, options: { create: boolean }) => { guard(); return openEncryptedArchiveDatabase(path, targetKey!, options); } } : {}) });
 					try { await copyArchiveStore(source, target, guard); }
 					catch (error) {
@@ -874,7 +875,7 @@ export class ArchiveVault {
 		return `Archive transition rolled back explicitly; local lease locked and marker preserved. ${sourceNotice} Capture resumes from a fresh baseline; no backfill.` + await this.#delete(state.from?.remember?.account);
 	}
 
-	/** Only call from the MAIN session_start path, never a Jarvis side boot. */
+	/** Only call from the MAIN session_start path, never a Noodle side boot. */
 	async start(ctx: ArchiveVaultContext): Promise<void> {
 		const sequence = ++this.#startSequence;
 		let owner: string | undefined, epoch = this.#epoch, attempted = false;

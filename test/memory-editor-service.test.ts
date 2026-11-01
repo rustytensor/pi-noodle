@@ -14,7 +14,7 @@ const require = createRequire(import.meta.url);
 const sqlite = () => (require("node:sqlite") as typeof import("node:sqlite")).DatabaseSync;
 const draft = (patch: Partial<MemoryNoteDraft> = {}): MemoryNoteDraft => ({ title: "Synthetic fact", text: "Synthetic concise factual note", category: "project", scope: "project", ...patch });
 function fixture(t: TestContext) {
-	const root = mkdtempSync(join(tmpdir(), "pi-jarvis-editor-service-"));
+	const root = mkdtempSync(join(tmpdir(), "pi-noodle-editor-service-"));
 	const agent = join(root, "agent"), a = join(root, "workspace-a"), b = join(root, "workspace-b");
 	for (const path of [agent, a, b]) mkdirSync(path);
 	const services: SharedMemoryService[] = [];
@@ -73,7 +73,7 @@ test("capture/recall pauses permit explicit editor administration but preserve m
 	const f = fixture(t), service = f.service(), ctx = f.ctx();
 	saveMemoryPolicy(f.a, f.agent, "global", { capture: false, recall: false });
 	assert.deepEqual(service.editorAccess(ctx), { enabled: true, capture: false, recall: false });
-	assert.equal(service.canUse("jarvis_memory_remember", ctx), false); assert.equal(service.canUse("jarvis_memory_search", ctx), false);
+	assert.equal(service.canUse("noodle_memory_remember", ctx), false); assert.equal(service.canUse("noodle_memory_search", ctx), false);
 	const record = service.editorCreate(draft(), ctx);
 	assert.deepEqual(service.editorGet(record.id, ctx, "current"), record);
 	assert.equal(service.editorList({ scope: "project" }, ctx).total, 1);

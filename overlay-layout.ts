@@ -1,8 +1,8 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { backgroundAnsi, colorToRgb, mixColors, stripTerminalSequences, truncateToWidth, visibleWidth, type Color } from "@earendil-works/pi-tui";
-import type { JarvisOverlaySnapshot, JarvisOverlayView } from "./overlay.js";
+import type { NoodleOverlaySnapshot, NoodleOverlayView } from "./overlay.js";
 
-export interface JarvisHeaderOptions {
+export interface NoodleHeaderOptions {
 	expanded: boolean;
 	focusTarget: "input" | "tools" | "followUp" | "steer" | "model" | "thinking" | "history";
 	focused: boolean;
@@ -22,11 +22,11 @@ interface PermissionControl {
  * always last, so the overlay can retain it when applying a height budget.
  * Call with the content width (excluding the overlay's border/padding).
  */
-export function renderJarvisHeader(
+export function renderNoodleHeader(
 	theme: Theme,
-	view: JarvisOverlayView,
+	view: NoodleOverlayView,
 	width: number,
-	options: JarvisHeaderOptions,
+	options: NoodleHeaderOptions,
 ): string[] {
 	width = Number.isFinite(width) ? Math.max(0, Math.floor(width)) : 0;
 	if (width === 0) return [];
@@ -34,7 +34,7 @@ export function renderJarvisHeader(
 	const sideModel = inlineText(view.getModelLabel()) || "unknown";
 	const status = inlineText(view.getMainStatusLabel()) || "unknown";
 	const statusColor = status === "busy" ? "warning" : status === "idle" ? "success" : "muted";
-	const title = theme.bold(theme.fg("accent", "Jarvis"));
+	const title = theme.bold(theme.fg("accent", "Noodle"));
 	const main = theme.fg("muted", "Main");
 	const state = theme.fg(statusColor, status);
 	const separator = theme.fg("dim", " · ");
@@ -63,7 +63,7 @@ export function renderJarvisHeader(
 		lines.push(
 			fit(theme.fg("muted", `Focus: ${inlineText(view.getMainFocusLabel()) || "idle"}`), width),
 			fit(theme.fg("muted", `Main model: ${inlineText(view.getMainModelLabel()) || "unknown"}`), width),
-			fit(theme.fg("muted", `Jarvis model: ${sideModel}${mode ? ` (${mode})` : ""}`), width),
+			fit(theme.fg("muted", `Noodle model: ${sideModel}${mode ? ` (${mode})` : ""}`), width),
 			fit(theme.fg("muted", `Since last: ${inlineText(view.getMainDeltaLabel()) || "unchanged"}`), width),
 			fit(theme.fg("muted", `Access: ${inlineText(view.getRepoToolsDetailLabel()) || "unknown"}`), width),
 		);
@@ -77,7 +77,7 @@ export function renderJarvisHeader(
 }
 
 /** Width-aware selector/history controls; never hide the focused target. */
-export function renderJarvisControls(theme: Theme, view: JarvisOverlayView, width: number, options: JarvisHeaderOptions): string {
+export function renderNoodleControls(theme: Theme, view: NoodleOverlayView, width: number, options: NoodleHeaderOptions): string {
 	width = Number.isFinite(width) ? Math.max(0, Math.floor(width)) : 0;
 	if (!width) return "";
 	const model = options.expanded ? inlineText(view.getModelModeLabel()) : "";
@@ -109,10 +109,10 @@ export function renderJarvisControls(theme: Theme, view: JarvisOverlayView, widt
  * message is shown only during active work; queue counts exclude the active
  * request. The overlay owns reserving space for this row and any notices.
  */
-export function renderJarvisActivity(
+export function renderNoodleActivity(
 	theme: Theme,
-	snapshot: JarvisOverlaySnapshot,
-	view: JarvisOverlayView,
+	snapshot: NoodleOverlaySnapshot,
+	view: NoodleOverlayView,
 	width: number,
 ): string {
 	width = Number.isFinite(width) ? Math.max(0, Math.floor(width)) : 0;
@@ -124,7 +124,7 @@ export function renderJarvisActivity(
 	const waiting = view.getQueuedMessageCount?.() ?? 0;
 	const queued = Number.isFinite(waiting) ? Math.max(0, Math.floor(waiting)) : 0;
 	const active = streaming || processing;
-	const label = !ready ? active ? "Starting Jarvis…" : queued > 0 ? "Waiting to start…" : "Not ready"
+	const label = !ready ? active ? "Starting Noodle…" : queued > 0 ? "Waiting to start…" : "Not ready"
 		: streaming ? "Working…" : processing ? "Processing…"
 		: queued > 0 ? `${queued} queued` : "Ready";
 	const color = !ready || (!active && queued > 0) ? "warning" : active ? "accent" : "success";
@@ -152,7 +152,7 @@ function compactThinking(label: string): string {
  * Resolve on every call: theme invalidation may replace concrete token colors.
  * Older minimal themes used by hosts/fixtures retain semantic bg fallbacks.
  */
-export function jarvisSurface(theme: Theme, text: string, surface: "chrome" | "conversation" | "prompt"): string {
+export function noodleSurface(theme: Theme, text: string, surface: "chrome" | "conversation" | "prompt"): string {
 	if (typeof theme.style === "function" && theme.colors) {
 		const ink = theme.colors.text;
 		// Borrow the user's message palette instead of inheriting a flat tool-
@@ -195,7 +195,7 @@ function focusedControl(theme: Theme, text: string, fg: "accent" | "success"): s
 		: theme.bold(theme.fg(fg, text));
 }
 
-function renderPermissions(theme: Theme, controls: PermissionControl[], width: number, options: JarvisHeaderOptions): string {
+function renderPermissions(theme: Theme, controls: PermissionControl[], width: number, options: NoodleHeaderOptions): string {
 	const render = (control: PermissionControl, text: string) => options.focused && options.focusTarget === control.target
 		? focusedControl(theme, text, control.enabled ? "success" : "accent")
 		: theme.fg(control.enabled ? "success" : "muted", text);

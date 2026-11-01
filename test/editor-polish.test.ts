@@ -5,7 +5,7 @@ import {
 	CURSOR_MARKER, KeybindingsManager, TUI_KEYBINDINGS, getKeybindings, setKeybindings,
 	stripTerminalSequences, visibleWidth, type TUI,
 } from "@earendil-works/pi-tui";
-import { JarvisDraftEditor, MAX_DRAFT_BYTES } from "../draft-editor.js";
+import { NoodleDraftEditor, MAX_DRAFT_BYTES } from "../draft-editor.js";
 
 const theme = { fg: (_: string, text: string) => text } as Theme;
 const UP = "\x1b[A", DOWN = "\x1b[B", LEFT = "\x1b[D", RIGHT = "\x1b[C";
@@ -17,7 +17,7 @@ function fixture(initialText = "") {
 	let renders = 0;
 	const host = { terminal, requestRender: () => { renders++; } } as unknown as TUI;
 	const changes: string[] = [], submits: string[] = [], errors: string[] = [];
-	const editor = new JarvisDraftEditor(host, theme, {
+	const editor = new NoodleDraftEditor(host, theme, {
 		onChange: (text) => changes.push(text), onSubmit: (text) => submits.push(text),
 		onError: (message) => errors.push(message),
 	}, initialText);
@@ -328,7 +328,7 @@ test("oversize native yank is rolled back before publishing; absent error callba
 	assert.equal(f.errors.length, 1);
 	assert.deepEqual(f.submits, []);
 	const host = { terminal: { rows: 10, columns: 40 }, requestRender() {} } as unknown as TUI;
-	const editor = new JarvisDraftEditor(host, theme, { onChange() {}, onSubmit() {} }, "safe");
+	const editor = new NoodleDraftEditor(host, theme, { onChange() {}, onSubmit() {} }, "safe");
 	assert.throws(() => editor.setText("x".repeat(MAX_DRAFT_BYTES + 1)), /64 KiB/);
 	assert.equal(editor.getText(), "safe");
 	assert.throws(() => editor.setText("unsafe\x1b[31m"), /control characters/);

@@ -2,17 +2,17 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { CURSOR_MARKER, stripTerminalSequences, visibleWidth, type TUI } from "@earendil-works/pi-tui";
-import { JarvisOverlayBridge, JarvisOverlayComponent, attachOverlayBridge, type JarvisDisplayEntry, type JarvisOverlayView } from "../overlay.js";
+import { NoodleOverlayBridge, NoodleOverlayComponent, attachOverlayBridge, type NoodleDisplayEntry, type NoodleOverlayView } from "../overlay.js";
 
 const theme = { fg: (_: string, text: string) => text, bold: (text: string) => text } as Theme;
 const plain = (lines: string[]) => lines.map(stripTerminalSequences).join("\n");
-function fixture(bridge = new JarvisOverlayBridge(), entries: JarvisDisplayEntry[] = [], ready = true) {
+function fixture(bridge = new NoodleOverlayBridge(), entries: NoodleDisplayEntry[] = [], ready = true) {
 	const terminal = { rows: 40, columns: 100 };
 	const state = { entries, ready, processing: false, streaming: false, queued: 0, tools: false, note: false, redirect: false };
 	const sent: string[] = [];
 	let closes = 0;
 	const host = { terminal, requestRender() {} } as unknown as TUI;
-	const view: JarvisOverlayView = {
+	const view: NoodleOverlayView = {
 		isReady: () => state.ready, isStreaming: () => state.streaming,
 		getIsProcessing: () => state.processing, getQueuedMessageCount: () => state.queued,
 		getModelLabel: () => "test/side", getModelModeLabel: () => "follow main",
@@ -26,13 +26,13 @@ function fixture(bridge = new JarvisOverlayBridge(), entries: JarvisDisplayEntry
 		toggleSteerToMain: () => { state.redirect = !state.redirect; },
 		getDisplayEntries: () => state.entries, sendMessage: async (text) => { sent.push(text); },
 	};
-	const overlay = attachOverlayBridge(new JarvisOverlayComponent(host, theme, bridge, view, () => {
+	const overlay = attachOverlayBridge(new NoodleOverlayComponent(host, theme, bridge, view, () => {
 		closes++;
 	}), bridge, host);
 	overlay.focused = true;
 	return { overlay, bridge, state, terminal, sent, view, closes: () => closes };
 }
-const history = (count: number): JarvisDisplayEntry[] => Array.from({ length: count }, (_, i) => ({ kind: "assistant", text: `record-${i}` }));
+const history = (count: number): NoodleDisplayEntry[] => Array.from({ length: count }, (_, i) => ({ kind: "assistant", text: `record-${i}` }));
 
 function transcript(lines: string[]): string[] {
 	const text = lines.map(stripTerminalSequences);
@@ -44,14 +44,14 @@ function transcript(lines: string[]): string[] {
 
 test("short role hairlines stay on heading rows and leave message text and source anchors intact", () => {
 	const text = "Keep this **literal** body unchanged. 中文🙂";
-	const f = fixture(new JarvisOverlayBridge(), [{ kind: "assistant", text }]);
+	const f = fixture(new NoodleOverlayBridge(), [{ kind: "assistant", text }]);
 	try {
 		const wide = plain(f.overlay.render(100));
-		assert.match(wide, /Jarvis:  ────────/);
+		assert.match(wide, /Noodle:  ────────/);
 		assert.ok(wide.includes(text));
 		assert.equal(f.state.entries[0]!.text, text);
 		const narrow = plain(f.overlay.render(30));
-		assert.ok(!narrow.includes("Jarvis:  ────────"), "small reading columns omit decorative rules");
+		assert.ok(!narrow.includes("Noodle:  ────────"), "small reading columns omit decorative rules");
 		assert.equal(f.bridge.getDraft(), "");
 		assert.deepEqual(f.sent, []);
 	} finally { f.overlay.dispose(); }
@@ -139,7 +139,7 @@ test("compact diagnostics, activity and dismissible errors do not depend on tran
 	try {
 		let output = plain(f.overlay.render(80));
 		assert.ok(!output.includes("Since last:"));
-		assert.ok(output.includes("Jarvis · Main busy · side"));
+		assert.ok(output.includes("Noodle · Main busy · side"));
 		f.overlay.handleInput("\x0f");
 		output = plain(f.overlay.render(80));
 		assert.ok(output.includes("Since last: new request"));
@@ -149,7 +149,7 @@ test("compact diagnostics, activity and dismissible errors do not depend on tran
 		f.state.processing = true;
 		f.state.queued = 2;
 		output = plain(f.overlay.render(80));
-		assert.ok(output.includes("Starting Jarvis…") && output.includes("2 queued"));
+		assert.ok(output.includes("Starting Noodle…") && output.includes("2 queued"));
 		f.state.ready = f.state.streaming = true;
 		f.bridge.setWorkingMessage("Thinking…");
 		output = plain(f.overlay.render(80));
@@ -461,11 +461,11 @@ test("80x24 compact UI exposes core shortcuts, contextual controls and at least 
 		f.terminal.rows = 24;
 		for (const text of ["", "one\n  two\n    three\nfour"]) {
 			f.bridge.setDraft(text); // A fresh mount reflects bridge restore.
-			const component = new JarvisOverlayComponent({ terminal: f.terminal, requestRender() {} } as unknown as TUI, theme, f.bridge, f.view, () => {});
+			const component = new NoodleOverlayComponent({ terminal: f.terminal, requestRender() {} } as unknown as TUI, theme, f.bridge, f.view, () => {});
 			component.focused = true;
 			try {
 				const lines = component.render(54); const output = plain(lines);
-				for (const hint of ["F2 Model", "F3 Thinking", "ctrl+c stop", "esc close", "live", "tab controls", "ctrl+o details", "jarvis >", "Prompt · Message"]) assert.ok(output.includes(hint), hint);
+				for (const hint of ["F2 Model", "F3 Thinking", "ctrl+c stop", "esc close", "live", "tab controls", "ctrl+o details", "noodle >", "Prompt · Message"]) assert.ok(output.includes(hint), hint);
 				assert.match(output, /pageUp\/pageDown|PgUp\/PgDn/);
 				assert.ok((component as unknown as { viewport: { getStatus(): { startLine: number; endLine: number } } }).viewport.getStatus().endLine
 					- (component as unknown as { viewport: { getStatus(): { startLine: number; endLine: number } } }).viewport.getStatus().startLine >= 3);
@@ -510,11 +510,11 @@ test("prompt panel uses public semantic light/dark colors, a Message label and n
 				bg: (role: string, text: string) => { bgRoles.push(role); return `\x1b[${role === "userMessageBg" ? appearance === "light" ? 47 : 40 : 49}m${text}\x1b[49m`; },
 				bold: (text: string) => text,
 			} as unknown as Theme;
-			const overlay = new JarvisOverlayComponent({ terminal: f.terminal, requestRender() {} } as unknown as TUI, palette, f.bridge, f.view, () => {});
+			const overlay = new NoodleOverlayComponent({ terminal: f.terminal, requestRender() {} } as unknown as TUI, palette, f.bridge, f.view, () => {});
 			overlay.focused = true;
 			try {
 				overlay.handleInput("one\n  two"); const lines = overlay.render(54); const output = plain(lines);
-				assert.match(output, /Prompt · Message/); assert.match(output, /jarvis > one/); assert.match(output, /\.\.\.   two/);
+				assert.match(output, /Prompt · Message/); assert.match(output, /noodle > one/); assert.match(output, /\.\.\.   two/);
 				assert.ok(bgRoles.includes("userMessageBg") && bgRoles.includes("toolPendingBg"));
 				assert.ok(!bgRoles.includes("customMessageBg"), "chrome does not inherit a flat colorful message panel");
 				assert.ok(lines.some(line => line.includes(CURSOR_MARKER)));
@@ -542,7 +542,7 @@ test("tiny redraw, invalidation, unfocus and resize-before-redraw cannot apply a
 	}
 });
 
-function layoutProbe(component: JarvisOverlayComponent) {
+function layoutProbe(component: NoodleOverlayComponent) {
 	return component as unknown as {
 		viewport: { getStatus(): { startLine: number; endLine: number; following: boolean } };
 		transcriptCacheWidth: number;
@@ -554,13 +554,13 @@ function layoutProbe(component: JarvisOverlayComponent) {
 }
 
 test("conversation is framed, padded, source-bounded to 96 columns and spaces consecutive roles", () => {
-	const entries: JarvisDisplayEntry[] = [{ kind: "assistant", text: "first entry" }, { kind: "assistant", text: "second entry" }];
+	const entries: NoodleDisplayEntry[] = [{ kind: "assistant", text: "first entry" }, { kind: "assistant", text: "second entry" }];
 	const f = fixture(undefined, entries);
 	try {
 		f.terminal.columns = 220;
 		const output = plain(f.overlay.render(220));
 		assert.match(output, /╭ Conversation/);
-		assert.match(output, /first entry[^\n]*\n[^\n]*│\s+│[^\n]*\n[^\n]*Jarvis:/);
+		assert.match(output, /first entry[^\n]*\n[^\n]*│\s+│[^\n]*\n[^\n]*Noodle:/);
 		assert.equal(layoutProbe(f.overlay).transcriptCacheWidth, 96);
 		assert.deepEqual(entries.map(entry => entry.text), ["first entry", "second entry"]);
 		assert.ok(f.overlay.render(220).length < 28, "short conversations do not fill a huge empty panel");
@@ -617,7 +617,7 @@ test("narrow clipped bodies keep speaker and Conversation visible; notices never
 		f.terminal.rows = 20;
 		const lines = f.overlay.render(34), output = plain(lines);
 		const title = lines.map(stripTerminalSequences).find(line => line.includes("Conversation"))!;
-		assert.match(title, /Jarvis:/); assert.ok(output.includes("Prompt · Message"));
+		assert.match(title, /Noodle:/); assert.ok(output.includes("Prompt · Message"));
 		f.bridge.notify("urgent permission warning", "warning"); f.bridge.notify("informational configuration details");
 		assert.match(plain(f.overlay.render(80)), /Warning: urgent permission warning/);
 		assert.doesNotMatch(plain(f.overlay.render(80)), /Notice: informational configuration details/);

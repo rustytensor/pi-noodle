@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+// Explicit expected registration set: three new tools plus the three required legacy aliases.
+const COMPAT_ARCHIVE_TOOLS = ["noodle_archive_search", "noodle_archive_read", "noodle_archive_session", "jarvis_archive_search", "jarvis_archive_read", "jarvis_archive_session"];
 import { mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -105,7 +107,7 @@ function fixture(t: TestContext, service = new MockArchiveService(), lane: "main
 }
 function mount(service: MockArchiveService, lane: "main" | "jarvis", ctx: ExtensionContext, options: ArchiveExtensionOptions = {}) {
 	const handlers = new Map<string, Handler[]>(), tools = new Map<string, ToolDefinition<any>>();
-	let activeTools: string[] = ["read", "host_tool", "jarvis_memory_search"];
+	let activeTools: string[] = ["read", "host_tool", "noodle_memory_search"];
 	let selectionWrites = 0;
 	const register = (name: string, handler: Handler) => { handlers.set(name, [...(handlers.get(name) ?? []), handler]); };
 	const pi = {
@@ -144,7 +146,7 @@ const ids = (service: MockArchiveService) => service.captures.map(({ entry }) =>
 const text = (result: Awaited<ReturnType<ToolDefinition<any>["execute"]>>) => result.content.filter((part) => part.type === "text").map((part) => part.text).join("\n");
 const before = (selectedTools: string[] = []) => ({ type: "before_agent_start", prompt: "fixture user request", systemPrompt: "HOST PROMPT",
 	systemPromptOptions: { sections: { host: "HOST SECTION" }, selectedTools, forceSystemPrompt: "FORCED HOST PROMPT" } });
-const params = (name: string) => name === "jarvis_archive_search" ? { query: "fixture" } : name === "jarvis_archive_read" ? { id: "record-fixture" } : { sessionId: "session-fixture" };
+const params = (name: string) => name === "noodle_archive_search" ? { query: "fixture" } : name === "noodle_archive_read" ? { id: "record-fixture" } : { sessionId: "session-fixture" };
 
 test("loading and full OFF never inspect journals, inject context, touch records, or start work", async t => {
 	const f = fixture(t);
@@ -153,23 +155,23 @@ test("loading and full OFF never inspect journals, inject context, touch records
 	assert.equal(f.service.policyCalls, 0);
 	assert.equal(f.journal.reads, 0);
 	assert.equal(f.selectionWrites(), 0, "loading cannot use unbound session controls");
-	assert.equal(f.tools.size, 3);
+	assert.equal(f.tools.size, 6);
 	for (const name of ARCHIVE_TOOL_NAMES) assert.equal(f.tools.get(name)!.exposure, "hidden");
 	for (const name of ["message_start", "message_update", "message_end", "tool_result", "provider_stream_event", "agent_end", "context", "context_with_system"])
 		assert.equal(f.handlers.has(name), false, `${name} must not capture or inject`);
 	await f.emit("session_start");
 	for (const name of ["turn_end", "agent_settled", "session_before_compact", "session_compact", "session_before_switch", "session_before_fork", "session_before_tree", "session_tree", "model_select", "thinking_level_select", "session_info_changed"])
 		await f.emit(name);
-	const event = before(["read", "host_tool", ...ARCHIVE_TOOL_NAMES, "jarvis_memory_search"]);
+	const event = before(["read", "host_tool", ...ARCHIVE_TOOL_NAMES, "noodle_memory_search"]);
 	await f.emit("before_agent_start", event);
-	assert.deepEqual(event.systemPromptOptions.selectedTools, ["read", "host_tool", "jarvis_memory_search"]);
+	assert.deepEqual(event.systemPromptOptions.selectedTools, ["read", "host_tool", "noodle_memory_search"]);
 	assert.equal(event.systemPromptOptions.forceSystemPrompt, "FORCED HOST PROMPT");
 	assert.deepEqual(event.systemPromptOptions.sections, { host: "HOST SECTION" });
 	for (const name of ARCHIVE_TOOL_NAMES) {
 		assert.equal((await f.emit("tool_call", { toolName: name })).block, true);
 		await assert.rejects(f.execute(name, params(name)), /archive access expired/i);
 	}
-	assert.equal(await f.emit("tool_call", { toolName: "jarvis_memory_search" }), undefined);
+	assert.equal(await f.emit("tool_call", { toolName: "noodle_memory_search" }), undefined);
 	await f.emit("session_shutdown", { type: "session_shutdown", reason: "new" });
 	assert.equal(f.journal.reads, 0);
 	assert.equal(f.service.captureCalls, 0);
@@ -265,14 +267,14 @@ test("capture pause/full OFF/re-enable discard disabled-period entries without b
 	const f = fixture(t, service);
 	await f.emit("session_start");
 	f.journal.append(entry("enabled-first")); await f.emit("agent_settled");
-	const oldTool = f.tools.get("jarvis_archive_search")!;
+	const oldTool = f.tools.get("noodle_archive_search")!;
 	f.journal.canRead = false;
 	const beforeOffReads = f.journal.reads;
 	service.setPolicy({ capture: false });
 	f.journal.append(entry("capture-paused"));
 	await f.emit("agent_settled");
-	assert.match(text(await f.execute("jarvis_archive_search", { query: "fixture" })), /LOCAL_SYNTHETIC/);
-	await assert.rejects(f.execute("jarvis_archive_search", { query: "fixture" }, undefined, oldTool), /expired/);
+	assert.match(text(await f.execute("noodle_archive_search", { query: "fixture" })), /LOCAL_SYNTHETIC/);
+	await assert.rejects(f.execute("noodle_archive_search", { query: "fixture" }, undefined, oldTool), /expired/);
 	assert.equal(f.journal.reads, beforeOffReads);
 	f.journal.canRead = true;
 	service.setPolicy({ capture: true });
@@ -298,12 +300,15 @@ test("dynamic own-tool selection preserves Repo/memory/host tools and already-sn
 	let changed = 0;
 	const f = fixture(t, new MockArchiveService(), "main", { onToolsChanged: () => { changed++; } });
 	await f.emit("session_start");
-	const original = ["read", "host_tool", "jarvis_memory_search"];
+	const original = ["read", "host_tool", "noodle_memory_search"];
 	f.service.onPolicy = () => f.service.setPolicy(ON); // First observed inside before_agent_start, with reentrant notification.
-	const event = before(["earlier_hook_tool", "jarvis_memory_search", "read"]);
+	const event = before(["earlier_hook_tool", "noodle_memory_search", "read"]);
 	await f.emit("before_agent_start", event);
-	assert.deepEqual(f.activeTools(), [...original, ...ARCHIVE_TOOL_NAMES]);
-	assert.deepEqual(event.systemPromptOptions.selectedTools, ["earlier_hook_tool", "jarvis_memory_search", "read", ...ARCHIVE_TOOL_NAMES]);
+	const active = f.activeTools();
+	assert.deepEqual(active.slice(0, original.length), original, "foreign tool order is preserved");
+	// Alias registration order is not part of the contract; membership and multiplicity are.
+	assert.deepEqual(active.slice(original.length).sort(), [...COMPAT_ARCHIVE_TOOLS].sort());
+	assert.deepEqual(event.systemPromptOptions.selectedTools, ["earlier_hook_tool", "noodle_memory_search", "read", ...COMPAT_ARCHIVE_TOOLS]);
 	assert.deepEqual(event.systemPromptOptions.sections, { host: "HOST SECTION" });
 	assert.equal(event.systemPromptOptions.forceSystemPrompt, "FORCED HOST PROMPT");
 	for (const name of ARCHIVE_TOOL_NAMES) {
@@ -316,13 +321,13 @@ test("dynamic own-tool selection preserves Repo/memory/host tools and already-sn
 		assert.match(tool.description, /Default reach is this session/);
 		assert.match(tool.description, /one explicit user approval per request/);
 	}
-	const snapshotted = before(["earlier_hook_tool", ...ARCHIVE_TOOL_NAMES, "jarvis_memory_search"]);
+	const snapshotted = before(["earlier_hook_tool", ...ARCHIVE_TOOL_NAMES, "noodle_memory_search"]);
 	f.service.onPolicy = () => f.service.setPolicy({ modelAccess: false });
 	await f.emit("before_agent_start", snapshotted);
-	assert.deepEqual(snapshotted.systemPromptOptions.selectedTools, ["earlier_hook_tool", "jarvis_memory_search"]);
+	assert.deepEqual(snapshotted.systemPromptOptions.selectedTools, ["earlier_hook_tool", "noodle_memory_search"]);
 	assert.deepEqual(f.activeTools(), original);
 	assert.ok(changed >= 3);
-	assert.equal(f.tools.size, 3, "there are no model control/import/deletion tools");
+	assert.equal(f.tools.size, 6, "there are no model control/import/deletion tools");
 });
 
 test("tools forward the exact service API, including model=true and explicit all-project pagination", async t => {
@@ -330,9 +335,9 @@ test("tools forward the exact service API, including model=true and explicit all
 	const f = fixture(t, service); f.journal.canRead = false;
 	await f.emit("session_start");
 	const requests = [
-		{ name: "jarvis_archive_search", method: "search", args: { query: 'literal "phrase"', sessionId: "specific-session", scope: "all", offset: 40, limit: 50 } },
-		{ name: "jarvis_archive_read", method: "read", args: { id: "archive-record-id", scope: "all", offset: 12_000, limit: 12_000 } },
-		{ name: "jarvis_archive_session", method: "session", args: { sessionId: "specific-session", scope: "current", offset: 20, limit: 10 } },
+		{ name: "noodle_archive_search", method: "search", args: { query: 'literal "phrase"', sessionId: "specific-session", scope: "all", offset: 40, limit: 50 } },
+		{ name: "noodle_archive_read", method: "read", args: { id: "archive-record-id", scope: "all", offset: 12_000, limit: 12_000 } },
+		{ name: "noodle_archive_session", method: "session", args: { sessionId: "specific-session", scope: "current", offset: 20, limit: 10 } },
 	];
 	for (const { name, method, args } of requests) {
 		const result = await f.execute(name, args);
@@ -350,20 +355,20 @@ test("stale definitions cannot revive after policy, trust, epoch or session gene
 	const stale = ARCHIVE_TOOL_NAMES.map(name => f.tools.get(name)!);
 	service.setPolicy({ modelAccess: false }); service.setPolicy({ modelAccess: true });
 	for (let i = 0; i < stale.length; i++) await assert.rejects(f.execute(ARCHIVE_TOOL_NAMES[i]!, params(ARCHIVE_TOOL_NAMES[i]!), undefined, stale[i]), /expired/);
-	const epochStale = f.tools.get("jarvis_archive_search")!;
+	const epochStale = f.tools.get("noodle_archive_search")!;
 	service.setPolicy({}, false); // No push notification: execution itself must discover the epoch.
-	await assert.rejects(f.execute("jarvis_archive_search", { query: "fixture" }, undefined, epochStale), /expired/);
-	const trustStale = f.tools.get("jarvis_archive_search")!;
+	await assert.rejects(f.execute("noodle_archive_search", { query: "fixture" }, undefined, epochStale), /expired/);
+	const trustStale = f.tools.get("noodle_archive_search")!;
 	f.setTrust(false); f.journal.canRead = false;
 	await f.emit("before_agent_start", before());
 	f.setTrust(true); f.journal.canRead = true;
 	await f.emit("before_agent_start", before());
-	await assert.rejects(f.execute("jarvis_archive_search", { query: "fixture" }, undefined, trustStale), /expired/);
-	const sessionStale = f.tools.get("jarvis_archive_search")!;
+	await assert.rejects(f.execute("noodle_archive_search", { query: "fixture" }, undefined, trustStale), /expired/);
+	const sessionStale = f.tools.get("noodle_archive_search")!;
 	f.journal.id = "replacement-session";
 	f.journal.entries = [entry("replacement-history")];
 	await f.emit("session_start");
-	await assert.rejects(f.execute("jarvis_archive_search", { query: "fixture" }, undefined, sessionStale), /expired/);
+	await assert.rejects(f.execute("noodle_archive_search", { query: "fixture" }, undefined, sessionStale), /expired/);
 	f.journal.append(entry("replacement-new")); await f.emit("agent_settled");
 	assert.deepEqual(ids(service), ["replacement-new"]);
 	assert.deepEqual(service.reads, []);
@@ -374,26 +379,26 @@ test("model access changes revoke readers without dropping pending recording", a
 	const f = fixture(t, service); await f.emit("session_start");
 	f.journal.append(entry("before-reader-enable"));
 	service.setPolicy({ modelAccess: true });
-	const old = f.tools.get("jarvis_archive_read")!;
+	const old = f.tools.get("noodle_archive_read")!;
 	f.journal.append(entry("before-reader-disable"));
 	service.setPolicy({ modelAccess: false });
 	await f.emit("agent_settled");
 	assert.deepEqual(ids(service), ["before-reader-enable", "before-reader-disable"]);
-	await assert.rejects(f.execute("jarvis_archive_read", { id: "fixture" }, undefined, old), /expired/);
+	await assert.rejects(f.execute("noodle_archive_read", { id: "fixture" }, undefined, old), /expired/);
 });
 
 test("even policy changes without an epoch bump revoke observed definitions; foreign contexts cannot rebind tools", async t => {
 	const service = new MockArchiveService(); service.settings = { ...ON, capture: false };
 	const f = fixture(t, service); await f.emit("session_start");
-	const stale = f.tools.get("jarvis_archive_read")!;
+	const stale = f.tools.get("noodle_archive_read")!;
 	service.setPolicy({ modelAccess: false }, true, false);
 	service.setPolicy({ modelAccess: true }, true, false);
-	await assert.rejects(f.execute("jarvis_archive_read", { id: "fixture" }, undefined, stale), /expired/);
+	await assert.rejects(f.execute("noodle_archive_read", { id: "fixture" }, undefined, stale), /expired/);
 	const foreignJournal = new Journal("foreign-fixture"); foreignJournal.canRead = false;
 	const foreign = { ...f.ctx, sessionManager: foreignJournal } as unknown as ExtensionContext;
-	await assert.rejects(f.execute("jarvis_archive_read", { id: "fixture" }, undefined, f.tools.get("jarvis_archive_read")!, foreign), /expired/);
+	await assert.rejects(f.execute("noodle_archive_read", { id: "fixture" }, undefined, f.tools.get("noodle_archive_read")!, foreign), /expired/);
 	assert.equal(foreignJournal.reads, 0);
-	assert.match(text(await f.execute("jarvis_archive_read", { id: "fixture" })), /LOCAL_SYNTHETIC/);
+	assert.match(text(await f.execute("noodle_archive_read", { id: "fixture" })), /LOCAL_SYNTHETIC/);
 });
 
 test("tool and context cancellation block reads, and mid-read revocation discards the result", async t => {
@@ -409,9 +414,9 @@ test("tool and context cancellation block reads, and mid-read revocation discard
 	assert.deepEqual(service.reads, []);
 	f.ctx.signal = undefined;
 	const midRead = new AbortController(); service.onRead = () => midRead.abort();
-	await assert.rejects(f.execute("jarvis_archive_read", { id: "fixture" }, midRead.signal), /cancelled/);
+	await assert.rejects(f.execute("noodle_archive_read", { id: "fixture" }, midRead.signal), /cancelled/);
 	service.onRead = () => service.setPolicy({ enabled: false });
-	await assert.rejects(f.execute("jarvis_archive_search", { query: "fixture" }), /expired/);
+	await assert.rejects(f.execute("noodle_archive_search", { query: "fixture" }), /expired/);
 	assert.equal(service.reads.length, 2, "already-started synchronous reads cannot be rolled back, but results are withheld");
 });
 
@@ -420,19 +425,19 @@ test("side lifetime revocation is independent of main, Repo tools, memory tools 
 	const lifetime = new AbortController();
 	const main = fixture(t, service), side = fixture(t, service, "jarvis", { lifetimeSignal: lifetime.signal });
 	await main.emit("session_start"); await side.emit("session_start");
-	const sideDefinition = side.tools.get("jarvis_archive_search")!;
-	side.setActiveTools(["jarvis_memory_search", ...ARCHIVE_TOOL_NAMES]); // Repo tools OFF does not gate archive.
-	assert.match(text(await side.execute("jarvis_archive_search", { query: "fixture" })), /LOCAL_SYNTHETIC/);
+	const sideDefinition = side.tools.get("noodle_archive_search")!;
+	side.setActiveTools(["noodle_memory_search", ...ARCHIVE_TOOL_NAMES]); // Repo tools OFF does not gate archive.
+	assert.match(text(await side.execute("noodle_archive_search", { query: "fixture" })), /LOCAL_SYNTHETIC/);
 	const sideReads = side.journal.reads;
 	lifetime.abort(); side.journal.canRead = false;
 	side.journal.append(entry("revoked-side"));
 	await side.emit("agent_settled"); await side.emit("session_start");
-	await assert.rejects(side.execute("jarvis_archive_search", { query: "fixture" }, undefined, sideDefinition), /expired/);
+	await assert.rejects(side.execute("noodle_archive_search", { query: "fixture" }, undefined, sideDefinition), /expired/);
 	assert.equal(side.journal.reads, sideReads);
-	assert.deepEqual(side.activeTools(), ["jarvis_memory_search"]);
+	assert.deepEqual(side.activeTools(), ["noodle_memory_search"]);
 	assert.equal(service.listeners.size, 1);
 	main.journal.append(entry("main-after-side-close")); await main.emit("agent_settled");
-	assert.match(text(await main.execute("jarvis_archive_search", { query: "fixture" })), /LOCAL_SYNTHETIC/);
+	assert.match(text(await main.execute("noodle_archive_search", { query: "fixture" })), /LOCAL_SYNTHETIC/);
 	assert.deepEqual(ids(service), ["main-after-side-close"]);
 	assert.equal(service.closeCalls, 0);
 	await main.emit("session_shutdown");
@@ -464,7 +469,7 @@ test("live host and optional trust gates fail closed, without reading old entrie
 	f.journal.append(entry("trusted-new")); await f.emit("turn_end");
 	assert.deepEqual(ids(service), ["trusted-new"]);
 	f.setTrust(false); f.journal.canRead = false;
-	await assert.rejects(f.execute("jarvis_archive_search", { query: "fixture" }), /expired/);
+	await assert.rejects(f.execute("noodle_archive_search", { query: "fixture" }), /expired/);
 	for (const name of ARCHIVE_TOOL_NAMES) assert.equal(f.tools.get(name)!.exposure, "hidden");
 });
 
@@ -472,7 +477,7 @@ test("tree/cancelled transitions keep complete-journal identity, capture late en
 	const service = new MockArchiveService(); service.settings = { ...ON };
 	const f = fixture(t, service);
 	f.journal.append(entry("old-other-branch")); await f.emit("session_start");
-	const beforeTreeTool = f.tools.get("jarvis_archive_search")!;
+	const beforeTreeTool = f.tools.get("noodle_archive_search")!;
 	f.journal.append(entry("abandoned-new"));
 	f.late("session_before_tree", () => { f.journal.append(entry("late-before-tree")); });
 	await f.emit("session_before_tree");
@@ -480,12 +485,12 @@ test("tree/cancelled transitions keep complete-journal identity, capture late en
 	f.journal.append(entry("summary", "branch_summary", { fromId: "abandoned-new", summary: "final fixture summary" }, "old-other-branch"));
 	await f.emit("session_tree", { newLeafId: "summary", oldLeafId: "abandoned-new" });
 	assert.deepEqual(ids(service), ["abandoned-new", "late-before-tree", "summary"]);
-	await assert.rejects(f.execute("jarvis_archive_search", { query: "fixture" }, undefined, beforeTreeTool), /expired/);
-	const beforeCancelledFork = f.tools.get("jarvis_archive_search")!;
+	await assert.rejects(f.execute("noodle_archive_search", { query: "fixture" }, undefined, beforeTreeTool), /expired/);
+	const beforeCancelledFork = f.tools.get("noodle_archive_search")!;
 	f.late("session_before_fork", () => ({ cancel: true }));
 	assert.equal((await f.emit("session_before_fork")).cancel, true);
 	f.journal.append(entry("after-cancelled-fork")); await f.emit("turn_end");
-	await assert.rejects(f.execute("jarvis_archive_search", { query: "fixture" }, undefined, beforeCancelledFork), /expired/);
+	await assert.rejects(f.execute("noodle_archive_search", { query: "fixture" }, undefined, beforeCancelledFork), /expired/);
 	assert.deepEqual(ids(service), ["abandoned-new", "late-before-tree", "summary", "after-cancelled-fork"]);
 });
 
@@ -584,15 +589,15 @@ test("model tools default to this session without asking and forward scope sessi
 	const service = new MockArchiveService(); service.settings = { ...ON, modelWideSearch: false };
 	const f = fixture(t, service); await f.emit("session_start");
 	// No scope: the model's own-initiative reach is this session, never a question.
-	assert.match(text(await f.execute("jarvis_archive_search", { query: "earlier decision" })), /LOCAL_SYNTHETIC/);
+	assert.match(text(await f.execute("noodle_archive_search", { query: "earlier decision" })), /LOCAL_SYNTHETIC/);
 	assert.deepEqual(service.reads.at(-1), { method: "search", params: { query: "earlier decision", scope: "session" }, model: true, cwd: f.cwd, sessionId: f.journal.id });
 	// An explicit scope "session" naming THIS session is still the session reach.
-	assert.match(text(await f.execute("jarvis_archive_search", { query: "paths", scope: "session", sessionId: f.journal.id })), /LOCAL_SYNTHETIC/);
+	assert.match(text(await f.execute("noodle_archive_search", { query: "paths", scope: "session", sessionId: f.journal.id })), /LOCAL_SYNTHETIC/);
 	// Read defaults to the session reach too.
-	assert.match(text(await f.execute("jarvis_archive_read", { id: "record-fixture" })), /LOCAL_SYNTHETIC/);
+	assert.match(text(await f.execute("noodle_archive_read", { id: "record-fixture" })), /LOCAL_SYNTHETIC/);
 	assert.deepEqual(service.reads.at(-1), { method: "read", params: { id: "record-fixture", scope: "session" }, model: true, cwd: f.cwd, sessionId: f.journal.id });
 	// Session listing without an ID lists the current session.
-	assert.match(text(await f.execute("jarvis_archive_session", {})), /LOCAL_SYNTHETIC/);
+	assert.match(text(await f.execute("noodle_archive_session", {})), /LOCAL_SYNTHETIC/);
 	assert.deepEqual(service.reads.at(-1), { method: "session", params: { scope: "session" }, model: true, cwd: f.cwd, sessionId: f.journal.id });
 	assert.deepEqual(f.confirmations, [], "the session reach never asks");
 });
@@ -601,17 +606,17 @@ test("wider reach with model-search off asks once per request and runs only when
 	const service = new MockArchiveService(); service.settings = { ...ON, modelWideSearch: false };
 	const f = fixture(t, service); await f.emit("session_start");
 	f.setConfirm(true);
-	assert.match(text(await f.execute("jarvis_archive_search", { query: "fixture", scope: "all" })), /LOCAL_SYNTHETIC/);
+	assert.match(text(await f.execute("noodle_archive_search", { query: "fixture", scope: "all" })), /LOCAL_SYNTHETIC/);
 	assert.equal(f.confirmations.length, 1);
 	assert.match(f.confirmations[0]!.title, /all projects/);
 	assert.match(f.confirmations[0]!.message, /Search query: fixture/);
 	assert.match(f.confirmations[0]!.message, /One approval covers this request only/);
 	assert.deepEqual(service.reads.at(-1), { method: "search", params: { query: "fixture", scope: "all" }, model: true, cwd: f.cwd, sessionId: f.journal.id });
 	// One approval covers exactly one request: the next call asks again.
-	assert.match(text(await f.execute("jarvis_archive_search", { query: "fixture", scope: "all" })), /LOCAL_SYNTHETIC/);
+	assert.match(text(await f.execute("noodle_archive_search", { query: "fixture", scope: "all" })), /LOCAL_SYNTHETIC/);
 	assert.equal(f.confirmations.length, 2);
 	// A project-reach search names that reach.
-	assert.match(text(await f.execute("jarvis_archive_search", { query: "fixture", scope: "current" })), /LOCAL_SYNTHETIC/);
+	assert.match(text(await f.execute("noodle_archive_search", { query: "fixture", scope: "current" })), /LOCAL_SYNTHETIC/);
 	assert.match(f.confirmations[2]!.title, /beyond this session/);
 });
 
@@ -619,18 +624,18 @@ test("declined or unavailable approval refuses wider reach without executing any
 	const service = new MockArchiveService(); service.settings = { ...ON, modelWideSearch: false };
 	const f = fixture(t, service); await f.emit("session_start");
 	f.setConfirm(false);
-	const refused = text(await f.execute("jarvis_archive_search", { query: "fixture", scope: "current" }));
-	assert.equal(refused, "Wider archive reach (other sessions of this project) was not approved, so nothing was executed. The default reach is this session; ask the user before going wider, or have them run /jarvis-archive model-search on.");
+	const refused = text(await f.execute("noodle_archive_search", { query: "fixture", scope: "current" }));
+	assert.equal(refused, "Wider archive reach (other sessions of this project) was not approved, so nothing was executed. The default reach is this session; ask the user before going wider, or have them run /noodle-archive model-search on.");
 	assert.equal(service.reads.length, 0);
 	assert.equal(f.confirmations.length, 1);
 	// Without a usable prompt the wider reach is refused, not silently executed.
 	f.ctx.hasUI = false;
-	assert.match(text(await f.execute("jarvis_archive_read", { id: "record-fixture", scope: "all" })), /was not approved, so nothing was executed/);
+	assert.match(text(await f.execute("noodle_archive_read", { id: "record-fixture", scope: "all" })), /was not approved, so nothing was executed/);
 	assert.equal(service.reads.length, 0);
 	assert.equal(f.confirmations.length, 1, "no prompt is attempted without UI");
 	// The session reach keeps working without any prompt.
 	f.ctx.hasUI = true;
-	assert.match(text(await f.execute("jarvis_archive_read", { id: "record-fixture" })), /LOCAL_SYNTHETIC/);
+	assert.match(text(await f.execute("noodle_archive_read", { id: "record-fixture" })), /LOCAL_SYNTHETIC/);
 	assert.equal(f.confirmations.length, 1);
 });
 
@@ -638,15 +643,15 @@ test("model-search on grants wider reach without asking, and turning it off revo
 	const service = new MockArchiveService(); service.settings = { ...ON, modelWideSearch: true };
 	const f = fixture(t, service); await f.emit("session_start");
 	f.setConfirm(false); // Any prompt here would be declined.
-	assert.match(text(await f.execute("jarvis_archive_search", { query: "fixture", scope: "all" })), /LOCAL_SYNTHETIC/);
-	assert.match(text(await f.execute("jarvis_archive_read", { id: "record-fixture", scope: "current" })), /LOCAL_SYNTHETIC/);
-	assert.match(text(await f.execute("jarvis_archive_session", { sessionId: "other-session", scope: "current" })), /LOCAL_SYNTHETIC/);
+	assert.match(text(await f.execute("noodle_archive_search", { query: "fixture", scope: "all" })), /LOCAL_SYNTHETIC/);
+	assert.match(text(await f.execute("noodle_archive_read", { id: "record-fixture", scope: "current" })), /LOCAL_SYNTHETIC/);
+	assert.match(text(await f.execute("noodle_archive_session", { sessionId: "other-session", scope: "current" })), /LOCAL_SYNTHETIC/);
 	assert.deepEqual(f.confirmations, [], "the standing setting replaces per-request approval");
 	// Disabling the setting must revoke already-prepared tool definitions.
-	const stale = f.tools.get("jarvis_archive_search")!;
+	const stale = f.tools.get("noodle_archive_search")!;
 	service.setPolicy({ modelWideSearch: false });
-	await assert.rejects(f.execute("jarvis_archive_search", { query: "fixture", scope: "all" }, undefined, stale), /expired/);
-	assert.match(text(await f.execute("jarvis_archive_search", { query: "fixture", scope: "all" })), /was not approved, so nothing was executed/);
+	await assert.rejects(f.execute("noodle_archive_search", { query: "fixture", scope: "all" }, undefined, stale), /expired/);
+	assert.match(text(await f.execute("noodle_archive_search", { query: "fixture", scope: "all" })), /was not approved, so nothing was executed/);
 	assert.equal(f.confirmations.length, 1, "after disable the wider reach asks again");
 });
 
@@ -669,18 +674,18 @@ test("read and session listing are reach-gated, including foreign sessions at se
 	const f = fixture(t, service); await f.emit("session_start");
 	f.setConfirm(false);
 	// Reading an entry outside the current session is a wider reach.
-	assert.match(text(await f.execute("jarvis_archive_read", { id: "record-fixture", scope: "current" })), /was not approved/);
+	assert.match(text(await f.execute("noodle_archive_read", { id: "record-fixture", scope: "current" })), /was not approved/);
 	// Listing another session at scope "session" is a wider reach, not the default.
-	assert.match(text(await f.execute("jarvis_archive_session", { sessionId: "other-session" })), /was not approved/);
+	assert.match(text(await f.execute("noodle_archive_session", { sessionId: "other-session" })), /was not approved/);
 	assert.equal(service.reads.length, 0);
 	// The same request executes after its one approval, with the original params.
 	f.setConfirm(true);
-	assert.match(text(await f.execute("jarvis_archive_session", { sessionId: "other-session" })), /LOCAL_SYNTHETIC/);
+	assert.match(text(await f.execute("noodle_archive_session", { sessionId: "other-session" })), /LOCAL_SYNTHETIC/);
 	assert.deepEqual(service.reads.at(-1), { method: "session", params: { sessionId: "other-session", scope: "session" }, model: true, cwd: f.cwd, sessionId: f.journal.id });
 	assert.match(f.confirmations.at(-1)!.message, /List session: other-session/);
 });
 
-test("the jarvis lane bridges its reach approval instead of using side-session UI", async t => {
+test("the noodle lane bridges its reach approval instead of using side-session UI", async t => {
 	const service = new MockArchiveService(); service.settings = { ...ON, modelWideSearch: false };
 	const bridged: Array<{ title: string; detail: string }> = [];
 	const f = fixture(t, service, "jarvis", {
@@ -688,9 +693,9 @@ test("the jarvis lane bridges its reach approval instead of using side-session U
 	});
 	await f.emit("session_start");
 	// The bridge decides: first request declined, second approved.
-	assert.match(text(await f.execute("jarvis_archive_search", { query: "fixture", scope: "all" })), /was not approved/);
+	assert.match(text(await f.execute("noodle_archive_search", { query: "fixture", scope: "all" })), /was not approved/);
 	assert.equal(service.reads.length, 0);
-	assert.match(text(await f.execute("jarvis_archive_search", { query: "fixture", scope: "all" })), /LOCAL_SYNTHETIC/);
+	assert.match(text(await f.execute("noodle_archive_search", { query: "fixture", scope: "all" })), /LOCAL_SYNTHETIC/);
 	assert.deepEqual(bridged.map(({ title }) => title), ["Allow archive access to all projects?", "Allow archive access to all projects?"]);
 	assert.deepEqual(f.confirmations, [], "the side lane never touches terminal UI");
 });

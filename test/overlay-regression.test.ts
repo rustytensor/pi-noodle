@@ -7,21 +7,21 @@ import {
 	type Terminal, type TUI,
 } from "@earendil-works/pi-tui";
 import {
-	JarvisOverlayBridge, JarvisOverlayComponent, attachOverlayBridge,
-	type JarvisDisplayEntry, type JarvisOverlayView,
+	NoodleOverlayBridge, NoodleOverlayComponent, attachOverlayBridge,
+	type NoodleDisplayEntry, type NoodleOverlayView,
 } from "../overlay.js";
 
 const theme = { fg: (_: string, text: string) => text, bold: (text: string) => text } as Theme;
 const plain = (lines: string[]) => lines.map(stripTerminalSequences).join("\n");
 
-function fixture(bridge = new JarvisOverlayBridge(), keybindings = getKeybindings(), entries: JarvisDisplayEntry[] = []) {
+function fixture(bridge = new NoodleOverlayBridge(), keybindings = getKeybindings(), entries: NoodleDisplayEntry[] = []) {
 	const terminal = { rows: 40, columns: 120 };
 	let renders = 0;
 	let closes = 0;
 	const sent: string[] = [];
 	const state = { entries, streaming: false, tools: false, followUp: false, steer: false };
 	const host = { terminal, requestRender: () => { renders++; } } as unknown as TUI;
-	const view: JarvisOverlayView = {
+	const view: NoodleOverlayView = {
 		isReady: () => true, isStreaming: () => state.streaming,
 		getModelLabel: () => "test/model", getModelModeLabel: () => "follow main",
 		getMainStatusLabel: () => "idle", getMainModelLabel: () => "test/main",
@@ -34,7 +34,7 @@ function fixture(bridge = new JarvisOverlayBridge(), keybindings = getKeybinding
 		toggleSteerToMain: () => { state.steer = !state.steer; },
 		getDisplayEntries: () => state.entries, sendMessage: async (text) => { sent.push(text); },
 	};
-	const overlay = attachOverlayBridge(new JarvisOverlayComponent(host, theme, bridge, view, () => {
+	const overlay = attachOverlayBridge(new NoodleOverlayComponent(host, theme, bridge, view, () => {
 		closes++;
 	}, keybindings), bridge, host);
 	overlay.focused = true;
@@ -185,7 +185,7 @@ test("all key paths request redraw, invalidate input, and honor remapped actions
 });
 
 test("disposal cancels confirmation, preserves view-owned grants, and is identity-safe and idempotent", async () => {
-	const bridge = new JarvisOverlayBridge();
+	const bridge = new NoodleOverlayBridge();
 	const first = fixture(bridge);
 	const second = fixture(bridge);
 	second.state.tools = second.state.followUp = second.state.steer = true;
@@ -286,9 +286,9 @@ for (const Renderer of [TuiMainScreen, TuiAltScreen]) {
 		const terminal = new MemoryTerminal();
 		const host = new Renderer(terminal);
 		const f = fixture();
-		const bridge = new JarvisOverlayBridge();
+		const bridge = new NoodleOverlayBridge();
 		let handle: ReturnType<TUI["showOverlay"]> | undefined;
-		const component = attachOverlayBridge(new JarvisOverlayComponent(host, theme, bridge, f.view, () => handle?.hide(), undefined, { showIntro: true }), bridge, host);
+		const component = attachOverlayBridge(new NoodleOverlayComponent(host, theme, bridge, f.view, () => handle?.hide(), undefined, { showIntro: true }), bridge, host);
 		const baseInputs: string[] = [];
 		const base = { render: () => ["base"], invalidate() {}, handleInput: (data: string) => baseInputs.push(data) };
 		host.addChild(base);
@@ -298,7 +298,7 @@ for (const Renderer of [TuiMainScreen, TuiAltScreen]) {
 			handle = host.showOverlay(component, { width: "68%", minWidth: 68, maxHeight: "82%" });
 			host.renderNow(true);
 			assert.ok(component.render(68).some((line) => line.includes(CURSOR_MARKER)));
-			assert.match(plain(component.render(68)), /A SECOND LANE OF THOUGHT/);
+			assert.match(plain(component.render(68)), /your agent's inner voice/);
 			terminal.input?.("hello");
 			host.renderNow();
 			assert.ok(plain(component.render(68)).includes("hello"));
@@ -364,7 +364,7 @@ test("Kitty key releases do not toggle or approve; submit failures are reported"
 
 test("bridge confirmation admission fails closed; footer observers survive detach/reset and cannot break settlement", async () => {
 	let open = false, changes = 0;
-	const bridge = new JarvisOverlayBridge(() => open);
+	const bridge = new NoodleOverlayBridge(() => open);
 	const detachThrow = bridge.onChange(() => { throw new Error("observer failed"); });
 	const detachFooter = bridge.onChange(() => { changes++; });
 	assert.equal(await bridge.requestConfirmation("invisible", "reject"), false);
@@ -378,8 +378,8 @@ test("bridge confirmation admission fails closed; footer observers survive detac
 	bridge.reset(); assert.equal(await pending, false);
 	const before = changes;
 	detachFooter(); detachFooter(); detachThrow(); bridge.refresh(); assert.equal(changes, before);
-	assert.equal(await new JarvisOverlayBridge(() => { throw new Error("admission failed"); }).requestConfirmation("title", "body"), false);
-	const standalone = new JarvisOverlayBridge(); const defaultPending = standalone.requestConfirmation("default", "body");
+	assert.equal(await new NoodleOverlayBridge(() => { throw new Error("admission failed"); }).requestConfirmation("title", "body"), false);
+	const standalone = new NoodleOverlayBridge(); const defaultPending = standalone.requestConfirmation("default", "body");
 	assert.ok(standalone.hasPendingConfirmation()); standalone.resolveConfirmation(true); assert.equal(await defaultPending, true);
 });
 
@@ -388,8 +388,8 @@ for (const Renderer of [TuiMainScreen, TuiAltScreen]) {
 		const terminal = new MemoryTerminal();
 		const host = new Renderer(terminal);
 		const f = fixture(undefined, undefined, Array.from({ length: 100 }, (_, i) => ({ kind: "assistant", text: `record-${i}` })));
-		const bridge = new JarvisOverlayBridge();
-		const component = attachOverlayBridge(new JarvisOverlayComponent(host, theme, bridge, f.view, () => {}), bridge, host);
+		const bridge = new NoodleOverlayBridge();
+		const component = attachOverlayBridge(new NoodleOverlayComponent(host, theme, bridge, f.view, () => {}), bridge, host);
 		host.addChild({ render: () => ["base"], invalidate() {}, handleInput() {} });
 		host.start();
 		let handle: ReturnType<TUI["showOverlay"]> | undefined;

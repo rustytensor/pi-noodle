@@ -1,17 +1,18 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { CURSOR_MARKER, getKeybindings, isKeyRelease, matchesKey, stripTerminalSequences, truncateToWidth, visibleWidth, wrapTextWithAnsi, type Component, type Focusable, type KeybindingsManager, type TUI, type TuiMouseEvent, type TuiMouseEventResult } from "@earendil-works/pi-tui";
-import { JarvisDraftEditor } from "./draft-editor.js";
-import { renderJarvisHeader, renderJarvisActivity, renderJarvisControls, jarvisSurface } from "./overlay-layout.js";
-import { JarvisChoicePicker, type JarvisPickerChoice } from "./model-picker.js";
+import { NoodleDraftEditor } from "./draft-editor.js";
+import { animationDisabled } from "./legacy-aliases.js";
+import { renderNoodleHeader, renderNoodleActivity, renderNoodleControls, noodleSurface } from "./overlay-layout.js";
+import { NoodleChoicePicker, type NoodlePickerChoice } from "./model-picker.js";
 import { TranscriptViewport, type TranscriptLineAnchor } from "./transcript-viewport.js";
-import { JarvisIntroAnimation, renderJarvisIntro } from "./jarvis-branding.js";
+import { NoodleIntroAnimation, renderNoodleIntro } from "./noodle-branding.js";
 
-export interface JarvisDisplayEntry {
+export interface NoodleDisplayEntry {
 	kind: "user" | "assistant" | "tool" | "system" | "status";
 	text: string;
 }
 
-export interface JarvisOverlayView {
+export interface NoodleOverlayView {
 	isReady(): boolean;
 	isStreaming(): boolean;
 	/** Waiting inputs only, excluding the active request. */
@@ -21,7 +22,7 @@ export interface JarvisOverlayView {
 	getModelLabel(): string;
 	getModelModeLabel(): string;
 	getThinkingLabel?(): string;
-	getModelChoices?(): Promise<readonly JarvisPickerChoice[]>;
+	getModelChoices?(): Promise<readonly NoodlePickerChoice[]>;
 	configureModel?(request: string): Promise<void>;
 	configureThinking?(request: string): Promise<void>;
 	cancelWork?(): Promise<void>;
@@ -36,7 +37,7 @@ export interface JarvisOverlayView {
 	toggleToolAccess(): void;
 	toggleFollowUpToMain(): void;
 	toggleSteerToMain(): void;
-	getDisplayEntries(): JarvisDisplayEntry[];
+	getDisplayEntries(): NoodleDisplayEntry[];
 	sendMessage(text: string): Promise<void>;
 }
 
@@ -56,13 +57,13 @@ type PickerState = {
 	kind: "model" | "thinking";
 	thread: number;
 	transcript: number;
-	picker?: JarvisChoicePicker;
+	picker?: NoodleChoicePicker;
 	loading: boolean;
 	saving: boolean;
 	error?: string;
 };
 
-const THINKING_CHOICES: readonly JarvisPickerChoice[] = [
+const THINKING_CHOICES: readonly NoodlePickerChoice[] = [
 	{ value: "auto", label: "auto (follow main when model follows main; otherwise off)" },
 	{ value: "follow-main", label: "follow-main (follow main thinking)" },
 	...["off", "minimal", "low", "medium", "high", "xhigh", "max"].map((value) => ({ value, label: value })),
@@ -75,23 +76,23 @@ interface NotificationItem {
 	timestamp: number;
 }
 
-export interface JarvisPendingConfirmation {
+export interface NoodlePendingConfirmation {
 	title: string;
 	message: string;
 }
 
-interface PendingConfirmationRecord extends JarvisPendingConfirmation {
+interface PendingConfirmationRecord extends NoodlePendingConfirmation {
 	resolve: (value: boolean) => void;
 }
 
-export interface JarvisOverlaySnapshot {
+export interface NoodleOverlaySnapshot {
 	statuses: string[];
 	notifications: NotificationItem[];
 	workingMessage?: string;
-	pendingConfirmation?: JarvisPendingConfirmation;
+	pendingConfirmation?: NoodlePendingConfirmation;
 }
 
-export class JarvisOverlayBridge {
+export class NoodleOverlayBridge {
 	private requestRender?: () => void;
 	private readonly listeners = new Set<() => void>();
 
@@ -218,14 +219,14 @@ export class JarvisOverlayBridge {
 		return this.pendingConfirmation !== undefined;
 	}
 
-	getPendingConfirmation(): JarvisPendingConfirmation | undefined {
+	getPendingConfirmation(): NoodlePendingConfirmation | undefined {
 		if (!this.pendingConfirmation) {
 			return undefined;
 		}
 		return { title: this.pendingConfirmation.title, message: this.pendingConfirmation.message };
 	}
 
-	snapshot(): JarvisOverlaySnapshot {
+	snapshot(): NoodleOverlaySnapshot {
 		return {
 			statuses: Array.from(this.statuses.values()),
 			notifications: [...this.notifications],
@@ -242,9 +243,9 @@ export class JarvisOverlayBridge {
 	}
 }
 
-export class JarvisOverlayComponent implements Component, Focusable {
+export class NoodleOverlayComponent implements Component, Focusable {
 	focused = false;
-	private input: JarvisDraftEditor;
+	private input: NoodleDraftEditor;
 	private readonly maxHeightProvider: () => number;
 	private focusTarget: OverlayFocusTarget = "input";
 	private expandedDetails = false;
@@ -265,11 +266,11 @@ export class JarvisOverlayComponent implements Component, Focusable {
 	private confirmationCanApprove = false;
 	private renderedRows = 0;
 	private renderedColumns = 0;
-	private readonly intro: JarvisIntroAnimation;
+	private readonly intro: NoodleIntroAnimation;
 	private thinkingAnimationTick = 0;
 	private thinkingAnimationTimer?: NodeJS.Timeout;
 	private transcriptCacheWidth = -1;
-	private transcriptCache: Array<{ kind: JarvisDisplayEntry["kind"]; text: string; layout: TranscriptEntryLayout }> = [];
+	private transcriptCache: Array<{ kind: NoodleDisplayEntry["kind"]; text: string; layout: TranscriptEntryLayout }> = [];
 	private transcriptLines: string[] = [];
 	/** Layout row identities let even blank spacing/repeated role headings anchor. */
 	private transcriptViewportRows: string[] = [];
@@ -281,14 +282,14 @@ export class JarvisOverlayComponent implements Component, Focusable {
 	constructor(
 		private readonly tui: TUI,
 		private readonly theme: Theme,
-		private readonly bridge: JarvisOverlayBridge,
-		private readonly view: JarvisOverlayView,
+		private readonly bridge: NoodleOverlayBridge,
+		private readonly view: NoodleOverlayView,
 		private readonly close: () => void,
 		private readonly keybindings: KeybindingsManager = getKeybindings(),
 		options: { showIntro?: boolean } = {},
 	) {
-		this.intro = new JarvisIntroAnimation(() => { if (!this.disposed) this.tui.requestRender(); },
-			options.showIntro === true && process.env.PI_JARVIS_NO_ANIMATION !== "1" && !process.env.NO_COLOR && process.env.TERM !== "dumb");
+		this.intro = new NoodleIntroAnimation(() => { if (!this.disposed) this.tui.requestRender(); },
+			options.showIntro === true && !animationDisabled(process.env) && !process.env.NO_COLOR && process.env.TERM !== "dumb");
 		this.maxHeightProvider = () => Math.max(0, Math.min(this.tui.terminal.rows, Math.max(1, Math.floor(this.tui.terminal.rows * 0.78))));
 
 		this.threadGeneration = bridge.getThreadGeneration();
@@ -296,9 +297,9 @@ export class JarvisOverlayComponent implements Component, Focusable {
 		this.input = this.createEditor();
 	}
 
-	private createEditor(): JarvisDraftEditor {
+	private createEditor(): NoodleDraftEditor {
 		const generation = this.bridge.getThreadGeneration();
-		const editor = new JarvisDraftEditor(this.tui, this.theme, {
+		const editor = new NoodleDraftEditor(this.tui, this.theme, {
 			onChange: (text) => {
 				if (!this.disposed && generation === this.bridge.getThreadGeneration()) this.bridge.setDraft(text);
 			},
@@ -323,7 +324,7 @@ export class JarvisOverlayComponent implements Component, Focusable {
 		return editor;
 	}
 
-	private seedHistory(editor: JarvisDraftEditor): void {
+	private seedHistory(editor: NoodleDraftEditor): void {
 		for (const entry of this.view.getDisplayEntries().filter((entry) => entry.kind === "user").slice(-100)) editor.addToHistory(entry.text);
 	}
 
@@ -384,7 +385,7 @@ export class JarvisOverlayComponent implements Component, Focusable {
 			return;
 		}
 		if (isKeyRelease(data)) return;
-		// Pi's default select.cancel includes Ctrl+C; Jarvis reserves it for stop.
+		// Pi's default select.cancel includes Ctrl+C; Noodle reserves it for stop.
 		if (matchesKey(data, "ctrl+c")) {
 			// Review owns input: Ctrl+C cancels review, never approves or stops
 			// a task as a side effect of selector/confirmation cancellation.
@@ -527,9 +528,9 @@ export class JarvisOverlayComponent implements Component, Focusable {
 		let remaining = Math.max(0, maxBodyLines - promptSection.length);
 		const active = Boolean(this.view.getIsProcessing?.() || this.view.isStreaming());
 		this.syncThinkingAnimation(active);
-		const activity = renderJarvisActivity(this.theme, snapshot, this.view, innerWidth);
+		const activity = renderNoodleActivity(this.theme, snapshot, this.view, innerWidth);
 		const icon = active ? this.theme.fg("accent", ["◈", "◆", "◇", "✦"][this.thinkingAnimationTick % 4] + " ") : "";
-		const header = renderJarvisHeader(this.theme, this.view, innerWidth, {
+		const header = renderNoodleHeader(this.theme, this.view, innerWidth, {
 			expanded: this.expandedDetails, focusTarget: this.focusTarget, focused: this.focused,
 			activity: this.expandedDetails || stripTerminalSequences(activity) !== "Ready" ? icon + activity : undefined,
 			infoNotice: !this.expandedDetails && snapshot.notifications.some(item => item.type === "info"),
@@ -545,7 +546,7 @@ export class JarvisOverlayComponent implements Component, Focusable {
 		if (remaining > 1 || ["model", "thinking", "history"].includes(this.focusTarget)) {
 			if (remaining === 0 && top.length) { top.pop(); remaining++; }
 			if (remaining > 0) {
-				top.push(renderJarvisControls(this.theme, this.view, innerWidth, { expanded: this.expandedDetails, focusTarget: this.focusTarget, focused: this.focused }));
+				top.push(renderNoodleControls(this.theme, this.view, innerWidth, { expanded: this.expandedDetails, focusTarget: this.focusTarget, focused: this.focused }));
 				remaining--;
 			}
 		}
@@ -564,7 +565,7 @@ export class JarvisOverlayComponent implements Component, Focusable {
 			// Seed only on initial layout/reflow, not every animation tick. The
 			// first scrolling key dismisses decoration AND navigates real history.
 			if (this.transcriptCacheWidth !== innerWidth || this.viewport.getStatus().totalLines === 0) this.renderTranscript(innerWidth, Math.max(0, remaining - 1), snapshot);
-			top.push(...renderJarvisIntro(this.theme, innerWidth, remaining, introFrame));
+			top.push(...renderNoodleIntro(this.theme, innerWidth, remaining, introFrame));
 		} else if (remaining > 0) {
 			top.push(...this.renderConversation(innerWidth, remaining, snapshot));
 		}
@@ -588,7 +589,7 @@ export class JarvisOverlayComponent implements Component, Focusable {
 	private openPicker(kind: PickerState["kind"]): void {
 		const configure = kind === "model" ? this.view.configureModel : this.view.configureThinking;
 		if (!configure || (kind === "model" && !this.view.getModelChoices)) {
-			this.bridge.notify(`Jarvis ${kind} selection is unavailable in this host.`, "warning");
+			this.bridge.notify(`Noodle ${kind} selection is unavailable in this host.`, "warning");
 			return;
 		}
 		this.intro.finish();
@@ -599,9 +600,9 @@ export class JarvisOverlayComponent implements Component, Focusable {
 			try {
 				const choices = kind === "model" ? await this.view.getModelChoices!() : THINKING_CHOICES;
 				if (!this.pickerIsCurrent(state)) return;
-				state.picker = new JarvisChoicePicker(this.tui, this.theme, this.keybindings, choices,
+				state.picker = new NoodleChoicePicker(this.tui, this.theme, this.keybindings, choices,
 					(choice) => { void this.applyChoice(state, choice.value); }, () => this.dismissPicker(),
-					`Jarvis ${kind} · project override (main unchanged)`);
+					`Noodle ${kind} · project override (main unchanged)`);
 				state.loading = false;
 			} catch (error) {
 				if (!this.pickerIsCurrent(state)) return;
@@ -646,7 +647,7 @@ export class JarvisOverlayComponent implements Component, Focusable {
 	private renderPicker(width: number, budget: number): string[] {
 		const state = this.pickerState!;
 		if (state.loading || state.saving || !state.picker) {
-			return [this.theme.fg("accent", `Jarvis ${state.kind}`),
+			return [this.theme.fg("accent", `Noodle ${state.kind}`),
 				this.theme.fg("muted", state.loading ? "Loading host model choices…" : state.saving ? "Applying project override…" : "Selection unavailable"),
 				...this.wrapBlock(this.theme.fg("error", sanitizeOverlayDisplayText(state.error ?? "")), width).slice(0, Math.max(0, budget - 3)),
 				this.theme.fg("dim", "Esc back • draft preserved")].slice(0, budget);
@@ -685,7 +686,7 @@ export class JarvisOverlayComponent implements Component, Focusable {
 		return [first, `${context} • ctrl+o details${hasNotice ? " • ctrl+l dismiss" : ""}`];
 	}
 
-	private renderConversation(width: number, budget: number, snapshot: JarvisOverlaySnapshot): string[] {
+	private renderConversation(width: number, budget: number, snapshot: NoodleOverlaySnapshot): string[] {
 		const framed = width >= 16 && budget >= 5;
 		const panelWidth = framed ? width - 2 : width;
 		const padding = framed ? width >= 40 ? 2 : 1 : 0;
@@ -716,7 +717,7 @@ export class JarvisOverlayComponent implements Component, Focusable {
 		const row = (line: string) => {
 			const content = " ".repeat(inset) + line;
 			const padded = content + " ".repeat(Math.max(0, panelWidth - visibleWidth(content)));
-			const body = jarvisSurface(this.theme, padded, "conversation");
+			const body = noodleSurface(this.theme, padded, "conversation");
 			return framed ? this.theme.fg("borderMuted", "│") + body + this.theme.fg("borderMuted", "│") : body;
 		};
 		return [framed ? border(true, title) : this.sectionDivider(title, width),
@@ -731,7 +732,7 @@ export class JarvisOverlayComponent implements Component, Focusable {
 			+ "─".repeat(Math.max(0, width - visibleWidth(text) - 1))), width, "", true);
 	}
 
-	private renderConfirmation(confirmation: JarvisPendingConfirmation, innerWidth: number, budget: number): string[] {
+	private renderConfirmation(confirmation: NoodlePendingConfirmation, innerWidth: number, budget: number): string[] {
 		const token = this.bridge.getConfirmationToken();
 		const layout = `${innerWidth}:${budget}`;
 		if (token !== this.confirmationToken || layout !== this.confirmationLayout) {
@@ -786,12 +787,12 @@ export class JarvisOverlayComponent implements Component, Focusable {
 		}
 	}
 
-	private renderTranscript(innerWidth: number, budget: number, snapshot: JarvisOverlaySnapshot): string[] {
+	private renderTranscript(innerWidth: number, budget: number, snapshot: NoodleOverlaySnapshot): string[] {
 		if (budget <= 0) return [];
-		const allEntries = [...this.view.getDisplayEntries(), ...snapshot.statuses.map((text): JarvisDisplayEntry => ({ kind: "status", text }))];
+		const allEntries = [...this.view.getDisplayEntries(), ...snapshot.statuses.map((text): NoodleDisplayEntry => ({ kind: "status", text }))];
 		// Bound rendered history, not the persisted side transcript. The omitted
 		// prefix is explicit and discoverable when scrolling to the beginning.
-		const entries: JarvisDisplayEntry[] = [];
+		const entries: NoodleDisplayEntry[] = [];
 		let remainingChars = 512 * 1024;
 		let omitted = allEntries.length > 500;
 		for (let i = allEntries.length - 1; i >= Math.max(0, allEntries.length - 500) && remainingChars > 0; i--) {
@@ -815,7 +816,7 @@ export class JarvisOverlayComponent implements Component, Focusable {
 			this.transcriptAnchors = [];
 			const cache: typeof this.transcriptCache = [];
 			const sourceIds = new Map<string, number>();
-			const labels = { user: "User:", assistant: "Jarvis:", tool: "Tool:", status: "Note:", system: "System:" };
+			const labels = { user: "User:", assistant: "Noodle:", tool: "Tool:", status: "Note:", system: "System:" };
 			for (let i = 0; i < entries.length; i++) {
 				const entry = entries[i]!;
 				const previous = this.transcriptCache[i];
@@ -848,9 +849,9 @@ export class JarvisOverlayComponent implements Component, Focusable {
 		return this.transcriptLines.slice(position.startLine, position.endLine);
 	}
 
-	private renderEntry(entry: JarvisDisplayEntry, innerWidth: number): TranscriptEntryLayout {
+	private renderEntry(entry: NoodleDisplayEntry, innerWidth: number): TranscriptEntryLayout {
 		const safeText = sanitizeOverlayDisplayText(entry.text);
-		const labels = { user: "User:", assistant: "Jarvis:", tool: "Tool:", status: "Note:", system: "System:" };
+		const labels = { user: "User:", assistant: "Noodle:", tool: "Tool:", status: "Note:", system: "System:" };
 		const colors = { user: "accent", assistant: "success", tool: "warning", status: "muted", system: "muted" } as const;
 		const label = this.theme.bold(this.theme.fg(colors[entry.kind], labels[entry.kind]));
 		// A short hairline belongs to the heading only, never body text or its
@@ -879,7 +880,7 @@ export class JarvisOverlayComponent implements Component, Focusable {
 	}
 
 	private renderInputLines(innerWidth: number, maxLines: number): string[] {
-		const prompt = innerWidth >= 12 ? "jarvis > " : innerWidth >= 3 ? "> " : "";
+		const prompt = innerWidth >= 12 ? "noodle > " : innerWidth >= 3 ? "> " : "";
 		const continuation = innerWidth >= 12 ? "     ... " : innerWidth >= 3 ? "| " : "";
 		const inputWidth = Math.max(1, innerWidth - visibleWidth(prompt));
 		return this.input.render(inputWidth, maxLines).map((line, index) => {
@@ -887,7 +888,7 @@ export class JarvisOverlayComponent implements Component, Focusable {
 			const content = truncateToWidth((this.input.focused ? this.theme.bold(prefix) : prefix)
 				+ this.theme.fg("text", line), innerWidth, "", true);
 			const padded = content + " ".repeat(Math.max(0, innerWidth - visibleWidth(content)));
-			return jarvisSurface(this.theme, padded, "prompt");
+			return noodleSurface(this.theme, padded, "prompt");
 		});
 	}
 
@@ -986,7 +987,7 @@ export class JarvisOverlayComponent implements Component, Focusable {
 	}
 
 	private overlayBackground(text: string): string {
-		return jarvisSurface(this.theme, text, "chrome");
+		return noodleSurface(this.theme, text, "chrome");
 	}
 }
 
@@ -1005,7 +1006,7 @@ function sanitizeInlineText(text: string): string {
 	return sanitizeOverlayDisplayText(text).replace(/\n/g, " ");
 }
 
-export function attachOverlayBridge(component: JarvisOverlayComponent, _bridge: JarvisOverlayBridge, _tui: TUI): JarvisOverlayComponent {
+export function attachOverlayBridge(component: NoodleOverlayComponent, _bridge: NoodleOverlayBridge, _tui: TUI): NoodleOverlayComponent {
 	component.attachBridge();
 	return component;
 }

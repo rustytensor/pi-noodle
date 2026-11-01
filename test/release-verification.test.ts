@@ -48,7 +48,7 @@ function main(): void {
 		name: string; version: string; lockfileVersion: number;
 		packages: Record<string, PackageManifest>;
 	};
-	assert.equal(manifest.name, "pi-jarvis");
+	assert.equal(manifest.name, "pi-noodle");
 	assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
 	assert.equal(lock.name, manifest.name);
 	assert.equal(lock.version, manifest.version);
@@ -91,15 +91,15 @@ function main(): void {
 	assert.equal(packed.name, manifest.name);
 	assert.equal(packed.version, manifest.version);
 	const packedPaths = new Set((packed.files ?? []).map((entry) => normalizeManifestEntry(entry.path)));
-	for (const path of ["package.json", "README.md", "AGENTS.md", "LICENSE", "docs/archive-encryption-design.md", "docs/watchers-host-investigation.md", ...[
-		"index", "jarvis-config", "main-context", "main-session-state", "model-picker", "overlay", "session-ref", "side-session",
-		"draft-editor", "overlay-layout", "transcript-viewport", "native-mcp", "jarvis-branding",
+	for (const path of ["package.json", "README.md", "AGENTS.md", "LICENSE", "docs/archive-encryption-design.md", "docs/watchers-host-investigation.md", "docs/storage-migration.md", ...[
+		"index", "noodle-config", "main-context", "main-session-state", "model-picker", "overlay", "session-ref", "side-session",
+		"draft-editor", "overlay-layout", "transcript-viewport", "native-mcp", "noodle-branding",
 		"memory-types", "memory-config", "memory-content", "memory-store", "memory-service", "memory-extension",
 		"memory-editor-types", "memory-editor", "memory-editor-controller",
 		"watchers-types", "watchers-config", "watchers-check", "watchers-service", "watchers-extension", "watchers-render",
 		"archive-types", "archive-config", "archive-store", "archive-service", "archive-extension", "archive-import",
 		"archive-crypto", "archive-keychain", "archive-secret-input", "archive-unlock", "archive-sqlite",
-		"archive-migration", "archive-vault-files", "archive-vault",
+		"archive-migration", "archive-vault-files", "archive-vault", "legacy-aliases", "storage-layout", "storage-migration",
 	].flatMap((name) => [`dist/${name}.js`, `dist/${name}.d.ts`])]) {
 		assert.ok(existsSync(join(process.cwd(), path)), `missing built/release artifact: ${path}`);
 		assert.ok(packedPaths.has(path), `missing expected packaged path: ${path}`);
@@ -111,7 +111,7 @@ function main(): void {
 	for (const path of packedPaths) {
 		assert.ok(!/(^|\/)(test|tmp|prompts|coord|node_modules|\.pi|\.git)\//.test(path), `forbidden payload path: ${path}`);
 		assert.ok(!path.endsWith(".tgz"), `archive must not be repacked: ${path}`);
-		assert.ok(path.startsWith("dist/") || ["package.json", "README.md", "AGENTS.md", "LICENSE", "docs/archive-encryption-design.md", "docs/watchers-host-investigation.md"].includes(path), `unexpected source artifact: ${path}`);
+		assert.ok(path.startsWith("dist/") || ["package.json", "README.md", "AGENTS.md", "LICENSE", "docs/archive-encryption-design.md", "docs/watchers-host-investigation.md", "docs/storage-migration.md"].includes(path), `unexpected source artifact: ${path}`);
 		assert.ok(!path.startsWith("dist/mcp-policy."), `stale removed artifact: ${path}`);
 	}
 	console.log("release verification passed");

@@ -23,7 +23,7 @@ function note(index: number, project: string, changes: Partial<MemoryRecord> = {
 		createdAt: 1000 + index, updatedAt: 2000 + index, ...changes };
 }
 function fixture(t: TestContext, count = 3, options: { promised?: boolean; columns?: number; rows?: number; real?: boolean } = {}) {
-	const root = mkdtempSync(join(tmpdir(), "jarvis-memory-ui-"));
+	const root = mkdtempSync(join(tmpdir(), "noodle-memory-ui-"));
 	const agent = join(root, "agent"), project = join(root, "workspace"); mkdirSync(agent); mkdirSync(project);
 	t.after(() => rmSync(root, { recursive: true, force: true }));
 	let onInput: ((data: string) => void) | undefined, closePresentation: (() => void) | undefined;
@@ -613,7 +613,7 @@ test("moving the cursor previews the highlighted note; Enter still opens the ful
 	// The right pane switched to the older note's body and metadata.
 	assert.match(f.screen(), /Body 0/); assert.ok(!f.screen().includes("Body 1"), "the preview pane switches rows");
 	assert.match(f.screen(), /Scope: project · Category: project · 24 bytes/);
-	assert.match(f.screen(), /Origin: jarvis · session-0/);
+	assert.match(f.screen(), /Origin: noodle · session-0/);
 	assert.match(f.screen(), /Enter opens the full note/);
 	// Enter opens the complete provenance view with exactly one further read.
 	await key(f, "\r");

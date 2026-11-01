@@ -23,7 +23,7 @@ export class FakeClock implements WatcherClock {
 }
 export async function drain() { for (let i = 0; i < 20; i++) await Promise.resolve(); }
 export function fixture() {
-	const root = mkdtempSync(join(tmpdir(), "jarvis-watchers-")), agentDir = join(root, "agent"), cwd = join(root, "project");
+	const root = mkdtempSync(join(tmpdir(), "noodle-watchers-")), agentDir = join(root, "agent"), cwd = join(root, "project");
 	mkdirSync(agentDir); mkdirSync(cwd);
 	return { root, agentDir, cwd, close: () => rmSync(root, { recursive: true, force: true }) };
 }

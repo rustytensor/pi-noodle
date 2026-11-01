@@ -5,15 +5,15 @@ import {
 	type Component, type Focusable, type KeybindingsManager,
 	type TUI, type TuiMouseEvent, type TuiMouseEventResult,
 } from "@earendil-works/pi-tui";
-import { JarvisDraftEditor } from "./draft-editor.js";
+import { NoodleDraftEditor } from "./draft-editor.js";
 
-export interface JarvisPickerChoice { value: string; label: string }
+export interface NoodlePickerChoice { value: string; label: string }
 
 /** Searchable public Input/SelectList composition, usable inside an existing overlay. */
-export class JarvisChoicePicker implements Component, Focusable {
+export class NoodleChoicePicker implements Component, Focusable {
 	focused = false;
 	private readonly input = new Input({ prompt: "" });
-	private readonly pasteDrain: JarvisDraftEditor;
+	private readonly pasteDrain: NoodleDraftEditor;
 	private list: SelectList;
 	private listHeight = 1;
 	private filteredIndices: number[] = [];
@@ -25,8 +25,8 @@ export class JarvisChoicePicker implements Component, Focusable {
 		private readonly tui: TUI,
 		private readonly theme: Theme,
 		private readonly keybindings: KeybindingsManager,
-		private readonly choices: readonly JarvisPickerChoice[],
-		private readonly onSelect: (choice: JarvisPickerChoice) => void,
+		private readonly choices: readonly NoodlePickerChoice[],
+		private readonly onSelect: (choice: NoodlePickerChoice) => void,
 		private readonly onCancel: () => void,
 		private readonly title: string,
 		initialSearch = "",
@@ -34,7 +34,7 @@ export class JarvisChoicePicker implements Component, Focusable {
 		this.input.setValue(safeInline(initialSearch).slice(0, 1024));
 		// Reuse the draft's bounded, split-framing drain rather than public Input's
 		// trailing-packet replay. Picker paste is deliberately discarded, not keys.
-		this.pasteDrain = new JarvisDraftEditor(tui, theme, { onChange() {}, onSubmit() {} });
+		this.pasteDrain = new NoodleDraftEditor(tui, theme, { onChange() {}, onSubmit() {} });
 		this.list = this.createList();
 	}
 
@@ -139,12 +139,12 @@ export class JarvisChoicePicker implements Component, Focusable {
 	invalidate(): void { this.canSelect = false; this.input.invalidate(); this.list.invalidate(); }
 }
 
-/** Outside /jarvis-model command picker: main host modal admission stays in index. */
-export class JarvisModelPicker extends JarvisChoicePicker {
+/** Outside /noodle-model command picker: main host modal admission stays in index. */
+export class NoodleModelPicker extends NoodleChoicePicker {
 	constructor(tui: TUI, theme: Theme, keybindings: KeybindingsManager, models: readonly Model<any>[],
 		onSelect: (model: Model<any>) => void, onCancel: () => void, initialSearch = "") {
 		super(tui, theme, keybindings, models.map((model, index) => ({ value: String(index), label: `${model.provider}/${model.id}` })),
-			(choice) => onSelect(models[Number(choice.value)]!), onCancel, "Jarvis model (main model unchanged)", initialSearch);
+			(choice) => onSelect(models[Number(choice.value)]!), onCancel, "Noodle model (main model unchanged)", initialSearch);
 	}
 }
 

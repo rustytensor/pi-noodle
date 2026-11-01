@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 > Historical note: releases before the `pi-jarvis` 1.x line refer to the project's earlier `pi-btw` and `/btw` naming. Those entries are preserved as historical release records and do not describe the current product name or command surface.
 
+## [1.15.0] - 2026-11-01
+
+### Renamed to pi-noodle
+- Rename the public package, UI, commands and tools to pi-noodle/Noodle; retain the old `/jarvis` commands and `jarvis_*` tools as compatibility aliases. Install with `pi install npm:pi-noodle`.
+- Add the neon skull banner and dark icon, with updated documentation and preview branding: Pi / your agent's inner voice.
+- Preserve saved memory, archive and watcher data, existing settings paths, session references and other persisted identifiers. No automatic data migration or privacy/default changes; the GitHub repository stays `rustytensor/pi-jarvis`.
+
+- Add an optional, explicitly reviewed offline storage-copy utility. New paths activate only after verification; original files and old credentials remain. Authenticated format tags and historical text are preserved. Real-data migration is never automatic.
+
 ## [1.14.0] - 2026-10-11
 
 ### Optional main-session watchers

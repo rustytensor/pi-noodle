@@ -27,14 +27,14 @@ const shell = (height, title, description, content) => `<svg xmlns="http://www.w
 `;
 
 function workspace() {
-	return shell(1134, "Two lanes. Shared local memory.", "Conceptual workspace: main Pi sends a summary and recent delta to an isolated Jarvis session, not a full context copy. Both explicitly mount shared local plaintext memory, on in trusted projects. Recall is bounded to global and current-project facts, not higher-priority instructions. Recalled facts can reach the active model/provider. No automatic steering or task handoff. Memory, archive, Repo tools and bridge controls are independent.",
+	return shell(1134, "Two lanes. Shared local memory.", "Conceptual workspace: main Pi sends a summary and recent delta to an isolated Noodle session, not a full context copy. Both explicitly mount shared local plaintext memory, on in trusted projects. Recall is bounded to global and current-project facts, not higher-priority instructions. Recalled facts can reach the active model/provider. No automatic steering or task handoff. Memory, archive, Repo tools and bridge controls are independent.",
 		header("01", "THE WORKSPACE", "Two lanes. Shared memory.", "A second opinion, without losing focus.") +
 		// A shared service rail has no arrow: mounting is not a task handoff.
 		`<path d="M40 230H20V770H40M20 516H40" fill="none" stroke="${C.violet}" stroke-width="2"/><circle cx="20" cy="516" r="4" fill="${C.violet}"/>` +
 		card("main-lane", 164, 132, text(64, 208, "Main Pi / primary session", 30, C.cyan, 700) + text(64, 250, "Keep your primary task moving.")) +
 		`<path d="M320 296V322M320 392V420M312 410L320 420L328 410" fill="none" stroke="${C.cyan}" stroke-width="2" stroke-linecap="round"/>` +
-		text(320, 351, "Main context → Jarvis only", 26, C.cyan, 600, ' text-anchor="middle"') + text(320, 387, "Summary + delta, not a full copy", 26, C.muted, 400, ' text-anchor="middle"') +
-		card("jarvis-lane", 428, 178, text(64, 472, "Jarvis / isolated side session", 30, C.violet, 700) + text(64, 514, "Own model & thinking • scrollback") + text(64, 552, "Multiline draft • persistent history")) +
+		text(320, 351, "Main context → Noodle only", 26, C.cyan, 600, ' text-anchor="middle"') + text(320, 387, "Summary + delta, not a full copy", 26, C.muted, 400, ' text-anchor="middle"') +
+		card("noodle-lane", 428, 178, text(64, 472, "Noodle / isolated side session", 30, C.violet, 700) + text(64, 514, "Own model & thinking • scrollback") + text(64, 552, "Multiline draft • persistent history")) +
 		text(320, 654, "Both lanes mount the same local store", 26, C.violet, 400, ' text-anchor="middle"') +
 		card("shared-memory", 684, 296, text(64, 728, "Shared local memory", 30, C.violet, 700) + text(64, 770, "Preferences • decisions • search") + text(64, 810, "ON in trusted projects • plaintext", 26, C.cyan) + text(64, 850, "Bounded recall: global + this project") + text(64, 890, "Facts are context, not instructions.") + rule(911) + text(64, 952, "Recalls may reach your model/provider.", 26, C.muted), C.violet) +
 		text(320, 1026, "Memory, archive & tool/bridge access", 26, C.muted, 400, ' text-anchor="middle"') + text(320, 1064, "have separate controls.", 26, C.muted, 400, ' text-anchor="middle"') + footer(1105));
@@ -66,7 +66,7 @@ function access() {
 		header("03", "YOUR PERMISSIONS", "Access stays in your hands.", "Opt in independently. Stay in control.") +
 		card("fresh-owner", 164, 400, text(64, 208, "Fresh owner → three OFF gates", 30, C.text, 700) + text(64, 254, "Repo tools", 30, C.cyan, 700) + off(254) + text(64, 294, "read • bash • edit • write") + text(64, 332, "Native MCP • configured, side-owned", 26, C.muted) + rule(351) + text(64, 390, "Note main", 30, C.violet, 700) + off(390) + text(64, 430, "Quiet follow-up to the main lane") + rule(450) + text(64, 490, "Redirect", 30, C.cyan, 700) + off(490) + text(64, 532, "Visible confirmation for every send")) +
 		card("ordinary-close", 592, 160, text(64, 636, "Close hides. Work continues.", 30, C.cyan, 700) + text(64, 678, "Same owner: enabled grants stay on.") + text(64, 718, "No new invisible Redirect approvals.", 26, C.muted), C.cyan) +
-		card("explicit-controls", 780, 306, text(64, 824, "Explicit controls, no surprises", 30, C.text, 700) + text(64, 868, "/jarvis stop", 28, C.cyan, 600) + text(64, 906, "Clear queue • request cancellation") + text(64, 952, "/jarvis access off", 28, C.violet, 600) + text(64, 990, "Revoke Repo tools, Note & Redirect.") + rule(1012) + text(64, 1054, "/jarvis status → visible in main Pi", 26, C.muted)) +
+		card("explicit-controls", 780, 306, text(64, 824, "Explicit controls, no surprises", 30, C.text, 700) + text(64, 868, "/noodle stop", 28, C.cyan, 600) + text(64, 906, "Clear queue • request cancellation") + text(64, 952, "/noodle access off", 28, C.violet, 600) + text(64, 990, "Revoke Repo tools, Note & Redirect.") + rule(1012) + text(64, 1054, "/noodle status → visible in main Pi", 26, C.muted)) +
 		card("lifetime-boundary", 1114, 192, text(64, 1156, "Reset on owner change / teardown", 30, C.violet, 700) + text(64, 1196, "Main replacement • side /new") + text(64, 1234, "Reload / quit • trust denial") + text(64, 1274, "Background work is not a daemon.", 26, C.muted)) +
 		text(320, 1348, "Memory & archive: separate controls.", 26, C.muted, 400, ' text-anchor="middle"') + footer(1392));
 }
@@ -74,7 +74,7 @@ function access() {
 export function renderShowcase(outDir) {
 	mkdirSync(outDir, { recursive: true });
 	for (const [name, render] of [["workspace", workspace], ["history", history], ["access", access]]) {
-		writeFileSync(resolve(outDir, `jarvis-${name}.svg`), render(), "utf8");
+		writeFileSync(resolve(outDir, `noodle-${name}.svg`), render(), "utf8");
 	}
 }
 

@@ -4,9 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { getKeybindings } from "@earendil-works/pi-tui";
-import jarvisExtension from "../index.js";
-import type { JarvisDisplayEntry, JarvisOverlayBridge, JarvisOverlayView } from "../overlay.js";
-import { JarvisSideSessionRuntime } from "../side-session.js";
+import noodleExtension from "../index.js";
+import type { NoodleDisplayEntry, NoodleOverlayBridge, NoodleOverlayView } from "../overlay.js";
+import { NoodleSideSessionRuntime } from "../side-session.js";
 
 function deferred() {
 	let resolve!: () => void;
@@ -15,7 +15,7 @@ function deferred() {
 	return { promise, resolve, reject };
 }
 type Deferred = ReturnType<typeof deferred>;
-type StatusView = JarvisOverlayView & Required<Pick<JarvisOverlayView, "getQueuedMessageCount" | "getIsProcessing">>;
+type StatusView = NoodleOverlayView & Required<Pick<NoodleOverlayView, "getQueuedMessageCount" | "getIsProcessing">>;
 type Feedback = { queued: number; processing: boolean; ready: boolean; streaming: boolean };
 async function tick() { await new Promise<void>((resolve) => setImmediate(resolve)); }
 async function until(predicate: () => boolean) {
@@ -29,7 +29,7 @@ const theme = { fg: (_: string, text: string) => text, bold: (text: string) => t
 
 class FakeRuntime {
 	readonly sent: string[] = [];
-	readonly entries: JarvisDisplayEntry[] = [{ kind: "assistant", text: "A real reply." }];
+	readonly entries: NoodleDisplayEntry[] = [{ kind: "assistant", text: "A real reply." }];
 	readonly promptGates: Deferred[] = [];
 	readonly toolAccess: boolean[] = [];
 	disposed = false;
@@ -58,7 +58,7 @@ class FakeRuntime {
 		await this.navigateGate?.promise;
 		if (this.navigateError) throw this.navigateError;
 	}
-	async compactJarvisContext() { this.compactCalls++; await this.compactGate?.promise; }
+	async compactNoodleContext() { this.compactCalls++; await this.compactGate?.promise; }
 	async syncModel() { this.syncCalls++; await this.syncGate?.promise; }
 	async sendMessage(text: string) {
 		assert.equal(this.disposed, false, "a disposed runtime cannot receive a replacement input");
@@ -131,26 +131,26 @@ function harness(root: string, id: number) {
 		appendEntry: (customType: string, data: unknown) => branch.push({ type: "custom", customType, data }),
 		sendUserMessage() { assert.fail("status feedback must never deliver to the main session"); },
 	};
-	JarvisSideSessionRuntime.create = (async (options: any) => {
+	NoodleSideSessionRuntime.create = (async (options: any) => {
 		const gate = boots.shift();
 		const runtime = new FakeRuntime(options);
 		runtimes.push(runtime);
 		try { await gate?.promise; return runtime; }
 		catch (error) { runtime.dispose(); throw error; }
 	}) as any;
-	jarvisExtension(pi);
+	noodleExtension(pi);
 	return {
 		ctx, runtimes, hostNotices, feedback, statuses,
-		command: (args: string) => commands.get("jarvis").handler(args, ctx),
+		command: (args: string) => commands.get("noodle").handler(args, ctx),
 		get view(): StatusView { return overlay.view; },
-		get bridge(): JarvisOverlayBridge { return overlay.bridge; },
+		get bridge(): NoodleOverlayBridge { return overlay.bridge; },
 		get overlay() { return overlay; },
 		render(): string { return overlay.render(110).join("\n").replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, ""); },
 		holdNextBoot() { const gate = deferred(); boots.push(gate); return gate; },
 		setRenderHook(hook?: () => void) { onRender = hook; },
 		clearBranch() { branch = []; },
 		event: async (name: string) => { await handlers.get(name)?.({ type: name }, ctx); },
-		start(args = "") { opened = commands.get("jarvis").handler(args, ctx); return opened!; },
+		start(args = "") { opened = commands.get("noodle").handler(args, ctx); return opened!; },
 		async stop() { onRender = undefined; await handlers.get("session_shutdown")?.({}, ctx); await opened; },
 	};
 }
@@ -166,10 +166,10 @@ function assertQueuedRendered(h: ReturnType<typeof harness>, queued: number) {
 }
 
 // A single parent owns the factory/environment patch; subtests execute serially.
-test("truthful /jarvis queue and processing feedback", async (t) => {
-	const originalCreate = JarvisSideSessionRuntime.create;
+test("truthful /noodle queue and processing feedback", async (t) => {
+	const originalCreate = NoodleSideSessionRuntime.create;
 	const originalAgentDir = process.env.PI_CODING_AGENT_DIR;
-	const root = mkdtempSync(join(tmpdir(), "jarvis-status-polish-"));
+	const root = mkdtempSync(join(tmpdir(), "noodle-status-polish-"));
 	process.env.PI_CODING_AGENT_DIR = join(root, "agent");
 	let id = 0;
 	const make = () => harness(root, id++);
@@ -179,7 +179,7 @@ test("truthful /jarvis queue and processing feedback", async (t) => {
 			const h = make();
 			try {
 				await h.event("session_start");
-				for (const control of ["status", "stop", "access off", "/status", "/jarvis stop"]) await h.command(control);
+				for (const control of ["status", "stop", "access off", "/status", "/noodle stop"]) await h.command(control);
 				assert.equal(h.runtimes.length, 0, "local controls never start the SDK/model or overlay");
 				h.ctx.isProjectTrusted = () => true;
 				const boot = h.holdNextBoot(), opening = h.start("assigned before close");
@@ -197,24 +197,24 @@ test("truthful /jarvis queue and processing feedback", async (t) => {
 				assert.equal(view.isToolAccessEnabled(), true);
 				assert.equal(view.isFollowUpToMainEnabled(), true); assert.equal(view.isSteerToMainEnabled(), true);
 				assert.equal(runtime.disposed, false);
-				assert.match(h.statuses.get("jarvis-background")!, /bg.*starting.*q2.*repo ON.*note ON.*redirect ASK/);
-				assert.ok(h.statuses.get("jarvis-background")!.length <= 80, "all three grants precede hints in a compact 80-column main footer");
+				assert.match(h.statuses.get("noodle-background")!, /bg.*starting.*q2.*repo ON.*note ON.*redirect ASK/);
+				assert.ok(h.statuses.get("noodle-background")!.length <= 80, "all three grants precede hints in a compact 80-column main footer");
 				assert.equal(await runtime.options.confirmSteerToMain("must not prompt invisibly"), false);
 				assert.equal(await h.bridge.requestConfirmation("Forget memory", "closed human review"), false);
 				boot.resolve(); await until(() => runtime.sent.length === 1);
-				assert.match(h.statuses.get("jarvis-background")!, /bg.*working.*q1/);
-				runtime.endAgentRun(); assert.match(h.statuses.get("jarvis-background")!, /working/);
+				assert.match(h.statuses.get("noodle-background")!, /bg.*working.*q1/);
+				runtime.endAgentRun(); assert.match(h.statuses.get("noodle-background")!, /working/);
 				h.start(); assert.equal(h.runtimes.length, 1, "reopen reuses the same owner during active work");
 				assert.equal(h.view.isToolAccessEnabled(), true);
 				first.resolve(); await until(() => runtime.sent.length === 2);
 				second.resolve(); await waiting;
 				assert.deepEqual(runtime.sent, ["assigned before close", "queued before close"]);
-				assert.match(h.statuses.get("jarvis-background")!, /idle.*repo ON/);
+				assert.match(h.statuses.get("noodle-background")!, /idle.*repo ON/);
 				await h.view.sendMessage("/access off");
 				assert.equal(h.view.isToolAccessEnabled(), false); assert.equal(h.view.isFollowUpToMainEnabled(), false); assert.equal(h.view.isSteerToMainEnabled(), false);
 				assert.equal(runtime.disposed, false);
 			} finally { await h.stop(); }
-			assert.equal(h.statuses.get("jarvis-background"), undefined, "shutdown clears the owned footer");
+			assert.equal(h.statuses.get("noodle-background"), undefined, "shutdown clears the owned footer");
 		});
 
 		for (const boundary of ["boot", "sync", "prompt"] as const) {
@@ -577,7 +577,7 @@ test("truthful /jarvis queue and processing feedback", async (t) => {
 				assert.equal(h.runtimes[0]!.disposed, true);
 				assert.equal(h.runtimes[1]!.disposed, false);
 				assertFeedback(h.view, 1, true);
-				assert.equal(h.bridge.snapshot().workingMessage, "Starting /jarvis…");
+				assert.equal(h.bridge.snapshot().workingMessage, "Starting /noodle…");
 				assert.equal(h.bridge.snapshot().notifications.length, 0);
 				nextBoot.resolve(); await until(() => h.view.isReady() && !h.view.getIsProcessing());
 				assertFeedback(h.view, 0, false);
@@ -633,7 +633,7 @@ test("truthful /jarvis queue and processing feedback", async (t) => {
 			} finally { await h.stop(); }
 		});
 	} finally {
-		JarvisSideSessionRuntime.create = originalCreate;
+		NoodleSideSessionRuntime.create = originalCreate;
 		if (originalAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
 		else process.env.PI_CODING_AGENT_DIR = originalAgentDir;
 		rmSync(root, { recursive: true, force: true });

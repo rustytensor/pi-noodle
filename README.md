@@ -1,33 +1,37 @@
-# pi-jarvis
+pi-noodle: your Pi agent's inner voice and memory.
 
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/crustyhacker/pi-jarvis/main/docs/assets/jarvis-logo.svg" alt="JARVIS — Pi / A second lane of thought. Cyan, violet, and pink ASCII chrome." width="720">
+<img src="https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-neon-skull.png" alt="Noodle neon skull and ramen bowl" width="720">
+
+<img src="https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-dark-512.png" alt="pi-noodle icon" width="96">
+
+**Pi / your agent's inner voice**
 
 ## Remember more. Wait less. Stay in control.
 
 **Memory you can edit. A second lane of thought. Watchers that wake an idle agent. A searchable past.**
 
-Your main Pi session stays on the job. **Jarvis gives you room to investigate, remember and act**—without turning every side question into a change of plan. Open a polished conversation overlay, choose its model and thinking level, and let assigned work continue when you close the window.
+Your main Pi session stays on the job. **Noodle gives you room to investigate, remember and act**—without turning every side question into a change of plan. Open a polished conversation overlay, choose its model and thinking level, and let assigned work continue when you close the window.
 
-**The payoff compounds across sessions.** Main Pi and Jarvis share saved preferences, corrections and project decisions—even if you never open the overlay. **Now you can open the [curated memory editor](#edit-what-pi-remembers), inspect the saved facts and correct them yourself.** Add the optional history archive to search recorded conversations and tool activity, import existing Pi chats after review, and optionally encrypt the active archive.
+**The payoff compounds across sessions.** Main Pi and Noodle share saved preferences, corrections and project decisions—even if you never open the overlay. **Now you can open the [curated memory editor](#edit-what-pi-remembers), inspect the saved facts and correct them yourself.** Add the optional history archive to search recorded conversations and tool activity, import existing Pi chats after review, and optionally encrypt the active archive.
 
-**New in 1.14.0: stop babysitting slow work.** Set an optional [watcher](#main-session-watchers) for a file, a shell predicate, or a path going quiet, then let main Pi finish its turn. When the condition is met—or the wait times out or fails—the extension wakes the agent with the result and its own next-step note. **No model polling while it waits.**
+**Stop babysitting slow work.** Set an optional [watcher](#main-session-watchers) for a file, a shell predicate, or a path going quiet, then let main Pi finish its turn. When the condition is met—or the wait times out or fails—the extension wakes the agent with the result and its own next-step note. **No model polling while it waits.**
 
 **Power is explicit:** opt-in watchers, local tools + native MCP, quiet notes to main, and redirects that require your confirmation. [See the whole toolkit](#at-a-glance) · [Try memory in a minute](#memory-in-60-seconds).
 
 **Know the defaults:** shared memory is **on in trusted projects**, stored in **local plaintext**, and recalled facts can reach your active model. Watchers, the separate archive, archive encryption and three tool/bridge grants start **off**. Memory retrieval needs no embeddings or background model jobs. [Privacy and controls](#two-complementary-memory-features).
 
-[![CI](https://img.shields.io/github/actions/workflow/status/crustyhacker/pi-jarvis/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/crustyhacker/pi-jarvis/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/pi-jarvis?style=for-the-badge&color=7c3aed)](https://www.npmjs.com/package/pi-jarvis)
+[![CI](https://img.shields.io/github/actions/workflow/status/rustytensor/pi-jarvis/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/rustytensor/pi-jarvis/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/pi-noodle?style=for-the-badge&color=7c3aed)](https://www.npmjs.com/package/pi-noodle)
 [![license](https://img.shields.io/badge/license-MIT-111827?style=for-the-badge)](./LICENSE)
-[![Pi extension](https://img.shields.io/badge/Pi-extension-06b6d4?style=for-the-badge)](https://github.com/crustyhacker/pi-jarvis)
+[![Pi extension](https://img.shields.io/badge/Pi-extension-06b6d4?style=for-the-badge)](https://github.com/rustytensor/pi-jarvis)
 [![TypeScript](https://img.shields.io/badge/TypeScript-powered-2563eb?style=for-the-badge)](./package.json)
 
-<p><strong>Current version:</strong> 1.14.0</p>
+<p><strong>Current version:</strong> 1.15.0</p>
 
 ```bash
-pi install npm:pi-jarvis
+pi install npm:pi-noodle
 ```
 
 [Install](#quick-start) · [Watchers](#main-session-watchers) · [Memory editor](#edit-what-pi-remembers) · [Shared memory](#shared-memory) · [Search & import](#full-session-archive) · [Encryption](#optional-archive-encryption) · [TUI controls](#overlay-controls) · [Native MCP](#native-mcp)
@@ -49,20 +53,29 @@ pi install npm:pi-jarvis
 
 </div>
 
+## Renamed from pi-jarvis
+
+Version **1.15.0** introduces **pi-noodle**. Install with `pi install npm:pi-noodle`.
+Use `/noodle`, `/noodle-model`, `/noodle-thinking`, `/noodle-memory`, `/noodle-archive` and `/noodle-watchers`; the old `/jarvis` command family and `jarvis_*` tools remain compatibility aliases for their `noodle_*` counterparts.
+
+Saved memory, archives, watcher state and session references are untouched by the rename. Existing settings and stores keep their legacy paths, including `extensions/pi-jarvis.json`, `.pi/jarvis.json`, their archive/watchers equivalents, `pi-jarvis-memory`, `extensions/pi-jarvis-archive` and `jarvis-sessions/`. No automatic data move or privacy/default change occurs. The GitHub repository remains `rustytensor/pi-jarvis`.
+
+Optional: the [offline storage migration utility](docs/storage-migration.md) can move copies to noodle-named paths after every Pi instance is stopped. It requires explicit review, retains originals, and does not rewrite historical text or authenticated format tags. No migration is needed to install the renamed extension.
+
 ## Main-session watchers
 
 **Wait without model polling.** Version 1.14.0 adds optional main-agent watchers: a short check runs on an extension timer; the agent can finish its turn and be woken when the condition is met, the deadline expires, or checking fails. No model calls are made while waiting. The wake-up itself starts a model turn and can therefore cost tokens.
 
-Watchers start **off** and are independent of shared memory, archive controls, Jarvis Repo tools, Note main and Redirect. Enable them yourself in a trusted project:
+Watchers start **off** and are independent of shared memory, archive controls, Noodle Repo tools, Note main and Redirect. Enable them yourself in a trusted project:
 
 ```text
-/jarvis-watchers on                         # global default
-/jarvis-watchers --project on               # this project's override
-/jarvis-watchers status
-/jarvis-watchers cancel <id>
-/jarvis-watchers off                        # explicit global master-off
-/jarvis-watchers --project clear            # remove controls; fallback may enable
-/jarvis-watchers --global set maxWatchers 3
+/noodle-watchers on                         # global default
+/noodle-watchers --project on               # this project's override
+/noodle-watchers status
+/noodle-watchers cancel <id>
+/noodle-watchers off                        # explicit global master-off
+/noodle-watchers --project clear            # remove controls; fallback may enable
+/noodle-watchers --global set maxWatchers 3
 ```
 
 `on`, `off`, `clear` and `set` default to global scope. Global settings live at `<agentDir>/extensions/pi-jarvis-watchers.json`; project overrides live at `.pi/jarvis-watchers.json`, under `watchers`. Per-field project > global > defaults applies, except explicit global `enabled=false` blocks project on. Invalid settings or denied/throwing project trust stop execution. Setting writes use a separate cooperative lock and atomic replacement; malformed files need manual repair, and contended/uncertain writes are not automatically retried. `clear` removes settings, not transcript history. Numeric settings have validated hard ceilings; see `watchers-config.ts`.
@@ -77,7 +90,7 @@ Watchers start **off** and are independent of shared memory, archive controls, J
 | `outputTailChars` | `500` |
 | `maxDirectoryEntries` | `2000` (including the root) |
 
-The main model gets `jarvis_watcher_set`, `jarvis_watcher_list`, and `jarvis_watcher_cancel` when enabled. The setting tool requires a **nonempty label and nonempty agent note**, plus `condition` and `timeoutSeconds`; optional `intervalSeconds` and `checkTimeoutSeconds` must respect the effective limits. The note should say what the agent was waiting for and what it intended to do next, so a wake-up remains useful after compaction. Excess requests are refused, not silently clamped. A configured limit change cancels incompatible existing watchers instead of changing their approved commands.
+The main model gets `noodle_watcher_set`, `noodle_watcher_list`, and `noodle_watcher_cancel` when enabled. The setting tool requires a **nonempty label and nonempty agent note**, plus `condition` and `timeoutSeconds`; optional `intervalSeconds` and `checkTimeoutSeconds` must respect the effective limits. The note should say what the agent was waiting for and what it intended to do next, so a wake-up remains useful after compaction. Excess requests are refused, not silently clamped. A configured limit change cancels incompatible existing watchers instead of changing their approved commands.
 
 Conditions:
 - `{ "kind": "command", "command": "test -e build.done" }`: a short foreground POSIX shell predicate. Exit **0 = met**, **1 = not yet**; other exits, signals, launch failures and check-runtime expiry end it as **check failed**. Do not launch background work or request interactive input.
@@ -86,7 +99,7 @@ Conditions:
 
 ### Launch-time permission, not per-repeat permission
 
-**Watcher launch/progress and final-result blocks are compact by default.** They show the label, condition in plain words, interval/time limit, cwd and full-command line count. Use Pi's normal **Ctrl+O** tool expansion to show or hide the **entire byte-identical supervised execution command**, without abbreviation, reformatting or line numbering. The block uses the theme's semantic `accent` colour, not added-code/success green or a hard-coded palette; existing expansion preferences and keybinding customizations remain respected. Pi 1.0.0/1.1.0 does not render the nested bash launch as a separate transcript row (`parentToolCallId`); it remains represented by the same expandable watcher block. Hooks and permission prompts still receive the full unchanged command, never the collapsed display. The first check runs through the main session's normal `bash` tool via `ctx.executeTool` **inside** `jarvis_watcher_set`. Bash permission hooks can deny it; denial refuses the watcher and schedules nothing. A changed command/timeout or an unavailable/unverifiable result also refuses registration. Pi itself does not prompt before every bash command: the user's configured hooks decide whether approval is needed.
+**Watcher launch/progress and final-result blocks are compact by default.** They show the label, condition in plain words, interval/time limit, cwd and full-command line count. Use Pi's normal **Ctrl+O** tool expansion to show or hide the **entire byte-identical supervised execution command**, without abbreviation, reformatting or line numbering. The block uses the theme's semantic `accent` colour, not added-code/success green or a hard-coded palette; existing expansion preferences and keybinding customizations remain respected. Pi 1.0.0/1.1.0 does not render the nested bash launch as a separate transcript row (`parentToolCallId`); it remains represented by the same expandable watcher block. Hooks and permission prompts still receive the full unchanged command, never the collapsed display. The first check runs through the main session's normal `bash` tool via `ctx.executeTool` **inside** `noodle_watcher_set`. Bash permission hooks can deny it; denial refuses the watcher and schedules nothing. A changed command/timeout or an unavailable/unverifiable result also refuses registration. Pi itself does not prompt before every bash command: the user's configured hooks decide whether approval is needed.
 
 After a permitted launch, the extension repeats the **byte-identical command, including its bounded foreground supervisor, in the same cwd**, through `pi.exec("/bin/sh", ["-c", command], ...)`. The command and its limits are fixed for that watcher. **Repeats do not pass through bash hooks, custom backends, prefixes or session environment.** They execute locally and do not inherit the isolation or environment of a remote/container/custom bash backend. They do not run its result-redaction hooks either. Choose predicates appropriate for local repeat execution; if you require fresh approval, backend isolation or redaction on every check, do not enable this fallback. Pi exposes no documented idle bash-tool dispatcher in the inspected 1.0.0/1.1.0 APIs; [the source investigation](docs/watchers-host-investigation.md) explains the choice.
 
@@ -94,7 +107,7 @@ The included supervisor bounds retained output and attempts to kill its check's 
 
 ### Visibility, lifecycle and honest delivery limits
 
-The main footer shows active/pending watchers; `/jarvis-watchers status` and `/jarvis status` show their conditions, elapsed times, deadlines, notes and delivery state. Cancel by ID yourself. Overlay `/watchers …` and `/jarvis-watchers …` are intercepted locally without side boot, provider work or queueing. A launch review blocks admission of Jarvis-owned modal/private inputs; existing modal/private input pauses new checks and holds notices until it ends. The deadline still advances. Ordinary closing/reopening Jarvis does not stop main watchers. `/jarvis stop` and `/jarvis access off` retain their side-only meanings.
+The main footer shows active/pending watchers; `/noodle-watchers status` and `/noodle status` show their conditions, elapsed times, deadlines, notes and delivery state. Cancel by ID yourself. Overlay `/watchers …` and `/noodle-watchers …` are intercepted locally without side boot, provider work or queueing. A launch review blocks admission of Noodle-owned modal/private inputs; existing modal/private input pauses new checks and holds notices until it ends. The deadline still advances. Ordinary closing/reopening Noodle does not stop main watchers. `/noodle stop` and `/noodle access off` retain their side-only meanings.
 
 A fired watcher produces a displayed **extension-authored custom message**, expressly **not typed by the user and carrying no user approval or new permissions**, with reason, last output tail/omission flag, elapsed time and the agent's note. Command output and notes are untrusted data. Pi converts custom message content to user-role text for providers; the label is not a separate cryptographically authenticated provider role. It cannot make model confusion literally impossible. Output and notes are stored in the ordinary session and can reach the model/provider; do not put secrets in predicates, their output or notes. This feature is not archive encryption.
 
@@ -102,21 +115,21 @@ If main is idle, the message starts a turn. If main is busy, it is a **follow-up
 
 Watcher snapshots use custom entries on the active session branch, separate from model context. **Compaction does not stop live checks or erase their notes.** Quit/reload/main-session replacement and tree/fork boundaries stop checking and abort owned work. No watcher daemon runs while Pi is closed. On resume, unfinished waits are reported with their notes as **lost**, or **overdue** when their wall-clock deadline has passed; the condition's outcome is unknown, and no check is restarted or backfilled. Historical jobs are never silently resurrected by tree/fork navigation. A fork has a different session ID and does not copy watcher jobs. If watchers are off, recovery notices are suppressed but stored summaries remain inspectable. `--no-session` runs cannot be recovered after exit. Stored state and output limits are not a hard disk quota; original session entries are never truncated.
 
-Version one mounts watcher tools **only in main**, never in Jarvis. It does not change existing tool, memory, archive, model/thinking, bridge, renderer or theme defaults.
+Version one mounts watcher tools **only in main**, never in Noodle. It does not change existing tool, memory, archive, model/thinking, bridge, renderer or theme defaults.
 
 ## Edit what Pi remembers
 
 **A useful memory should be inspectable—not a black box.** The curated memory editor, introduced in **1.12.0**, gives you a dedicated TUI for the preferences, corrections, decisions and references saved by you and your models.
 
 ```text
-/jarvis-memory editor
+/noodle-memory editor
 ```
 
-Inside Jarvis, use **`/memory editor`**. No model call or side-session boot is required.
+Inside Noodle, use **`/memory editor`**. No model call or side-session boot is required.
 
-![Curated memory editor, actual renderer with synthetic notes](https://raw.githubusercontent.com/crustyhacker/pi-jarvis/main/docs/assets/jarvis-memory-editor.svg)
+![Curated memory editor, actual renderer with synthetic notes](https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-memory-editor.svg)
 
-*Actual component with synthetic notes and a custom palette—not a live memory database. [Open the full-size preview](https://raw.githubusercontent.com/crustyhacker/pi-jarvis/main/docs/assets/jarvis-memory-editor.svg).*
+*Actual component with synthetic notes and a custom palette—not a live memory database. [Open the full-size preview](https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-memory-editor.svg).*
 
 | When you want to… | The editor lets you… |
 |---|---|
@@ -133,22 +146,12 @@ Inside Jarvis, use **`/memory editor`**. No model call or side-session boot is r
 
 ---
 
-<details>
-<summary>Plain-text wordmark</summary>
-
 ```text
-     _    _    ____ __     _____ ____
-    | |  / \  |  _ \\ \   / /_ _/ ___|
- _  | | / _ \ | |_) |\ \ / / | |\___ \
-| |_| |/ ___ \|  _ <  \ V /  | | ___) |
- \___//_/   \_\_| \_\  \_/  |___|____/
-
-       PI / A SECOND LANE OF THOUGHT
+NOODLE
+Pi / your agent's inner voice
 ```
 
-</details>
-
-![Jarvis compact overlay, rendered with deterministic demo data](https://raw.githubusercontent.com/crustyhacker/pi-jarvis/main/docs/assets/jarvis-overlay.svg)
+![Noodle compact overlay, rendered with deterministic demo data](https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-overlay.svg)
 
 *Actual renderer, deterministic demo conversation, custom dark palette—not a live provider session. Theme-aware panels, bounded reading width, visible access states and a distinct multiline prompt keep the discussion front and center.*
 
@@ -158,14 +161,14 @@ Inside Jarvis, use **`/memory editor`**. No model call or side-session boot is r
 
 ## Stop re-explaining your project
 
-A fresh session should not mean throwing away every useful decision. `pi-jarvis` gives main Pi and Jarvis a shared place to keep the facts you want to reuse—and an optional archive when you need the original evidence.
+A fresh session should not mean throwing away every useful decision. `pi-noodle` gives main Pi and Noodle a shared place to keep the facts you want to reuse—and an optional archive when you need the original evidence.
 
-| Your workflow | What Jarvis adds |
+| Your workflow | What Noodle adds |
 |---|---|
-| **"Remember how I like to work."** | Global preference notes, available to main Pi and Jarvis across projects |
+| **"Remember how I like to work."** | Global preference notes, available to main Pi and Noodle across projects |
 | **"We already decided this."** | Project-scoped decisions and corrections that survive session changes |
 | **"That saved fact needs fixing."** | A human-controlled editor for inspecting, correcting, organizing and reviewing deletion of curated notes |
-| **"Jarvis found something useful."** | A saved fact can be recalled later in main Pi without enabling `Note main` or `Redirect` |
+| **"Noodle found something useful."** | A saved fact can be recalled later in main Pi without enabling `Note main` or `Redirect` |
 | **"What did we say about deployment?"** | Keyword search across saved notes and bounded conversation captures |
 | **"Show me the original tool output."** | Separately enabled archive search, session provenance and paged raw entries |
 | **"I have months of existing Pi chats."** | Explicit bulk-import preview, confirmation, duplicate skipping and per-file reports |
@@ -177,10 +180,10 @@ Memory is **context, not authority**: records can be stale, recall is bounded an
 After installing and reloading, check the first-use notice and effective settings. These are **literal commands**, not promises that a model will save or recall a fact:
 
 ```text
-/jarvis-memory
-/jarvis-memory remember Build workflow | This project uses npm, not pnpm.
-/jarvis-memory remember --global Answer style | Prefer concise answers with file paths.
-/jarvis-memory search Build workflow
+/noodle-memory
+/noodle-memory remember Build workflow | This project uses npm, not pnpm.
+/noodle-memory remember --global Answer style | Prefer concise answers with file paths.
+/noodle-memory search Build workflow
 ```
 
 The first note stays in this project; the second is a deliberate cross-project preference. Both lanes use the same store. Inside the overlay, `/memory search Build workflow` runs locally without a model call or waiting for queued side work.
@@ -188,14 +191,14 @@ The first note stays in this project; the second is a deliberate cross-project p
 Now ask either lane: *"What build workflow did we save for this project? Search memory if needed."* Or ask: *"Find the earlier discussion about deployment and show the source before suggesting a change."* Automatic recall uses global/current-project records; broader search is explicit:
 
 ```text
-/jarvis-memory search --all deployment
+/noodle-memory search --all deployment
 ```
 
-**Your controls, immediately available:** `/jarvis-memory off` is the global master-off; `/jarvis-memory --project off` pauses this project. `/jarvis-memory --project capture off` and `--project recall off` control saving and recall separately here. Full off retains data but blocks even record inspection; none of these switches erases original Pi transcripts or already-sent model context. [Inspect, edit and forget saved records](#inspect-edit-and-forget).
+**Your controls, immediately available:** `/noodle-memory off` is the global master-off; `/noodle-memory --project off` pauses this project. `/noodle-memory --project capture off` and `--project recall off` control saving and recall separately here. Full off retains data but blocks even record inspection; none of these switches erases original Pi transcripts or already-sent model context. [Inspect, edit and forget saved records](#inspect-edit-and-forget).
 
 ### A second cockpit—not a second task queue for main Pi
 
-Use `/jarvis` for a second opinion, progress checks or repo inspection while the main lane stays on its plan. Repo tools, `Note main` and `Redirect` are separate opt-ins; redirects still require confirmation. Shared memory does **not** steer, interrupt or queue work into the other lane.
+Use `/noodle` for a second opinion, progress checks or repo inspection while the main lane stays on its plan. Repo tools, `Note main` and `Redirect` are separate opt-ins; redirects still require confirmation. Shared memory does **not** steer, interrupt or queue work into the other lane.
 
 - *"What is the main agent doing right now?"*
 - *"Which project decisions did we save, and which might be stale?"*
@@ -214,9 +217,9 @@ Use `/jarvis` for a second opinion, progress checks or repo inspection while the
 | **Default** | **On in trusted projects**, with separate capture/recall controls | **Off**; recording and model access are separately controlled |
 | **Retrieval** | Automatic recall from global/current-project memory; explicit broader search | Local indexed search and session browsing; no automatic context injection |
 | **Storage** | Local plaintext SQLite | Plaintext by default; optional password encryption for the archive database, index and SQLite journals |
-| **Manage it** | `/jarvis-memory editor` for curated notes; `/jarvis-memory` controls · overlay `/memory` | `/jarvis-archive` · overlay `/archive` |
+| **Manage it** | `/noodle-memory editor` for curated notes; `/noodle-memory` controls · overlay `/memory` | `/noodle-archive` · overlay `/archive` |
 
-Both work across main Pi and Jarvis, independently of **Repo tools** and whether the overlay is open. Each has its own local SQLite store and global/project controls. Turning one off does not turn the other off.
+Both work across main Pi and Noodle, independently of **Repo tools** and whether the overlay is open. Each has its own local SQLite store and global/project controls. Turning one off does not turn the other off.
 
 **Privacy matters:** shared memory remains local plaintext. The archive also defaults to plaintext, with separate, [optional password encryption](#optional-archive-encryption). Archive content is unredacted and can include secrets; encryption does not prevent authorized model reads from sending retrieved content to your provider. It does not protect original Pi transcripts, shared memory or retained plaintext backups. “Full” means accepted finalized data exposed by Pi—not hidden provider reasoning or a crash-safe audit log. Historical import is explicit. Review the [memory controls](#shared-memory), [archive limits](#full-session-archive) and encryption boundary before enabling more access.
 
@@ -228,7 +231,7 @@ Both work across main Pi and Jarvis, independently of **Repo tools** and whether
 
 | Capability | Why it matters |
 |---|---|
-| **[Shared persistent memory](#shared-memory)** | Stop re-explaining useful preferences and project decisions. Main Pi and Jarvis use the same local store, across sessions—even without the overlay. |
+| **[Shared persistent memory](#shared-memory)** | Stop re-explaining useful preferences and project decisions. Main Pi and Noodle use the same local store, across sessions—even without the overlay. |
 | **[Scoped recall and search](#memory-in-60-seconds)** | Relevant global/current-project facts can inform the next prompt. Explicitly search further when needed; inspect, edit or forget records yourself. |
 | **[Curated memory editor](#curated-memory-editor)** | A dedicated TUI to browse, inspect, create, duplicate, edit and review deletion of saved notes—with filters, provenance and conflict protection. Not the history archive. |
 | **[Searchable original history](#full-session-archive)** | Go beyond a summary: find recorded conversations, exposed tool activity and provenance, then page through the original accepted entries. Separate recording and model-access opt-ins. |
@@ -237,8 +240,8 @@ Both work across main Pi and Jarvis, independently of **Repo tools** and whether
 | **[A persistent second lane](#session-behavior)** | Investigate, brainstorm or get a second opinion in an isolated side conversation with restorable history. Side `/compact`, `/tree` and `/new` leave the main conversation alone. |
 | **[Main-session context](#how-it-fits-into-pi)** | See a deterministic main-session summary and bounded recent changes instead of manually pasting every update. |
 | **[Main-session watchers](#main-session-watchers)** | Let the agent wait without polling the model. Bounded local checks wake it with met/timed-out/check-failed results and its saved note; file creation and quiet paths are supported. Off by default, with visible limits and cancellation. |
-| **[Work that survives window close](#overlay-controls)** | Assigned work and enabled grants continue for the same live owner. Main status stays visible; `/jarvis stop` and `/jarvis access off` keep control close at hand. |
-| **[Your model, your thinking level](#model-and-thinking-resolution)** | Press **F2 / F3** inside Jarvis. Follow main or choose a physical model independently, with scoped settings and a preserved draft. |
+| **[Work that survives window close](#overlay-controls)** | Assigned work and enabled grants continue for the same live owner. Main status stays visible; `/noodle stop` and `/noodle access off` keep control close at hand. |
+| **[Your model, your thinking level](#model-and-thinking-resolution)** | Press **F2 / F3** inside Noodle. Follow main or choose a physical model independently, with scoped settings and a preserved draft. |
 | **[Local tools + native MCP](#native-mcp)** | Enable Repo tools for `read`, `bash`, `edit`, `write` and configured native MCP capabilities. Connections and permission generations belong to the side session. |
 | **[Quiet notes or deliberate redirects](#redirect-flow)** | Send a follow-up without changing the main priority, or request a redirect with visible per-send approval. Separate switches, not an all-or-nothing bridge. |
 | **[A conversation-first TUI](#keyboard-and-drafts)** | Padded reading panels, restrained color, clear speaker headings, anchored scrollback, multiline drafts, theme-aware focus and compact diagnostics. |
@@ -247,7 +250,7 @@ Both work across main Pi and Jarvis, independently of **Repo tools** and whether
 ### The everyday loop
 
 1. **Remember the decision.** Save a concise project fact or an intentional global preference.
-2. **Explore beside the main task.** Ask Jarvis for triage, a second opinion or an explicitly permitted repo inspection.
+2. **Explore beside the main task.** Ask Noodle for triage, a second opinion or an explicitly permitted repo inspection.
 3. **Find the evidence.** Search memory; opt into archive recording/import when you need original recorded history.
 4. **Wait without babysitting.** Opt into a main watcher, record the agent's next-step note, and get a wake-up instead of repeated model polling.
 5. **Bring back what matters.** Keep it as context, send a quiet note, or confirm a redirect. You choose the level of intervention.
@@ -258,27 +261,27 @@ No perfect-recall promise, autonomous swarm claim or hidden permission escalatio
 
 ## How it fits into Pi
 
-<img src="https://raw.githubusercontent.com/crustyhacker/pi-jarvis/main/docs/assets/jarvis-workspace.svg" alt="Main Pi and Jarvis are separate conversation lanes. Main-session context flows to Jarvis; both share local plaintext memory, on in trusted projects. Recalled facts may reach the model/provider. Archive and tool permissions remain separate." width="640">
+<img src="https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-workspace.svg" alt="Main Pi and Noodle are separate conversation lanes. Main-session context flows to Noodle; both share local plaintext memory, on in trusted projects. Recalled facts may reach the model/provider. Archive and tool permissions remain separate." width="640">
 
 *Architecture illustration—not a live session or a promise that every saved fact is recalled.*
 
 ### Operating model
 
-**One main plan, one side conversation, shared useful context.** Jarvis gets a summary and bounded delta from main Pi—not a duplicate of every hidden provider state. Its session, model choice, tools and pending input remain independently owned.
+**One main plan, one side conversation, shared useful context.** Noodle gets a summary and bounded delta from main Pi—not a duplicate of every hidden provider state. Its session, model choice, tools and pending input remain independently owned.
 
 | What you want | What to do |
 |---|---|
-| Status, analysis or a second opinion | Open `/jarvis` and ask; repo inspection is not required. |
+| Status, analysis or a second opinion | Open `/noodle` and ask; repo inspection is not required. |
 | Inspect or change project files / call native MCP | Explicitly enable **Repo tools** and trust the project and configured capabilities. |
-| Leave a useful observation for main | Enable **Note main** and ask Jarvis to send it. |
+| Leave a useful observation for main | Enable **Note main** and ask Noodle to send it. |
 | Change the main agent's priority | Enable **Redirect**, review the proposed message and approve that send. |
-| Close the window, not the task | Escape; use main Pi's Jarvis status and explicit stop/access-off commands as needed. |
+| Close the window, not the task | Escape; use main Pi's Noodle status and explicit stop/access-off commands as needed. |
 
 ---
 
-## Why use `/jarvis` instead of the main lane?
+## Why use `/noodle` instead of the main lane?
 
-Use `/jarvis` when you want:
+Use `/noodle` when you want:
 
 - a second opinion without changing the primary plan yet
 - a quick repo inspection while the main agent keeps moving
@@ -298,7 +301,7 @@ Stay in the main lane when you want:
 ### 1) Install
 
 ```bash
-pi install npm:pi-jarvis
+pi install npm:pi-noodle
 ```
 
 This package is meant to run **inside a Pi installation** that already provides the Pi runtime packages. Those host packages are declared as optional peers so npm does not install a second copy of the full Pi/AI provider stack just to add this extension.
@@ -308,82 +311,82 @@ Requires **Pi 1.0.0** and **Node.js 22.19.0 or newer**. Version **1.6.0** suppor
 ### 2) Restart or reload Pi
 
 `pi install` registers the package automatically. For local development, build and load `./dist/index.js` with `pi -e ./dist/index.js`.
-**Shared memory is enabled by default in trusted projects**, including main Pi even if you never open the overlay. A first-use notice explains capture and recall; [try the one-minute memory workflow](#memory-in-60-seconds). Already using another memory extension? Run `/jarvis-memory off` before your first prompt; this disables both main and Jarvis memory without deleting anything.
+**Shared memory is enabled by default in trusted projects**, including main Pi even if you never open the overlay. A first-use notice explains capture and recall; [try the one-minute memory workflow](#memory-in-60-seconds). Already using another memory extension? Run `/noodle-memory off` before your first prompt; this disables both main and Noodle memory without deleting anything.
 
 **The separate full-session archive is OFF by default.** Nothing is imported or recorded by that subsystem until you opt in. **Optional password encryption is also OFF by default**; installation does not encrypt an existing archive or change your recording/model/memory settings. If you want to avoid new plaintext archive captures during setup, pause effective **capture before enabling or migrating**. See [Full-session archive](#full-session-archive) and [safe encryption setup](#safe-initial-setup).
 
-### 3) Open Jarvis
+### 3) Open Noodle
 
 ```bash
-/jarvis
+/noodle
 ```
 
 Or open it and send the first message immediately:
 
 ```bash
-/jarvis summarize the last validation failure and suggest the fastest next move
+/noodle summarize the last validation failure and suggest the fastest next move
 ```
 
 ### 4) Turn on more power only when you want it
 
 - leave `Repo tools` off for context / analysis without repository or MCP access; shared memory has separate controls
 - turn `Repo tools` on when you want local `read`, `bash`, `edit`, `write`, and configured native MCP capabilities
-- turn `Note main` on when you want Jarvis to quietly message the main session
-- turn `Redirect` on when you want Jarvis to propose a redirect that you still explicitly confirm
+- turn `Note main` on when you want Noodle to quietly message the main session
+- turn `Redirect` on when you want Noodle to propose a redirect that you still explicitly confirm
 
-**Close is not stop:** assigned work and enabled access now survive ordinary window close/reopen within the same running main/side session. Check main Pi's Jarvis status, use `/jarvis stop` to request cancellation, or `/jarvis access off` to revoke access. Defaults remain off; reload/restart does not restore grants.
+**Close is not stop:** assigned work and enabled access now survive ordinary window close/reopen within the same running main/side session. Check main Pi's Noodle status, use `/noodle stop` to request cancellation, or `/noodle access off` to revoke access. Defaults remain off; reload/restart does not restore grants.
 
 ---
 
 ## Command surface
 
-### `/jarvis`
+### `/noodle`
 Opens the side overlay. Task text following the command becomes the first side-session prompt. Closing the window does **not** stop an assigned task or clear enabled access within the same running main/side session.
 
-### `/jarvis status` · `/jarvis stop` · `/jarvis access off`
+### `/noodle status` · `/noodle stop` · `/noodle access off`
 Local controls work even with the window closed, without booting a side session or sending a model prompt. `status` reports activity, waiting inputs and access; `stop` requests cancellation of active work and clears waiting inputs; `access off` disables Repo tools, Note main and Redirect and cancels pending reviews. These are explicit reserved command forms, not task prompts. Stopping/revocation is best effort—not rollback of tools or remote work already started.
 
-### `/jarvis-model`
-In Pi's terminal UI, running `/jarvis-model` with no argument opens a searchable model picker. In RPC, JSON, and print modes it reports the current selection; exact model-setting commands still work. `/jarvis` itself requires the terminal UI and does not start hidden work in other modes.
+### `/noodle-model`
+In Pi's terminal UI, running `/noodle-model` with no argument opens a searchable model picker. In RPC, JSON, and print modes it reports the current selection; exact model-setting commands still work. `/noodle` itself requires the terminal UI and does not start hidden work in other modes.
 
-### `/jarvis-model [--project|--global] <provider/model>`
-Pins `/jarvis` to a specific model without changing the main session model. A plain `/jarvis-model <provider/model>` writes a **project-local** override to `.pi/jarvis.json`.
+### `/noodle-model [--project|--global] <provider/model>`
+Pins `/noodle` to a specific model without changing the main session model. A plain `/noodle-model <provider/model>` writes a **project-local** override to `.pi/jarvis.json`.
 
-### `/jarvis-model [--project|--global] follow-main`
+### `/noodle-model [--project|--global] follow-main`
 Restores the chosen scope to `follow-main`. A project-scoped `follow-main` override still wins over a global pinned setting.
 
-### `/jarvis-model [--project|--global] clear`
-Removes the selected scope so `/jarvis` falls back through the remaining config layers to the built-in default.
+### `/noodle-model [--project|--global] clear`
+Removes the selected scope so `/noodle` falls back through the remaining config layers to the built-in default.
 
-### `/jarvis-thinking [--project|--global] auto|follow-main|off|minimal|low|medium|high|xhigh|max`
-Sets the thinking level used by `/jarvis` without changing the main session thinking level. A plain `/jarvis-thinking <level>` writes a **project-local** override to `.pi/jarvis.json`.
+### `/noodle-thinking [--project|--global] auto|follow-main|off|minimal|low|medium|high|xhigh|max`
+Sets the thinking level used by `/noodle` without changing the main session thinking level. A plain `/noodle-thinking <level>` writes a **project-local** override to `.pi/jarvis.json`.
 
-- `auto` preserves the built-in behavior: follow the main thinking level only when `/jarvis` follows the main model; pinned `/jarvis` models use `off`.
-- `follow-main` follows the main thinking level even when `/jarvis` is pinned to a separate model.
+- `auto` preserves the built-in behavior: follow the main thinking level only when `/noodle` follows the main model; pinned `/noodle` models use `off`.
+- `follow-main` follows the main thinking level even when `/noodle` is pinned to a separate model.
 - Explicit levels request that thinking level; Pi clamps it to the selected model's supported levels.
-- Changes to main thinking immediately synchronize when `/jarvis` follows it.
-- xAI `/jarvis` models still force thinking `off`.
+- Changes to main thinking immediately synchronize when `/noodle` follows it.
+- xAI `/noodle` models still force thinking `off`.
 
-### `/jarvis-thinking [--project|--global] clear`
-Removes the selected scope so `/jarvis` thinking falls back through the remaining config layers to the built-in `auto` default.
+### `/noodle-thinking [--project|--global] clear`
+Removes the selected scope so `/noodle` thinking falls back through the remaining config layers to the built-in `auto` default.
 
-### `/jarvis-memory`
-Reports shared-memory status. Use `/jarvis-memory editor` for the curated-note TUI editor, or `/jarvis-memory help` for controls and inline data-management commands. Memory controls default to **global**, unlike model/thinking controls. See [Shared memory](#shared-memory) below.
+### `/noodle-memory`
+Reports shared-memory status. Use `/noodle-memory editor` for the curated-note TUI editor, or `/noodle-memory help` for controls and inline data-management commands. Memory controls default to **global**, unlike model/thinking controls. See [Shared memory](#shared-memory) below.
 
-### `/jarvis-archive`
-Reports the separate full-session archive's status. It defaults **OFF**, with independent capture, model-access, model-search and optional encryption controls. `/jarvis-archive help` documents enablement warnings, paging, explicit import, deletion and human-only encryption administration. See [Full-session archive](#full-session-archive).
+### `/noodle-archive`
+Reports the separate full-session archive's status. It defaults **OFF**, with independent capture, model-access, model-search and optional encryption controls. `/noodle-archive help` documents enablement warnings, paging, explicit import, deletion and human-only encryption administration. See [Full-session archive](#full-session-archive).
 
-### Side-session commands inside `/jarvis`
-The `/jarvis` input handles a small set of built-in commands against the isolated side-session:
+### Side-session commands inside `/noodle`
+The `/noodle` input handles a small set of built-in commands against the isolated side-session:
 
-- `/compact [instructions]` compacts the `/jarvis` conversation context.
-- `/tree` prints the `/jarvis` session tree with entry IDs.
-- `/tree <entry-id>` navigates the `/jarvis` session tree to that entry.
+- `/compact [instructions]` compacts the `/noodle` conversation context.
+- `/tree` prints the `/noodle` session tree with entry IDs.
+- `/tree <entry-id>` navigates the `/noodle` session tree to that entry.
 - `/tree --summarize <entry-id> [instructions]` navigates and summarizes the branch being left.
-- `/new` starts a fresh `/jarvis` side-session without changing the main Pi session.
-- `/status`, `/stop`, `/access off` (or `/jarvis status|stop|access off`) are immediate local background controls, without model/queue work.
-- `/memory …` or `/jarvis-memory …` manages shared memory immediately, without sending a model prompt or waiting for queued side work. Initial forms such as `/jarvis /memory off` are also handled locally, without booting a side session.
-- `/archive …` or `/jarvis-archive …` manages the separate optional archive locally, without model/queue work; initial `/jarvis /archive …` works without booting a side session.
+- `/new` starts a fresh `/noodle` side-session without changing the main Pi session.
+- `/status`, `/stop`, `/access off` (or `/noodle status|stop|access off`) are immediate local background controls, without model/queue work.
+- `/memory …` or `/noodle-memory …` manages shared memory immediately, without sending a model prompt or waiting for queued side work. Initial forms such as `/noodle /memory off` are also handled locally, without booting a side session.
+- `/archive …` or `/noodle-archive …` manages the separate optional archive locally, without model/queue work; initial `/noodle /archive …` works without booting a side session.
 
 ---
 
@@ -396,14 +399,14 @@ This is a **separate, optional subsystem**, not a change to shared memory's cura
 These examples opt into recording; they are **not encrypted-first setup**. If you want to avoid new plaintext archive captures, [pause effective capture before enabling or migrating](#safe-initial-setup), then verify encryption/cleanup before explicitly resuming capture.
 
 ```text
-/jarvis-archive                                    # status; no archive-record reads
-/jarvis-archive --project on --confirm-sensitive    # record here only
-/jarvis-archive on --confirm-sensitive              # enable globally
-/jarvis-archive model-access on --confirm-sensitive # allow model search/read; recording alone doesn't
-/jarvis-archive model-search on --confirm-sensitive # allow model tools beyond this session without asking
-/jarvis-archive capture off                         # pause recording default, retain access
-/jarvis-archive off                                 # global MASTER OFF; keep stored data
-/jarvis-archive clear --confirm-sensitive           # remove global settings; fallback may re-enable
+/noodle-archive                                    # status; no archive-record reads
+/noodle-archive --project on --confirm-sensitive    # record here only
+/noodle-archive on --confirm-sensitive              # enable globally
+/noodle-archive model-access on --confirm-sensitive # allow model search/read; recording alone doesn't
+/noodle-archive model-search on --confirm-sensitive # allow model tools beyond this session without asking
+/noodle-archive capture off                         # pause recording default, retain access
+/noodle-archive off                                 # global MASTER OFF; keep stored data
+/noodle-archive clear --confirm-sensitive           # remove global settings; fallback may re-enable
 ```
 
 Controls default to **global**; use `--project` for an override. Resolution is per-field project > global > defaults (`enabled: false`, `capture: true`, `modelAccess: false`, `modelWideSearch: false`), except an **explicit global off overrides every project**. `capture off`, `model-access off` and `model-search off` set defaults that a project can override; inspect effective status. Use `clear --confirm-sensitive` to remove a scoped setting, never data. Malformed/unreadable settings and untrusted projects pause **all** archive access. Full off blocks even manual record inspection; recording-only/model-only pauses do not prevent explicit human reads. Separate files avoid interfering with memory/model settings:
@@ -425,17 +428,17 @@ Recording begins after an activation baseline, never by importing pre-existing e
 ### Search and inspect
 
 ```text
-/jarvis-archive search deployment decision
-/jarvis-archive search --all --offset 20 deployment
-/jarvis-archive session --all <session-id> 0
-/jarvis-archive read --all <record-id> 0
-/jarvis-archive read --all --metadata <record-id> 0
-/jarvis-archive stats --all
+/noodle-archive search deployment decision
+/noodle-archive search --all --offset 20 deployment
+/noodle-archive session --all <session-id> 0
+/noodle-archive read --all <record-id> 0
+/noodle-archive read --all --metadata <record-id> 0
+/noodle-archive stats --all
 ```
 
-Search/session pages return bounded excerpts of normalized indexing text with IDs, project, lane, timestamps and parent entry IDs. Excerpts are not exact quotations; use `read` for original case and content. Follow `nextOffset` to continue. Exceptionally large/escape-heavy provenance is explicitly labeled with `abbreviated` field names, never allowed to block record access; `read --metadata` (model tool `part: "metadata"`) pages the exact original metadata. `read` returns complete raw JSON **through pages**; its offsets count Unicode codepoints, not bytes or UTF-16 units. Results are bounded to 24,000 bytes of JSON plus an untrusted-data notice; stored payloads are not shortened. Use explicit `--all` to access other projects. Models get only three read-only tools—`jarvis_archive_search`, `jarvis_archive_read`, and `jarvis_archive_session`—when model access is enabled. No model controls, import, or deletion tools exist. Tools recheck current permissions/trust/cancellation and reject stale definitions.
+Search/session pages return bounded excerpts of normalized indexing text with IDs, project, lane, timestamps and parent entry IDs. Excerpts are not exact quotations; use `read` for original case and content. Follow `nextOffset` to continue. Exceptionally large/escape-heavy provenance is explicitly labeled with `abbreviated` field names, never allowed to block record access; `read --metadata` (model tool `part: "metadata"`) pages the exact original metadata. `read` returns complete raw JSON **through pages**; its offsets count Unicode codepoints, not bytes or UTF-16 units. Results are bounded to 24,000 bytes of JSON plus an untrusted-data notice; stored payloads are not shortened. Use explicit `--all` to access other projects. Models get only three read-only tools—`noodle_archive_search`, `noodle_archive_read`, and `noodle_archive_session`—when model access is enabled. No model controls, import, or deletion tools exist. Tools recheck current permissions/trust/cancellation and reject stale definitions.
 
-**Model-tool reach.** The model tools default to the **current session**, so the main agent can recover details that were said earlier and lost to compaction without asking. Any wider reach—other sessions of this project (`scope: "current"`) or other projects (`scope: "all"`)—asks for one approval per request through Pi's normal confirmation prompt (the Jarvis side asks through its overlay) unless the standing `model-search` setting is enabled; a declined or unavailable approval refuses with one sentence and executes nothing. Session reach follows the current Pi session ID: compaction keeps it, but pre-fork/pre-tree history of the same conversation is outside it (a known follow-up; use an approved wider reach for that). Human `/jarvis-archive search/read/session` commands are unaffected and keep defaulting to this project.
+**Model-tool reach.** The model tools default to the **current session**, so the main agent can recover details that were said earlier and lost to compaction without asking. Any wider reach—other sessions of this project (`scope: "current"`) or other projects (`scope: "all"`)—asks for one approval per request through Pi's normal confirmation prompt (the Noodle side asks through its overlay) unless the standing `model-search` setting is enabled; a declined or unavailable approval refuses with one sentence and executes nothing. Session reach follows the current Pi session ID: compaction keeps it, but pre-fork/pre-tree history of the same conversation is outside it (a known follow-up; use an approved wider reach for that). Human `/noodle-archive search/read/session` commands are unaffected and keep defaulting to this project.
 
 Global accessibility is within the **same active Pi agent directory**, not cloud sync or other users' machines. Project controls govern operations initiated here; existing records from a paused project remain accessible through explicit all-project queries from another allowed project. Disabling is not deletion. Returned model-tool results persist normally in Pi and can be captured again as part of a later journal entry.
 
@@ -443,36 +446,36 @@ Global accessibility is within the **same active Pi agent directory**, not cloud
 
 **Turn a pile of old chats into history you can query.** Preview first, confirm the reviewed set, then inspect what imported—and what did not.
 
-<img src="https://raw.githubusercontent.com/crustyhacker/pi-jarvis/main/docs/assets/jarvis-history.svg" alt="Optional archive workflow: preview the selected history files, confirm the exact reviewed set, import with duplicate skipping and per-file reporting, then search recorded entries. Archive and model access are off by default. Content defaults to unredacted plaintext and may hold secrets; model reads can reach the provider even with encryption. Encryption protects only the active archive." width="640">
+<img src="https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-history.svg" alt="Optional archive workflow: preview the selected history files, confirm the exact reviewed set, import with duplicate skipping and per-file reporting, then search recorded entries. Archive and model access are off by default. Content defaults to unredacted plaintext and may hold secrets; model reads can reach the provider even with encryption. Encryption protects only the active archive." width="640">
 
 *Workflow illustration, not automatic setup. Recording must be explicitly enabled; read [safe encryption setup](#safe-initial-setup) before capturing/importing if avoiding new plaintext archive copies.*
 
 With archive recording enabled, run:
 
 ```text
-/jarvis-archive import-all
+/noodle-archive import-all
 ```
 
 This **previews** `.jsonl` candidates recursively under the active Pi agent directory's `sessions` folder (normally `~/.pi/agent/sessions`). It shows the candidate file count before any transcript body is read or archived. Then paste the confirmation command supplied by the preview:
 
 ```text
-/jarvis-archive import-all --confirm-sensitive --preview <preview-id>
+/noodle-archive import-all --confirm-sensitive --preview <preview-id>
 ```
 
 For a different session directory, preview it explicitly:
 
 ```text
-/jarvis-archive import-all /absolute/path/to/session-directory
+/noodle-archive import-all /absolute/path/to/session-directory
 ```
 
-The default covers Pi's standard main-session directory across projects. For older Jarvis side sessions, repeat the preview for `<active-agent-dir>/jarvis-sessions`; custom `--session-dir` locations also need an explicit directory preview.
+The default covers Pi's standard main-session directory across projects. For older Noodle side sessions, repeat the preview for `<active-agent-dir>/jarvis-sessions`; custom `--session-dir` locations also need an explicit directory preview.
 
 The confirmation token selects the **exact reviewed file list**, not a fresh scan. Files created afterward are not silently added. Existing identical entries are skipped, and each source file keeps its original project/session identity. Bad/legacy files are reported individually rather than hiding failures or abandoning the rest of the batch. Original transcripts are never rewritten.
 
 ```text
-/jarvis-archive import-report <report-id>       # paged per-file results
-/jarvis-archive import-report <report-id> <nextOffset> # follow the returned offset
-/jarvis-archive import-cancel                   # stop pending/active imports
+/noodle-archive import-report <report-id>       # paged per-file results
+/noodle-archive import-report <report-id> <nextOffset> # follow the returned offset
+/noodle-archive import-cancel                   # stop pending/active imports
 ```
 
 Previews expire after 10 minutes and are bound to the current project/session and permission generation. A new preview replaces the old one; confirmation consumes it once. The latest report is kept only in memory, not persisted or supplied to models. Policy/session changes, cancellation, or storage-wide failure stop remaining work; completed entries remain, with partial counts reported. The start notice supplies the report ID; progress counts update as each file settles, not on every entry. Counts cover acknowledged writes; a storage failure can leave an uncertain final commit. Re-preview explicitly to retry—imports are never automatically replayed.
@@ -484,21 +487,21 @@ Bulk import is a human command, not a model tool. It requires enabled recording 
 ### Single-file import and retention
 
 ```text
-/jarvis-archive import --confirm-sensitive /absolute/path/to/session.jsonl
-/jarvis-archive forget-session --confirm <session-id>
-/jarvis-archive prune --confirm 2026-01-01T00:00:00.000Z
-/jarvis-archive prune --all --confirm 2026-01-01T00:00:00.000Z
+/noodle-archive import --confirm-sensitive /absolute/path/to/session.jsonl
+/noodle-archive forget-session --confirm <session-id>
+/noodle-archive prune --confirm 2026-01-01T00:00:00.000Z
+/noodle-archive prune --all --confirm 2026-01-01T00:00:00.000Z
 ```
 
 Single-file import is **human-only**, requires enabled recording and an explicit regular v3 JSONL file, and preserves the source header's project/session identity—even if different from the current project. Directory discovery happens only through the explicit bulk preview above; no silent historical import occurs. Both import modes require v3 session files; legacy session versions require a separately reviewed conversion first. Completed entries survive a partial/cancelled import, with counts reported; duplicate entries are skipped, differing payloads for an existing identity are rejected, and originals are never modified. Deletion defaults to this project; `--all` is explicit. Stable identity tombstones prevent re-import of deleted entries, not every semantic copy or other previously unarchived entry.
 
-Storage is lazy SQLite under `<active-agent-dir>/extensions/pi-jarvis-archive/`: the plaintext default uses `archive.sqlite` (normally `~/.pi/agent/extensions/pi-jarvis-archive/archive.sqlite`). After explicit encryption management, `archive.vault.json` selects a generation at `vaults/<UUID>/archive.sqlite`; the same root retains prior generations until explicit cleanup. Owned directories/files use private permissions where supported, with defensive link/type checks and concurrent-writer transactions. There is no background watcher: observed settings changes are propagated between mounted lanes, while other processes recheck at operation boundaries. Deletion does not erase original Pi files, prior search-result copies, already-sent model context or backups, and does not guarantee reclaimed disk space or forensic erasure. For a complete reset, stop all Pi processes using the store and remove only its archive directory yourself; that also removes tombstones. Shared memory stays separate and unchanged. To stop both Jarvis persistence layers, use both `/jarvis-archive off` and `/jarvis-memory off`; neither disables Pi's original session transcripts.
+Storage is lazy SQLite under `<active-agent-dir>/extensions/pi-jarvis-archive/`: the plaintext default uses `archive.sqlite` (normally `~/.pi/agent/extensions/pi-jarvis-archive/archive.sqlite`). After explicit encryption management, `archive.vault.json` selects a generation at `vaults/<UUID>/archive.sqlite`; the same root retains prior generations until explicit cleanup. Owned directories/files use private permissions where supported, with defensive link/type checks and concurrent-writer transactions. There is no background watcher: observed settings changes are propagated between mounted lanes, while other processes recheck at operation boundaries. Deletion does not erase original Pi files, prior search-result copies, already-sent model context or backups, and does not guarantee reclaimed disk space or forensic erasure. For a complete reset, stop all Pi processes using the store and remove only its archive directory yourself; that also removes tombstones. Shared memory stays separate and unchanged. To stop both Noodle persistence layers, use both `/noodle-archive off` and `/noodle-memory off`; neither disables Pi's original session transcripts.
 
 ---
 
 ## Optional archive encryption
 
-Version **1.10.0** provides **optional, OFF-by-default password encryption** for the full-session archive. It is **agent-wide**, shared by main Pi and Jarvis in the same active agent directory, not a project-scoped setting. Encryption is independent of archive enablement, capture, model access, shared memory, Repo tools and bridge permissions. No archive is automatically migrated, no history is backfilled, and no user setting is changed automatically.
+Version **1.10.0** provides **optional, OFF-by-default password encryption** for the full-session archive. It is **agent-wide**, shared by main Pi and Noodle in the same active agent directory, not a project-scoped setting. Encryption is independent of archive enablement, capture, model access, shared memory, Repo tools and bridge permissions. No archive is automatically migrated, no history is backfilled, and no user setting is changed automatically.
 
 ### What it protects—and what it does not
 
@@ -506,44 +509,44 @@ Encrypted operation protects the **active archive SQLite database, its FTS searc
 
 It does **not** encrypt Pi's original JSONL/session files, shared-memory SQLite, external attachments, exports, independently retained backups, or previously retrieved/provider-sent context. **Migration retains its source, including plaintext, until explicit cleanup.** Vault metadata (generation identities, wrapping parameters and startup policy) and filesystem metadata are not concealed. An unlocked process and authorized tools can read the contents; swap, core dumps, trusted extensions and malicious same-user code are outside this boundary. There is **no independently audited cryptography, official/vendor-audited SQLCipher, FIPS, sandbox or forensic-erasure claim**. Public/private-key unlocking is deferred.
 
-Choose a strong, unique password and keep it safely outside Pi conversation history. Passwords are valid Unicode, **1–4096 UTF-8 bytes**, without control characters or line breaks; they are not trimmed or normalized. There is no password-recovery bypass. `/jarvis-archive password` requires an unlocked archive, asks for a new password twice, and locks afterward. It **rewraps the same data key, not key rotation**: old key/envelope backups may still unlock that key's data.
+Choose a strong, unique password and keep it safely outside Pi conversation history. Passwords are valid Unicode, **1–4096 UTF-8 bytes**, without control characters or line breaks; they are not trimmed or normalized. There is no password-recovery bypass. `/noodle-archive password` requires an unlocked archive, asks for a new password twice, and locks afterward. It **rewraps the same data key, not key rotation**: old key/envelope backups may still unlock that key's data.
 
 ### Safe initial setup
 
 These are **explicit user actions**, not permission for an agent or extension to change your settings.
 
 1. Start Pi yourself in **regular TUI**: `pi --tui-mode regular`. Stop **all other Pi instances using this agent directory**, including older versions, before migration, recovery or cleanup. Review available disk space: migration retains both source and target.
-2. Run `/jarvis-archive status` and review the configured/effective enablement, capture and model-access settings, trust and any config errors. Project fields override global defaults; an explicit global archive `off` is a master-off. Repair malformed settings manually without discarding privacy controls.
-3. **If avoiding new plaintext archive captures, pause CAPTURE before enabling or migrating**, for example `/jarvis-archive --project capture off`, then check status for effective **capture off**. A global `capture off` alone does not defeat project `capture on` overrides. Review every scope you intend to enable; do not start sensitive work until the effective pause is confirmed. This pause does not stop Pi's own transcripts or shared-memory capture.
-4. Enable the archive only in your intended scope, for example `/jarvis-archive --project on --confirm-sensitive`, and confirm that it is configured **ON in a trusted project with capture still off**. Project `on` cannot override an explicit global master-off; choose any global change yourself, recognizing that global enablement can affect other projects. Encryption administration requires enabled/trusted archive policy, but **does not require capture or model access to be on**. Leave model access off unless you separately want it.
-5. Run `/jarvis-archive encryption on --confirm-sensitive --confirm-stopped`. Enter the new password twice in the private prompt, verifying **each** submission as described below. On success the encrypted generation is unlocked for the current main session; your capture setting is unchanged. Inspect `/jarvis-archive encryption status` and, if desired, manually inspect records with capture/model access still off. A pre-existing archive's accepted records are migrated exactly; old Pi session files are not imported.
-6. Verify that the active encrypted archive is usable **before deleting its retained source**. If you choose to remove retired plaintext, run `/jarvis-archive encryption cleanup --confirm-sensitive --confirm-stopped` with a live unlock. Cleanup ends the local grant: unlock again, check status/retired plaintext counts and inspect any reported partial cleanup. Do not call the archive protected while plaintext copies you care about still remain. Cleanup does not touch outside backups or original transcripts.
-7. **Resume capture explicitly only when ready**, in the scope you paused, for example `/jarvis-archive --project capture on`; check effective status again. Unlocking and migration do not turn capture on or recover the paused period. Enable model access separately only if intended.
+2. Run `/noodle-archive status` and review the configured/effective enablement, capture and model-access settings, trust and any config errors. Project fields override global defaults; an explicit global archive `off` is a master-off. Repair malformed settings manually without discarding privacy controls.
+3. **If avoiding new plaintext archive captures, pause CAPTURE before enabling or migrating**, for example `/noodle-archive --project capture off`, then check status for effective **capture off**. A global `capture off` alone does not defeat project `capture on` overrides. Review every scope you intend to enable; do not start sensitive work until the effective pause is confirmed. This pause does not stop Pi's own transcripts or shared-memory capture.
+4. Enable the archive only in your intended scope, for example `/noodle-archive --project on --confirm-sensitive`, and confirm that it is configured **ON in a trusted project with capture still off**. Project `on` cannot override an explicit global master-off; choose any global change yourself, recognizing that global enablement can affect other projects. Encryption administration requires enabled/trusted archive policy, but **does not require capture or model access to be on**. Leave model access off unless you separately want it.
+5. Run `/noodle-archive encryption on --confirm-sensitive --confirm-stopped`. Enter the new password twice in the private prompt, verifying **each** submission as described below. On success the encrypted generation is unlocked for the current main session; your capture setting is unchanged. Inspect `/noodle-archive encryption status` and, if desired, manually inspect records with capture/model access still off. A pre-existing archive's accepted records are migrated exactly; old Pi session files are not imported.
+6. Verify that the active encrypted archive is usable **before deleting its retained source**. If you choose to remove retired plaintext, run `/noodle-archive encryption cleanup --confirm-sensitive --confirm-stopped` with a live unlock. Cleanup ends the local grant: unlock again, check status/retired plaintext counts and inspect any reported partial cleanup. Do not call the archive protected while plaintext copies you care about still remain. Cleanup does not touch outside backups or original transcripts.
+7. **Resume capture explicitly only when ready**, in the scope you paused, for example `/noodle-archive --project capture on`; check effective status again. Unlocking and migration do not turn capture on or recover the paused period. Enable model access separately only if intended.
 
 ### Human commands
 
-These commands run locally without a provider call and are **not model tools**. No password, key, path or scope arguments are accepted. The overlay's `/archive …` alias also works locally; password entry closes Jarvis and uses the main editor area, revoking the overlay's transient permissions.
+These commands run locally without a provider call and are **not model tools**. No password, key, path or scope arguments are accepted. The overlay's `/archive …` alias also works locally; password entry closes Noodle and uses the main editor area, revoking the overlay's transient permissions.
 
 ```text
-/jarvis-archive encryption [status]
-/jarvis-archive encryption on --confirm-sensitive --confirm-stopped
-/jarvis-archive encryption off --confirm-sensitive --confirm-stopped
-/jarvis-archive encryption cleanup --confirm-sensitive --confirm-stopped
-/jarvis-archive encryption recover --rollback --confirm-sensitive --confirm-stopped
-/jarvis-archive encryption break-lock --confirm-sensitive --confirm-stopped
-/jarvis-archive unlock [session|process|remember|for MINUTES|idle MINUTES]
-/jarvis-archive lock
-/jarvis-archive password
-/jarvis-archive startup manual|prompt|remember
+/noodle-archive encryption [status]
+/noodle-archive encryption on --confirm-sensitive --confirm-stopped
+/noodle-archive encryption off --confirm-sensitive --confirm-stopped
+/noodle-archive encryption cleanup --confirm-sensitive --confirm-stopped
+/noodle-archive encryption recover --rollback --confirm-sensitive --confirm-stopped
+/noodle-archive encryption break-lock --confirm-sensitive --confirm-stopped
+/noodle-archive unlock [session|process|remember|for MINUTES|idle MINUTES]
+/noodle-archive lock
+/noodle-archive password
+/noodle-archive startup manual|prompt|remember
 ```
 
-**`encryption on` migrates the active archive to an encrypted generation; `encryption off` converts it to plaintext. Neither turns recording on/off.** In contrast, `/jarvis-archive off` is the ordinary archive master-off: it pauses reads/capture without decrypting or deleting stored files. `lock` revokes the local key first and then attempts durable remembered-authorization revocation; a failure is reported honestly, not silently repaired. Other processes observe durable revisions at operation boundaries, not instantaneously.
+**`encryption on` migrates the active archive to an encrypted generation; `encryption off` converts it to plaintext. Neither turns recording on/off.** In contrast, `/noodle-archive off` is the ordinary archive master-off: it pauses reads/capture without decrypting or deleting stored files. `lock` revokes the local key first and then attempts durable remembered-authorization revocation; a failure is reported honestly, not silently repaired. Other processes observe durable revisions at operation boundaries, not instantaneously.
 
 ### Private password entry
 
 **Only Pi regular TUI is supported** (`pi --tui-mode regular`). Fullscreen, unknown/missing renderer modes and non-TUI operation refuse password entry; there is no ordinary-editor, RPC, argument or environment fallback. Do not change renderer settings automatically. Passwords are masked and never routed through normal editors/history, model tools, session entries, notifications or logs.
 
-**Every submit or cancel—including typed-only Enter, Escape and Ctrl+C—requires a fresh displayed code typed by hand, followed by Enter.** Pasting a code cannot approve completion. Cancellation immediately revokes backend work, but retains a **cancel-only private input sink** until you verify its exit; a completed/aborted backend promise does not restore the editor. Jarvis, its model picker and main-memory review cannot overlap that ownership. Cancellable main-session switch/fork/tree navigation is refused until verified exit; retry navigation afterward. Resize a tiny terminal if the code is not readable. Repeated hostile input can deny service; this is not proof that every buffered transport byte has drained.
+**Every submit or cancel—including typed-only Enter, Escape and Ctrl+C—requires a fresh displayed code typed by hand, followed by Enter.** Pasting a code cannot approve completion. Cancellation immediately revokes backend work, but retains a **cancel-only private input sink** until you verify its exit; a completed/aborted backend promise does not restore the editor. Noodle, its model picker and main-memory review cannot overlap that ownership. Cancellable main-session switch/fork/tree navigation is refused until verified exit; retry navigation afterward. Resize a tiny terminal if the code is not readable. Repeated hostile input can deny service; this is not proof that every buffered transport byte has drained.
 
 **Do not force `/reload`, quit or focus replacement while entering a password.** Forced host reload/quit and trusted external focus replacement cannot preserve input quarantine. The extension abandons ownership and wipes/revokes what it owns without stale editor-restoration callbacks, but cannot protect bytes routed after host/process teardown or genuine human-verified release. Trusted extensions with input/screen/process access are not isolated. Use the displayed verified cancellation instead.
 
@@ -551,7 +554,7 @@ These commands run locally without a provider call and are **not model tools**. 
 
 | Choice | Behavior |
 |---|---|
-| `unlock` / `unlock session` | Default. Main-session-owned grant shared with Jarvis; overlay close and side `/new` do not end it. Replacing the main session ends it. |
+| `unlock` / `unlock session` | Default. Main-session-owned grant shared with Noodle; overlay close and side `/new` do not end it. Replacing the main session ends it. |
 | `unlock process` | Process-local grant; supported main `new`/`resume`/`fork` handoffs preserve it. Reload, quit and process restart end it. |
 | `unlock for MINUTES` | Fixed-duration grant, 1–10080 integer minutes. Handoff preserves the original deadline. |
 | `unlock idle MINUTES` | Locks after that many minutes without successful archive data activity. Status/policy checks do not refresh it; handoff preserves the deadline. |
@@ -562,7 +565,7 @@ These commands run locally without a provider call and are **not model tools**. 
 
 Timed grants check both monotonic and wall time, including access-boundary expiry after suspend/delayed timers; no immediate erasure during sleep is promised. **Plaintext conversion refuses fixed/idle timed grants before copying a key or publishing a transition**: explicitly `unlock session` or `unlock process` first if you really intend conversion. Any grant can be revoked by explicit lock, observed full-off/trust/config failure, revision changes or unsafe storage. No instantaneous cross-process key erasure is promised.
 
-Startup runs only from the **main** lifecycle, never Jarvis boot. Full-off, untrusted/malformed policy and restart-required storage suppress prompts, credential access and database authentication. Restoring trust does not silently reuse a revoked local grant. An explicit nonremember unlock clears an existing remembered authorization (and changes remembered startup to manual); a startup manual/prompt selection also clears it. Explicit lock clears remembered authorization durably before best-effort native credential deletion. Failed deletion can leave a key in the OS store and is reported; durable revocation is not a promise that all OS copies are erased.
+Startup runs only from the **main** lifecycle, never Noodle boot. Full-off, untrusted/malformed policy and restart-required storage suppress prompts, credential access and database authentication. Restoring trust does not silently reuse a revoked local grant. An explicit nonremember unlock clears an existing remembered authorization (and changes remembered startup to manual); a startup manual/prompt selection also clears it. Explicit lock clears remembered authorization durably before best-effort native credential deletion. Failed deletion can leave a key in the OS store and is reported; durable revocation is not a promise that all OS copies are erased.
 
 ### Migration, cleanup and recovery
 
@@ -588,13 +591,13 @@ See [Archive encryption design and operating contract](docs/archive-encryption-d
 
 ## Shared memory
 
-**The feature you can use even without the overlay:** main Pi and Jarvis use **one local memory service**, independent of the overlay lifecycle. Useful Jarvis discussions can inform a later main session and vice versa—even when `Note main` is off. Memory does not steer or queue messages into the other session; it supplies historical context when recalled. Close/reopen, `/new`, and project changes do not erase it.
+**The feature you can use even without the overlay:** main Pi and Noodle use **one local memory service**, independent of the overlay lifecycle. Useful Noodle discussions can inform a later main session and vice versa—even when `Note main` is off. Memory does not steer or queue messages into the other session; it supplies historical context when recalled. Close/reopen, `/new`, and project changes do not erase it.
 
 Use project notes for architecture choices, build conventions, corrections and useful references. Use global notes only for preferences you deliberately want across projects. Prefer concise, specific facts with stable titles; search and inspect their dates/provenance before relying on them. **Do not use memory as a password or token store.** See [Memory in 60 seconds](#memory-in-60-seconds) for commands you can run without involving a model.
 
 ### What is remembered
 
-- **Bounded conversation captures (not the optional full-session archive):** only newly finalized user/assistant text observed after loading this feature, labeled with project, main/Jarvis lane, session ID, event identity and timestamps. No silent historical import or reconstruction from old session files.
+- **Bounded conversation captures (not the optional full-session archive):** only newly finalized user/assistant text observed after loading this feature, labeled with project, main/Noodle lane, session ID, event identity and timestamps. No silent historical import or reconstruction from old session files.
 - **Curated notes:** your active model can save concise preferences, corrections, project decisions and references during normal foreground work. Stable scoped titles update/deduplicate notes. You can save or edit notes explicitly too. Curation depends on the model choosing the tool; it is not a separate background summarizer.
 - **Bounded recall:** a small request-local selection of global/current-project notes and matching conversation excerpts, using local keyword search. Other projects are available through explicit `search --all` or the model's cross-project search tool. Project scope uses the canonical working directory, not a remote repository name; separate worktrees remain separate scopes unless a note is global.
 
@@ -603,14 +606,14 @@ There are **no embeddings, background model calls, telemetry, or memory-server c
 ### Controls
 
 ```text
-/jarvis-memory                         # status, without reading stored memories
-/jarvis-memory off                     # global MASTER OFF for main + Jarvis
-/jarvis-memory on                      # enable globally; project restrictions still apply
-/jarvis-memory capture off             # saving default off (project overrides apply)
-/jarvis-memory recall off              # recall default off (project overrides apply)
-/jarvis-memory --project off           # pause memory in this project
-/jarvis-memory --project clear         # remove this project's memory settings
-/jarvis-memory --global clear          # remove global settings, not stored data
+/noodle-memory                         # status, without reading stored memories
+/noodle-memory off                     # global MASTER OFF for main + Noodle
+/noodle-memory on                      # enable globally; project restrictions still apply
+/noodle-memory capture off             # saving default off (project overrides apply)
+/noodle-memory recall off              # recall default off (project overrides apply)
+/noodle-memory --project off           # pause memory in this project
+/noodle-memory --project clear         # remove this project's memory settings
+/noodle-memory --global clear          # remove global settings, not stored data
 ```
 
 `enabled`, `capture`, and `recall` default to `true`. Each field resolves project → global → default, **except global `enabled: false` is a master switch that no project can override**. Untrusted projects and unreadable/malformed settings pause all memory. Use `--project capture off` or `--project recall off` to pause that capability specifically here; inspect status for the effective setting. The full off switch means no capture, memory-record reads, injection, tool execution, or background work; existing data remains on disk. Even inspection requires re-enabling memory. Explicit management commands still work with only capture or recall turned off. Turning memory off does not erase facts/tool results already in the current conversation or already-viewed output.
@@ -628,10 +631,10 @@ Place this in `<agentDir>/extensions/pi-jarvis.json` to disable memory before in
 ### Curated memory editor
 
 ```text
-/jarvis-memory editor
+/noodle-memory editor
 ```
 
-A dedicated TUI overlay for **the useful facts you and your models save**—not the full-session archive and not automatic conversation captures. New in **1.12.0**. Inside Jarvis, `/memory editor` opens the same editor locally without a model call or waiting for queued side work.
+A dedicated TUI overlay for **the useful facts you and your models save**—not the full-session archive and not automatic conversation captures. New in **1.12.0**. Inside Noodle, `/memory editor` opens the same editor locally without a model call or waiting for queued side work.
 
 - **Find the right note:** paged browsing, keyword search, this-project/global/all-projects scope, category and origin-lane filters, and sorting. The header says what is filtered in plain words, and only when something is.
 - **Read while you browse:** moving the cursor previews the highlighted note in the right pane (body first, then scope, dates and origin); Enter opens the full record with IDs and provenance. List rows show scope and last-updated date, aligned.
@@ -654,7 +657,7 @@ Escape deliberately arms back/close rather than immediately releasing the window
 
 [See the editor preview and workflow overview above](#edit-what-pi-remembers). Initial window width is capped at 144 columns; Pi clamps smaller terminals, and reopening recalculates the width.
 
-The editor is **human-only and TUI-only**, independent of Repo tools and archive access. It works with capture or recall paused, but full memory off, denied project trust or invalid configuration blocks record access; it never enables memory for you. Opening it from Jarvis closes only Jarvis's presentation, preserving assigned work and grants. Private archive input, model pickers and memory reviews cannot overlap the editor's modal ownership.
+The editor is **human-only and TUI-only**, independent of Repo tools and archive access. It works with capture or recall paused, but full memory off, denied project trust or invalid configuration blocks record access; it never enables memory for you. Opening it from Noodle closes only Noodle's presentation, preserving assigned work and grants. Private archive input, model pickers and memory reviews cannot overlap the editor's modal ownership.
 
 Notes remain **local plaintext and untrusted historical context**, not a password vault. The existing 160-character title and 16 KiB UTF-8 body limits apply, with best-effort suspected-secret rejection. Scope/title changes retain deterministic identities and deletion markers; existing titles are not silently overwritten. Forgotten titles require the existing explicit `remember` command to restore. Deleting notes does not erase other mentions, original Pi transcripts, previously sent model context or backups.
 
@@ -663,17 +666,17 @@ Notes remain **local plaintext and untrusted historical context**, not a passwor
 The existing inline commands remain available alongside the overlay:
 
 ```text
-/jarvis-memory list                    # recent global/current-project records
-/jarvis-memory search deployment       # local keyword search
-/jarvis-memory search --all deployment # explicitly search every project
-/jarvis-memory show <id>
-/jarvis-memory remember --global Answer style | Prefer concise answers.
-/jarvis-memory remember Build choice | This project uses npm, not pnpm.
-/jarvis-memory edit <id> Replacement fact, preserving the note's scope/title.
-/jarvis-memory forget <id>
-/jarvis-memory forget-all --confirm     # this project's records only
-/jarvis-memory forget-all --confirm --global
-/jarvis-memory forget-all --confirm --all
+/noodle-memory list                    # recent global/current-project records
+/noodle-memory search deployment       # local keyword search
+/noodle-memory search --all deployment # explicitly search every project
+/noodle-memory show <id>
+/noodle-memory remember --global Answer style | Prefer concise answers.
+/noodle-memory remember Build choice | This project uses npm, not pnpm.
+/noodle-memory edit <id> Replacement fact, preserving the note's scope/title.
+/noodle-memory forget <id>
+/noodle-memory forget-all --confirm     # this project's records only
+/noodle-memory forget-all --confirm --global
+/noodle-memory forget-all --confirm --all
 ```
 
 Put data scope flags **after the action**. `list --global` and `search --global …` restrict results to global records; `show --all <id>` and `forget --all <id>` explicitly allow another project's record. Lists and searches are bounded; narrow your query to find older records. Model-requested deletion is limited to one current/global record and requires human confirmation; commands above are explicit user actions. Confirmation is cancelled on observed permission change, abort or disposal, and a concurrently changed record must be reviewed again. Settings are rechecked at operation boundaries; other processes do not receive a live push notification.
@@ -692,7 +695,7 @@ The combined live-record/tombstone budget is 100,000 identities: new identity sa
 
 ## Model and thinking resolution
 
-**A different perspective, without changing main Pi.** Press **F2** for the model or **F3** for thinking inside Jarvis; the pickers keep your draft in place. Busy changes are refused rather than silently interrupting a turn. Use the commands for explicit project/global choices.
+**A different perspective, without changing main Pi.** Press **F2** for the model or **F3** for thinking inside Noodle; the pickers keep your draft in place. Busy changes are refused rather than silently interrupting a turn. Use the commands for explicit project/global choices.
 
 **Project override → Global default → Built-in behavior** (`follow-main` model, `auto` thinking). Malformed or unreadable shared configuration is never automatically repaired or overwritten; repair it deliberately while preserving privacy controls.
 
@@ -718,21 +721,21 @@ The overlay header exposes three controls, all **off by default**:
 | `Note main` | Sends a concise, non-interrupting note to the main session | Explicit opt-in |
 | `Redirect` | Sends a redirecting instruction to the main session | Explicit opt-in + per-send confirmation |
 
-`Note main` and `Redirect` can be forcibly disabled when the active `/jarvis` model is incompatible with bridge tools. **Ordinary close keeps assigned work and enabled switches running**; reopen to continue the same side conversation. Main Pi's status area shows Jarvis's activity and enabled access while the window is closed. Enabled Repo tools may continue local/native MCP work, and enabled Note main may deliver a follow-up in the background.
+`Note main` and `Redirect` can be forcibly disabled when the active `/noodle` model is incompatible with bridge tools. **Ordinary close keeps assigned work and enabled switches running**; reopen to continue the same side conversation. Main Pi's status area shows Noodle's activity and enabled access while the window is closed. Enabled Repo tools may continue local/native MCP work, and enabled Note main may deliver a follow-up in the background.
 
 **Redirect still requires visible, per-send human confirmation.** Closing cancels pending confirmations, and new background redirect/deletion reviews are refused rather than left hidden or automatically approved. Nothing is automatically resent on reopen.
 
-Use `/jarvis stop` to request cancellation and clear waiting inputs, or `/jarvis access off` to revoke all three grants without relying on window close. Grants live only in memory: side `/new`, main/side-reference replacement, observed trust denial and reload/quit revoke them. Archive password entry explicitly revokes the transient grants before closing Jarvis. Already-running operations are not undone; native cancellation remains best effort.
+Use `/noodle stop` to request cancellation and clear waiting inputs, or `/noodle access off` to revoke all three grants without relying on window close. Grants live only in memory: side `/new`, main/side-reference replacement, observed trust denial and reload/quit revoke them. Archive password entry explicitly revokes the transient grants before closing Noodle. Already-running operations are not undone; native cancellation remains best effort.
 
 Long redirects are paged: review every page with Up/Down or PageUp/PageDown before pressing Y. Resize if the terminal is too small to review safely. Configured Pi selection keybindings are respected.
 
 ### First-open neon intro
 
-The first `/jarvis` open for each main-session ID shows the ASCII wordmark with a **1.8-second cyan/violet/pink chrome sweep**. It is decorative, not a loading screen: startup and queued prompts continue normally, and the editor and permission controls remain usable. Type or paste to dismiss it immediately; your input is preserved. Escape still closes the overlay. Confirmation review and warnings/errors take priority.
+The first `/noodle` open for each main-session ID shows the ASCII wordmark with a **1.8-second cyan/violet/pink chrome sweep**. It is decorative, not a loading screen: startup and queued prompts continue normally, and the editor and permission controls remain usable. Type or paste to dismiss it immediately; your input is preserved. Escape still closes the overlay. Confirmation review and warnings/errors take priority.
 
-Reopening Jarvis, side `/new`, tree navigation, and returning to a previously opened main session do not replay it. The once-per-session memory lives in the loaded extension; restarting Pi or `/reload` resets it. Small terminals use a compact wordmark or skip the intro entirely. Light themes and 256-color terminals are supported; there is no flashing or terminal blinking.
+Reopening Noodle, side `/new`, tree navigation, and returning to a previously opened main session do not replay it. The once-per-session memory lives in the loaded extension; restarting Pi or `/reload` resets it. Small terminals use a compact wordmark or skip the intro entirely. Light themes and 256-color terminals are supported; there is no flashing or terminal blinking.
 
-To skip the intro, start Pi with `PI_JARVIS_NO_ANIMATION=1`. A non-empty `NO_COLOR` or `TERM=dumb` also suppresses it. These switches affect the intro, not Pi's other animations or colors.
+To skip the intro, start Pi with `PI_NOODLE_NO_ANIMATION=1` (the old `PI_JARVIS_NO_ANIMATION=1` alias still works). A non-empty `NO_COLOR` or `TERM=dumb` also suppresses it. These switches affect the intro, not Pi's other animations or colors.
 
 ### Keyboard and drafts
 
@@ -744,14 +747,14 @@ Version **1.11.0** separates close from stop, adds in-window settings pickers an
 | Shift+Enter / Ctrl+J | Insert a newline |
 | Tab / Shift+Tab | Cycle between prompt, history, settings and access controls |
 | Space | Toggle a focused permission or open its settings picker |
-| F2 / F3 | Select Jarvis's model / thinking level inside the window |
+| F2 / F3 | Select Noodle's model / thinking level inside the window |
 | PageUp / PageDown | Scroll conversation history; reaching the bottom resumes live following |
 | Up / Down with history focused | Scroll history line by line |
 | Alt+Up / Alt+Down | Scroll history line by line without leaving the prompt |
 | Ctrl+End | Jump back to live output |
 | Ctrl+O | Expand/collapse model, main-context delta, and access details |
 | Ctrl+L | Dismiss notices |
-| Ctrl+C | Request stopping Jarvis work and clear waiting inputs; reviews/pickers retain their own cancellation behavior |
+| Ctrl+C | Request stopping Noodle work and clear waiting inputs; reviews/pickers retain their own cancellation behavior |
 | Escape | Close without stopping work; inside a picker/review, cancel it instead |
 
 The compact header keeps activity, the side model and named permission states easy to scan. Verbose main focus, setting scopes and full diagnostics live behind Ctrl+O. Informational notices are summarized in the compact view; warnings/errors remain prominent and Ctrl+L dismisses notices. Waiting counts exclude the active request.
@@ -760,9 +763,9 @@ The conversation has its own padded, theme-aware reading panel, separated from q
 
 The multiline editor uses Pi's public editor and configured editing keybindings. Up/Down move within a draft; Up at the beginning of the first line (or in an empty editor) recalls prompts. Down past recalled prompts restores the draft. Pasted indentation and newlines are preserved, with Pi's normal tab-to-spaces normalization. Oversized drafts (over 64 KiB) and terminal-control payloads are rejected explicitly, never silently truncated or sent.
 
-The prompt is a distinct terminal-style **`jarvis >` message editor**, not an operating-system shell. It keeps Pi's multiline editing and indentation. F2/F3 open pickers within the same window and preserve the draft; their choices use project-scoped settings, with follow-main/auto and clear-override options. Model/thinking changes are refused during active work rather than interrupting it; stop or wait, then select. The main model and thinking level stay unchanged.
+The prompt is a distinct terminal-style **`noodle >` message editor**, not an operating-system shell. It keeps Pi's multiline editing and indentation. F2/F3 open pickers within the same window and preserve the draft; their choices use project-scoped settings, with follow-main/auto and clear-override options. Model/thinking changes are refused during active work rather than interrupting it; stop or wait, then select. The main model and thinking level stay unchanged.
 
-Keyboard history scrolling works in regular and fullscreen TUI. Supported fullscreen wheel events scroll the overlay; in regular mode the terminal owns wheel/scrollback, so use the keyboard controls for Jarvis history. Reading older output stays anchored while new output arrives; Ctrl+End returns to live.
+Keyboard history scrolling works in regular and fullscreen TUI. Supported fullscreen wheel events scroll the overlay; in regular mode the terminal owns wheel/scrollback, so use the keyboard controls for Noodle history. Reading older output stays anchored while new output arrives; Ctrl+End returns to live.
 
 Unsent drafts and enabled access switches survive closing/reopening in the same running main/side session. They are not saved to disk. Side `/new`, main-session replacement, and switching to an unrelated side-session reference clear them; navigating the side tree only resets the transcript view. Background work is owned by that live Pi session, not a detached daemon: replacement/reload/quit ends it. Shared memory follows its separate persistent controls.
 
@@ -770,7 +773,7 @@ Scrollback follows new output until you scroll up. To bound rendering work, the 
 
 ### Permission flow
 
-<img src="https://raw.githubusercontent.com/crustyhacker/pi-jarvis/main/docs/assets/jarvis-access.svg" alt="A fresh owner starts with Repo tools, Note main and Redirect off. Each is a separate opt-in; Redirect requires visible per-send confirmation. Ordinary close preserves same-owner work and grants. Explicit stop and access-off remain available." width="640">
+<img src="https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-access.svg" alt="A fresh owner starts with Repo tools, Note main and Redirect off. Each is a separate opt-in; Redirect requires visible per-send confirmation. Ordinary close preserves same-owner work and grants. Explicit stop and access-off remain available." width="640">
 
 *Permission/lifecycle illustration. Memory and archive controls are independent. Closing is not revocation; an incompatible model can still disable bridge controls.*
 
@@ -781,7 +784,7 @@ Scrollback follows new output until you scroll up. To bound rendering work, the 
 **Discuss freely. Redirect deliberately.**
 
 1. Enable **Redirect** separately from Repo tools and Note main.
-2. Ask Jarvis to propose the message for main Pi.
+2. Ask Noodle to propose the message for main Pi.
 3. Review the visible confirmation, including every page of a long message.
 4. Approve that send—or cancel and keep the main plan unchanged.
 
@@ -791,15 +794,15 @@ A closed overlay cannot approve a redirect. Closing cancels pending reviews; bac
 
 ## Session behavior
 
-- `/jarvis` keeps its own isolated conversation state
+- `/noodle` keeps its own isolated conversation state
 - prior side-session history is restored from a session file under `jarvis-sessions/`
 - main-tree navigation reconciles the side-session reference instead of continuing in an unrelated side thread
 - reset/shutdown invalidates old queues; failed commands and uncertain sends are not automatically replayed
 - side-session project resources honor the main session's project-trust decision
-- Jarvis sees current main-session state plus a compact delta since the last `/jarvis` turn
-- `/compact`, `/tree`, and `/new` entered inside `/jarvis` operate on the side-session, not the main session
-- plain `/jarvis-model <provider/model>` writes the project model override; use `--global` to change the global default
-- plain `/jarvis-thinking <level>` writes the project thinking override; use `--global` to change the global default
+- Noodle sees current main-session state plus a compact delta since the last `/noodle` turn
+- `/compact`, `/tree`, and `/new` entered inside `/noodle` operate on the side-session, not the main session
+- plain `/noodle-model <provider/model>` writes the project model override; use `--global` to change the global default
+- plain `/noodle-thinking <level>` writes the project thinking override; use `--global` to change the global default
 - thinking-step streaming is intentionally collapsed to a cleaner animated fallback for readability
 
 ---
@@ -809,32 +812,32 @@ A closed overlay cannot approve a redirect. Closing cancels pending reviews; bac
 ### Ask for live status
 
 ```bash
-/jarvis what is the main agent doing right now?
+/noodle what is the main agent doing right now?
 ```
 
 ### Ask for triage while the main lane keeps moving
 
 ```bash
-/jarvis summarize the last failing test and tell me the fastest likely fix
+/noodle summarize the last failing test and tell me the fastest likely fix
 ```
 
-### Use Jarvis as a repo-side helper
+### Use Noodle as a repo-side helper
 
 ```bash
-/jarvis inspect overlay.ts for teardown or redraw risks
+/noodle inspect overlay.ts for teardown or redraw risks
 ```
 
 ### Send a non-interrupting note back to the main session
 
-1. Open `/jarvis`
+1. Open `/noodle`
 2. Enable `Note main`
-3. Ask Jarvis to send the note
+3. Ask Noodle to send the note
 
 ### Send a redirect safely
 
-1. Open `/jarvis`
+1. Open `/noodle`
 2. Enable `Redirect`
-3. Ask Jarvis to redirect the main session
+3. Ask Noodle to redirect the main session
 4. Confirm the send
 
 ---
@@ -843,18 +846,18 @@ A closed overlay cannot approve a redirect. Closing cancels pending reviews; bac
 
 This repository's validation baseline is **Pi 1.0.0**, using host-provided `@earendil-works/pi-ai`, `@earendil-works/pi-coding-agent`, and `@earendil-works/pi-tui`. Older Pi versions are not supported by this release.
 
-Physical models use the main host's public model registry for requests and credentials, including custom providers and runtime-only authentication. **Virtual/router models are not supported**: Pi's public extension registry does not expose session-aware virtual routing. Pin `/jarvis-model <provider/physical-model>` if the main session uses a virtual model.
+Physical models use the main host's public model registry for requests and credentials, including custom providers and runtime-only authentication. **Virtual/router models are not supported**: Pi's public extension registry does not expose session-aware virtual routing. Pin `/noodle-model <provider/physical-model>` if the main session uses a virtual model.
 
 ### Native MCP
 
-Pi already provides MCP; Jarvis 1.6.0 opts its separate SDK session into Pi's native factories when Repo tools is enabled.
+Pi already provides MCP; Noodle 1.6.0 opts its separate SDK session into Pi's native factories when Repo tools is enabled.
 
-- **Repo tools is the opt-in for both local tools and native MCP.** While initially off, Jarvis does not start MCP connections or expand MCP configuration credentials/commands.
+- **Repo tools is the opt-in for both local tools and native MCP.** While initially off, Noodle does not start MCP connections or expand MCP configuration credentials/commands.
 - Enabling it starts **separate, side-owned connections** to configured servers from the active agent directory's `mcp.json` and, only when trusted, the project's `.pi/mcp.json`. Main-session connections are neither reused nor disconnected. Servers registered only by main-session extensions are not automatically inherited.
-- Native direct, deferred/tool-search, codemode, and resource tools keep Pi's configured exposure. Jarvis rechecks live permission and session lifetime for calls, including nested calls and previously prepared tool references. Server annotations are hints, not permission grants.
+- Native direct, deferred/tool-search, codemode, and resource tools keep Pi's configured exposure. Noodle rechecks live permission and session lifetime for calls, including nested calls and previously prepared tool references. Server annotations are hints, not permission grants.
 - Disabling Repo tools, explicit access-off, observed trust denial or retiring the side owner invalidates that permission generation, hides its tools, aborts owned call signals, and requests native disconnection. **Ordinary overlay close preserves enabled access and assigned work** for the same live owner. Re-enabling after revocation creates a fresh generation rather than reviving stale calls.
 - **Cancellation is best effort, not rollback or a sandbox.** Pi may allow already-started connection handshakes, authentication refresh/cleanup, or remote operations to finish or time out after revocation. A pending native handshake may outlive the shutdown request until Pi finishes or times it out.
-- Manage servers and OAuth sign-in in **main Pi** (`/mcp` or `pi mcp ...`), not through a side-session administration command. Jarvis does not register a side `/mcp` manager. Codemode's classifier/image-model helpers are disabled in the side session.
+- Manage servers and OAuth sign-in in **main Pi** (`/mcp` or `pi mcp ...`), not through a side-session administration command. Noodle does not register a side `/mcp` manager. Codemode's classifier/image-model helpers are disabled in the side session.
 
 Use narrowly scoped credentials and trust your configured servers. Enabling Repo tools permits the configured MCP capabilities; it is not a read-only grant.
 
@@ -915,10 +918,10 @@ Regenerate the self-contained feature/workflow SVGs:
 npm run render:showcase
 ```
 
-Check them with an existing Playwright installation (no browser dependency is bundled with Jarvis):
+Check them with an existing Playwright installation (no browser dependency is bundled with Noodle):
 
 ```bash
-npm run check:showcase -- --playwright-module /absolute/path/to/playwright --browser /path/to/chrome --out-dir /tmp/jarvis-showcase-qa
+npm run check:showcase -- --playwright-module /absolute/path/to/playwright --browser /path/to/chrome --out-dir /tmp/noodle-showcase-qa
 ```
 
 The module/browser flags are optional when Playwright and its cached browser are already available. The check uses a fresh browser context and a loopback-only documentation server, captures desktop/390px/320px light/dark wrappers, and checks SVG text bounds, overlaps, image loading and horizontal overflow. Results and screenshots go to the output directory; without an explicit directory, a temporary one is created. These are **local README-style checks**, not a claim to reproduce GitHub/npm's complete production renderer or a live TUI. The ordinary test suite also checks deterministic generation, escaped/self-contained SVG markup and documented feature boundaries without needing a browser.
@@ -929,10 +932,12 @@ GitHub Actions validate branch pushes and pull requests on Node 22.19.0 and 24. 
 
 A matching annotated **`vX.Y.Z`** tag runs exact-tag validation and creates a GitHub release with the validated npm tarball. **npm publication stays manual**; no npm publishing token is configured. Existing assets are verified, never overwritten with different bytes.
 
-CI reports violations; protected-branch/tag rules must be configured separately for enforcement. See [RELEASING.md](https://github.com/crustyhacker/pi-jarvis/blob/main/RELEASING.md) for atomic tagged pushes, fork/merge handling, reruns, and manual npm publication.
+CI reports violations; protected-branch/tag rules must be configured separately for enforcement. See [RELEASING.md](https://github.com/rustytensor/pi-jarvis/blob/main/RELEASING.md) for atomic tagged pushes, fork/merge handling, reruns, and manual npm publication.
 
 ---
 
 ## License
 
-`pi-jarvis` is released under the **MIT License**. See [LICENSE](./LICENSE).
+`pi-noodle` is released under the **MIT License**. See [LICENSE](./LICENSE).
+
+Logo adapted from 'Death Ramen Skull Bowl Logo' by gagavastard (Envato Elements).

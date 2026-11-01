@@ -22,7 +22,7 @@ function nativeAvailable(t: TestContext): boolean {
 	const db = new Constructor(":memory:", { fileMustExist: false, timeout: 5000 }); db.close(); return true;
 }
 function fixture(t: TestContext) {
-	const root = fs.mkdtempSync(join(tmpdir(), "pi-jarvis-encrypted-store-test-")); fs.chmodSync(root, 0o700);
+	const root = fs.mkdtempSync(join(tmpdir(), "pi-noodle-encrypted-store-test-")); fs.chmodSync(root, 0o700);
 	const agent = join(root, "agent"), project = join(root, "project"), key = randomBytes(32), stores: ArchiveStore[] = [];
 	const calls: { path: string; create: boolean }[] = [];
 	const factory: NonNullable<ArchiveStoreOptions["databaseFactory"]> = (path, options) => {

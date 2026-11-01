@@ -508,7 +508,7 @@ function isValidationSegment(segment: string): boolean {
 	if (/^(?:npx\s+)?tsc(?:\s|$)/.test(segment) && /(?:^|\s)(?:-p|--project)\s+tsconfig\.build\.json(?:\s|$)/.test(segment)) {
 		return true;
 	}
-	if (/^node(?:\s|$)/.test(segment) && /\btest\/jarvis\.test\.ts(?:\s|$)/.test(segment)) {
+	if (/^node(?:\s|$)/.test(segment) && /\btest\/noodle\.test\.ts(?:\s|$)/.test(segment)) {
 		return true;
 	}
 	return false;

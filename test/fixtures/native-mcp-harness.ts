@@ -8,8 +8,8 @@ import {
 	type AssistantMessage, type JsonObject, type Model, type Provider, type SimpleStreamOptions, type TranscriptContext,
 } from "@earendil-works/pi-ai";
 import { ModelRegistry, ModelRuntime, type AgentSession, type ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { JarvisOverlayBridge } from "../../overlay.js";
-import { createSideSessionFile, JarvisSideSessionRuntime } from "../../side-session.js";
+import { NoodleOverlayBridge } from "../../overlay.js";
+import { createSideSessionFile, NoodleSideSessionRuntime } from "../../side-session.js";
 import type { MainSessionContextPayload } from "../../main-context.js";
 
 export const model: Model<any> = {
@@ -25,7 +25,7 @@ const mainContext: MainSessionContextPayload = {
 };
 export type Call = { name: string; arguments: Record<string, unknown>; id?: string };
 export type LedgerEntry = { event: string; pid: number; method?: string; name?: string; value?: string; uri?: string; revision?: number; envValue?: string; reason?: string };
-export type CreateOptions = Partial<Parameters<typeof JarvisSideSessionRuntime.create>[0]>;
+export type CreateOptions = Partial<Parameters<typeof NoodleSideSessionRuntime.create>[0]>;
 export const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 export async function bounded<T>(promise: Promise<T>, label: string, ms = 8000): Promise<T> {
 	let timer: ReturnType<typeof setTimeout> | undefined;
@@ -44,7 +44,7 @@ export function alive(pid: number) {
 	try { process.kill(pid, 0); return true; } catch { return false; }
 }
 // Probe only our owned runtime; all interaction with the actual Pi SDK is public.
-export function sessionOf(runtime: JarvisSideSessionRuntime): AgentSession {
+export function sessionOf(runtime: NoodleSideSessionRuntime): AgentSession {
 	return (runtime as unknown as { session: AgentSession }).session;
 }
 function response(selected: Model<any>, calls?: Call[]) {
@@ -71,7 +71,7 @@ export class ScriptedHost {
 		return response(selected, steps);
 	};
 	declared() { return getCurrentTools(this.contexts.at(-1)?.messages ?? []).map((tool) => tool.name); }
-	async prompt(runtime: JarvisSideSessionRuntime, ...steps: Call[][]) {
+	async prompt(runtime: NoodleSideSessionRuntime, ...steps: Call[][]) {
 		this.setSteps(...steps);
 		await bounded(runtime.sendMessage("Execute the deterministic local fixture plan."), "SDK fixture prompt");
 		assert.equal(this.steps.length, 0, "all scripted turns consumed");
@@ -110,19 +110,19 @@ export class LocalServer {
 	}
 }
 export async function fixture(run: (f: {
-	root: string; cwd: string; agentDir: string; bridge: JarvisOverlayBridge; host: ScriptedHost;
+	root: string; cwd: string; agentDir: string; bridge: NoodleOverlayBridge; host: ScriptedHost;
 	server: (name?: string, held?: boolean) => LocalServer;
 	globalConfig: (servers: Record<string, unknown>) => void; projectConfig: (servers: Record<string, unknown>) => void;
-	create: (overrides?: CreateOptions) => Promise<JarvisSideSessionRuntime>;
+	create: (overrides?: CreateOptions) => Promise<NoodleSideSessionRuntime>;
 }) => Promise<void>) {
-	const root = mkdtempSync(join(tmpdir(), "pi-jarvis-native-mcp-"));
+	const root = mkdtempSync(join(tmpdir(), "pi-noodle-native-mcp-"));
 	const cwd = join(root, "workspace"), agentDir = join(root, "agent");
 	mkdirSync(cwd); mkdirSync(agentDir); mkdirSync(join(cwd, ".pi"));
 	writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ retry: { enabled: false }, compaction: { enabled: false }, cacheWarming: "off" }));
 	const prior = process.env.PI_CODING_AGENT_DIR;
 	process.env.PI_CODING_AGENT_DIR = agentDir;
-	const runtimes: JarvisSideSessionRuntime[] = [], servers: LocalServer[] = [];
-	const creating: Promise<JarvisSideSessionRuntime>[] = [];
+	const runtimes: NoodleSideSessionRuntime[] = [], servers: LocalServer[] = [];
+	const creating: Promise<NoodleSideSessionRuntime>[] = [];
 	try {
 		const scripted = new ScriptedHost();
 		const hostRuntime = await ModelRuntime.create({ credentials: new InMemoryCredentialStore(), modelsPath: null, refreshOnCreate: false });
@@ -140,14 +140,14 @@ export async function fixture(run: (f: {
 			const value = Reflect.get(target, property);
 			return typeof value === "function" ? value.bind(target) : value;
 		} });
-		const bridge = new JarvisOverlayBridge();
+		const bridge = new NoodleOverlayBridge();
 		await run({ root, cwd, agentDir, bridge, host: scripted,
 			server: (name = "fixture", held = false) => { const server = new LocalServer(name, root, held); servers.push(server); return server; },
 			globalConfig: (mcpServers) => writeFileSync(join(agentDir, "mcp.json"), JSON.stringify({ mcpServers })),
 			projectConfig: (mcpServers) => writeFileSync(join(cwd, ".pi", "mcp.json"), JSON.stringify({ mcpServers })),
 			create: (overrides = {}) => {
 				const pending = (async () => {
-					const runtime = await JarvisSideSessionRuntime.create({
+					const runtime = await NoodleSideSessionRuntime.create({
 						bridge, cwd, modelRegistry: host, model, thinkingLevel: "off", sessionFile: await createSideSessionFile(cwd), projectTrusted: true,
 						systemPromptProvider: () => "You are a deterministic fixture.", mainContextProvider: () => mainContext, toolAccessProvider: () => false,
 						communicationPermissionsProvider: () => ({ allowFollowUpToMain: false, allowSteerToMain: false }),

@@ -11,17 +11,17 @@ import {
 	type SessionBeforeTreeEvent, type SessionShutdownEvent, type SessionStartEvent, type Theme, type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import { getKeybindings, Input, StdinBuffer, TuiMainScreen, type Component, type TUI, type Terminal } from "@earendil-works/pi-tui";
-import jarvisExtension from "../index.js";
+import noodleExtension from "../index.js";
 import { createArchiveExtensionFactory } from "../archive-extension.js";
 import { NativeArchiveKeychain } from "../archive-keychain.js";
 import { abandonArchiveSecretPrompt, ArchiveSecretInput, isArchiveSecretPromptActive, revokeArchiveSecretPrompt } from "../archive-secret-input.js";
 import { SharedMemoryService } from "../memory-service.js";
-import { JarvisModelPicker } from "../model-picker.js";
+import { NoodleModelPicker } from "../model-picker.js";
 import { SharedArchiveService } from "../archive-service.js";
 import { ArchiveStore } from "../archive-store.js";
 import type { ArchivePage } from "../archive-types.js";
-import { JarvisOverlayComponent, type JarvisDisplayEntry, type JarvisOverlayView } from "../overlay.js";
-import { JarvisSideSessionRuntime } from "../side-session.js";
+import { NoodleOverlayComponent, type NoodleDisplayEntry, type NoodleOverlayView } from "../overlay.js";
+import { NoodleSideSessionRuntime } from "../side-session.js";
 
 // Real index, vault, cipher and default masked prompt; no SDK/provider runtime,
 // native credentials, user paths, persistent grants or remembered-startup commands.
@@ -52,13 +52,13 @@ async function until(predicate: () => boolean): Promise<void> {
 type Handler = (event: any, ctx: ExtensionContext) => unknown | Promise<unknown>;
 type Command = Omit<RegisteredCommand, "name" | "sourceInfo">;
 type DisposableComponent = Component & { dispose?(): void; focused?: boolean };
-type RuntimeOptions = Parameters<typeof JarvisSideSessionRuntime.create>[0];
+type RuntimeOptions = Parameters<typeof NoodleSideSessionRuntime.create>[0];
 interface Dialog {
 	component: DisposableComponent; overlay: boolean; closed: boolean; disposed: boolean; owner: string;
 }
 // Own extension component seam, as in index-regression: never Pi private APIs.
-function viewOf(component: JarvisOverlayComponent): JarvisOverlayView {
-	return (component as unknown as { view: JarvisOverlayView }).view;
+function viewOf(component: NoodleOverlayComponent): NoodleOverlayView {
+	return (component as unknown as { view: NoodleOverlayView }).view;
 }
 function apiFixture(manager: SessionManager, forbidden: () => never) {
 	const handlers = new Map<string, Handler[]>(), commands = new Map<string, Command>();
@@ -90,7 +90,7 @@ class FakeRuntime {
 	readonly manager: SessionManager;
 	readonly ctx: ExtensionContext;
 	readonly lifetime = new AbortController();
-	readonly transcript: JarvisDisplayEntry[] = [];
+	readonly transcript: NoodleDisplayEntry[] = [];
 	readonly sent: string[] = [];
 	readonly access: boolean[] = [];
 	readonly lane: ReturnType<typeof apiFixture>;
@@ -112,7 +112,7 @@ class FakeRuntime {
 	isStreaming(): boolean { return false; }
 	getModelLabel(): string { return "fixture/index-fixture"; }
 	getRepoToolsDetailLabel(): string { return "fixture repo tools"; }
-	getDisplayEntries(): JarvisDisplayEntry[] { return [...this.transcript]; }
+	getDisplayEntries(): NoodleDisplayEntry[] { return [...this.transcript]; }
 	setToolAccessEnabled(enabled: boolean): void {
 		this.access.push(enabled); this.fixture.order.push(`repo:${enabled}`);
 	}
@@ -133,7 +133,7 @@ class FakeRuntime {
 }
 
 class Fixture {
-	readonly root = mkdtempSync(join(tmpdir(), "pi-jarvis-vault-index-"));
+	readonly root = mkdtempSync(join(tmpdir(), "pi-noodle-vault-index-"));
 	readonly agentDir = join(this.root, "agent");
 	readonly project = join(this.root, "workspace");
 	readonly order: string[] = [];
@@ -231,7 +231,7 @@ class Fixture {
 	mount(mode: ExtensionContext["mode"] = "tui"): Mount {
 		const manager = SessionManager.inMemory(this.project), ctx = this.context(manager, `main-${this.mounts.length}`, mode);
 		const lane = apiFixture(manager, this.forbidden);
-		jarvisExtension(lane.api);
+		noodleExtension(lane.api);
 		const mount: Mount = {
 			ctx, manager, lane,
 			start: async (reason = "startup") => { this.retireHostUi(); await lane.emit({ type: "session_start", reason } satisfies SessionStartEvent, ctx); },
@@ -280,7 +280,7 @@ interface Mount {
 
 async function isolated(t: TestContext, body: (f: Fixture) => Promise<void>): Promise<void> {
 	const f = new Fixture(), previousDir = process.env.PI_CODING_AGENT_DIR;
-	const originalStart = SharedArchiveService.prototype.start, originalCreate = JarvisSideSessionRuntime.create;
+	const originalStart = SharedArchiveService.prototype.start, originalCreate = NoodleSideSessionRuntime.create;
 	const originalClose = SharedArchiveService.prototype.close;
 	process.env.PI_CODING_AGENT_DIR = f.agentDir;
 	SharedArchiveService.prototype.start = async function(ctx) {
@@ -291,10 +291,10 @@ async function isolated(t: TestContext, body: (f: Fixture) => Promise<void>): Pr
 		f.closes.push({ service: this, reason }); f.order.push(`root:close:${reason}`);
 		return originalClose.call(this, reason);
 	};
-	JarvisSideSessionRuntime.create = (async (options: RuntimeOptions) => {
+	NoodleSideSessionRuntime.create = (async (options: RuntimeOptions) => {
 		const runtime = new FakeRuntime(options, f); f.runtimes.push(runtime); await runtime.start();
-		return runtime as unknown as JarvisSideSessionRuntime;
-	}) as typeof JarvisSideSessionRuntime.create;
+		return runtime as unknown as NoodleSideSessionRuntime;
+	}) as typeof NoodleSideSessionRuntime.create;
 	for (const method of ["get", "set", "delete"] as const) t.mock.method(NativeArchiveKeychain.prototype, method, async () => {
 		f.keychainCalls++; assert.fail("no real OS keychain operation is permitted");
 	});
@@ -308,7 +308,7 @@ async function isolated(t: TestContext, body: (f: Fixture) => Promise<void>): Pr
 			for (const service of f.services) originalClose.call(service, "quit");
 		} finally {
 			SharedArchiveService.prototype.start = originalStart; SharedArchiveService.prototype.close = originalClose;
-			JarvisSideSessionRuntime.create = originalCreate; t.mock.restoreAll();
+			NoodleSideSessionRuntime.create = originalCreate; t.mock.restoreAll();
 			if (previousDir === undefined) delete process.env.PI_CODING_AGENT_DIR; else process.env.PI_CODING_AGENT_DIR = previousDir;
 			rmSync(f.root, { recursive: true, force: true });
 		}
@@ -340,13 +340,13 @@ async function answer(f: Fixture, count: number): Promise<void> {
 	}
 }
 async function encrypt(f: Fixture, mount: Mount): Promise<void> {
-	const command = mount.command("jarvis-archive", ENCRYPT); await answer(f, 2); await command;
+	const command = mount.command("noodle-archive", ENCRYPT); await answer(f, 2); await command;
 	assert.match(f.notices.at(-1)!, /encryption enabled; unlocked/);
 }
-async function open(f: Fixture, mount: Mount): Promise<{ opened: Promise<void>; component: JarvisOverlayComponent; runtime: FakeRuntime }> {
-	const before = f.runtimes.length, opened = mount.command("jarvis");
-	await until(() => f.runtimes.length > before && f.activeDialog?.component instanceof JarvisOverlayComponent);
-	return { opened, component: f.activeDialog!.component as JarvisOverlayComponent, runtime: f.runtimes.at(-1)! };
+async function open(f: Fixture, mount: Mount): Promise<{ opened: Promise<void>; component: NoodleOverlayComponent; runtime: FakeRuntime }> {
+	const before = f.runtimes.length, opened = mount.command("noodle");
+	await until(() => f.runtimes.length > before && f.activeDialog?.component instanceof NoodleOverlayComponent);
+	return { opened, component: f.activeDialog!.component as NoodleOverlayComponent, runtime: f.runtimes.at(-1)! };
 }
 function page(f: Fixture, query: string, ctx: ExtensionContext): ArchivePage {
 	const text = f.service.search({ query, scope: "all" }, ctx, false);
@@ -363,10 +363,10 @@ test("actual index exposes encryption controls but archive OFF never boots, read
 			t.mock.method(ArchiveStore.prototype, method, () => assert.fail("OFF archive must not access records"));
 		}
 		const h = f.mount(); await h.start();
-		await h.command("jarvis-archive", "encryption status");
+		await h.command("noodle-archive", "encryption status");
 		assert.match(f.notices.at(-1)!, /encryption off \(legacy plaintext\)/);
-		await h.command("jarvis-archive", ENCRYPT);
-		await h.command("jarvis", "/archive unlock process");
+		await h.command("noodle-archive", ENCRYPT);
+		await h.command("noodle", "/archive unlock process");
 		assert.equal(f.notices.filter(text => text.includes("enabled in a trusted project")).length, 2);
 		assert.equal(f.dialogs.length, 0); assert.equal(f.runtimes.length, 0);
 		assert.equal(existsSync(f.service.store.path), false);
@@ -384,8 +384,8 @@ test("ordinary index close preserves all three grants and reusable side owner, u
 		assert.equal(runtime.disposed, false); assert.equal(runtime.access.at(-1), true);
 		assert.equal(view.isToolAccessEnabled(), true); assert.equal(view.isFollowUpToMainEnabled(), true); assert.equal(view.isSteerToMainEnabled(), true);
 		assert.equal(await runtime.options.confirmSteerToMain("background must not ask invisibly"), false);
-		const reopening = h.command("jarvis"); await until(() => f.activeDialog?.component instanceof JarvisOverlayComponent);
-		const reopenedView = viewOf(f.activeDialog!.component as JarvisOverlayComponent);
+		const reopening = h.command("noodle"); await until(() => f.activeDialog?.component instanceof NoodleOverlayComponent);
+		const reopenedView = viewOf(f.activeDialog!.component as NoodleOverlayComponent);
 		assert.equal(f.runtimes.length, 1, "reopen does not create another side runtime");
 		assert.equal(reopenedView.isToolAccessEnabled(), true); assert.equal(reopenedView.isFollowUpToMainEnabled(), true); assert.equal(reopenedView.isSteerToMainEnabled(), true);
 		await h.shutdown(); await reopening;
@@ -393,7 +393,7 @@ test("ordinary index close preserves all three grants and reusable side owner, u
 	});
 });
 
-test("index local encryption closes/disposes Jarvis and revokes transient Repo tools before both real masked editor prompts", bounded, async t => {
+test("index local encryption closes/disposes Noodle and revokes transient Repo tools before both real masked editor prompts", bounded, async t => {
 	if (!nativeAvailable(t)) return;
 	await isolated(t, async f => {
 		const h = f.mount(); await h.start();
@@ -412,8 +412,8 @@ test("index local encryption closes/disposes Jarvis and revokes transient Repo t
 			assert.ok(f.order.indexOf("overlay:done") < f.order.indexOf("overlay:dispose"));
 			assert.ok(f.order.indexOf("overlay:dispose") < f.order.indexOf("secret:custom"));
 		};
-		// Actual /jarvis local-command interception while open, not a provider turn.
-		const command = h.command("jarvis", `/archive ${ENCRYPT}`);
+		// Actual /noodle local-command interception while open, not a provider turn.
+		const command = h.command("noodle", `/archive ${ENCRYPT}`);
 		await answer(f, 2); await command; await opened;
 		assert.equal(f.secretDialogs.length, 2); assert.equal(f.runtimes.length, bootCount);
 		const enabled = f.order.indexOf("repo:true"), revoked = f.order.indexOf("repo:false", enabled + 1);
@@ -465,7 +465,7 @@ test("index reason=new factory recreation loses session unlock, retains process 
 		assert.notEqual(f.service, sessionOwner); assert.equal(f.service.policy(h.ctx).enabled, false);
 		assert.equal(f.secretDialogs.length, 2, "manual startup never prompts when the session grant expires");
 		assert.throws(() => sessionOwner.search({ query: "INDEX_SIDE_FINAL_CANARY" }, h.ctx, false), /disabled|revoked|locked/);
-		const unlock = h.command("jarvis-archive", "unlock process"); await answer(f, 1); await unlock;
+		const unlock = h.command("noodle-archive", "unlock process"); await answer(f, 1); await unlock;
 		assert.match(f.notices.at(-1)!, /unlocked \(process\)/);
 		assert.equal(page(f, "INDEX_SIDE_FINAL_CANARY", h.ctx).records.length, 1);
 		assert.equal(page(f, "INDEX_ROOT_FINAL_CANARY", h.ctx).records.length, 1);
@@ -482,7 +482,7 @@ test("index reason=new factory recreation loses session unlock, retains process 
 	});
 });
 
-test("index startup manual reads no records or journal; prompt startup is root-only, closes open Jarvis, and has no RPC/input fallback", bounded, async t => {
+test("index startup manual reads no records or journal; prompt startup is root-only, closes open Noodle, and has no RPC/input fallback", bounded, async t => {
 	if (!nativeAvailable(t)) return;
 	await isolated(t, async f => {
 		let h = f.mount(); await h.start(); await encrypt(f, h); await h.shutdown("new");
@@ -500,7 +500,7 @@ test("index startup manual reads no records or journal; prompt startup is root-o
 		const { opened, runtime } = await open(f, h), overlay = f.activeDialog!;
 		assert.equal(f.secretDialogs.length, promptCount, "side extension startup does not prompt");
 		assert.equal(dataReads, 0); assert.equal(journalReads, 0);
-		await h.command("jarvis-archive", "startup prompt");
+		await h.command("noodle-archive", "startup prompt");
 		assert.equal(f.secretDialogs.length, promptCount, "choosing startup prompt is not an unlock");
 		f.onSecret = dialog => {
 			assert.equal(dialog.owner, "main-1"); assert.equal(overlay.disposed, true); assert.equal(runtime.disposed, true);
@@ -515,7 +515,7 @@ test("index startup manual reads no records or journal; prompt startup is root-o
 		await h.shutdown("new");
 		f.onSecret = undefined;
 		const rpc = f.mount("rpc"), dialogs = f.dialogs.length;
-		await rpc.start("new"); await rpc.command("jarvis-archive", "unlock process");
+		await rpc.start("new"); await rpc.command("noodle-archive", "unlock process");
 		assert.equal(f.dialogs.length, dialogs); assert.equal(f.service.policy(rpc.ctx).enabled, false);
 		assert.ok(f.notices.some(text => /cancelled|unavailable/.test(text) && /fallback/i.test(text)));
 		await rpc.shutdown("quit");
@@ -525,7 +525,7 @@ test("index startup manual reads no records or journal; prompt startup is root-o
 test("index cancels main switch/fork/tree during password entry and the revoked sink, until a fresh human exit code releases ownership", bounded, async t => {
 	if (!nativeAvailable(t)) return;
 	await isolated(t, async f => {
-		const h = f.mount(); await h.start(); await encrypt(f, h); await h.command("jarvis-archive", "lock");
+		const h = f.mount(); await h.start(); await encrypt(f, h); await h.command("noodle-archive", "lock");
 		const leafId = h.manager.appendMessage({ role: "user", content: "INDEX_NAVIGATION_FIXTURE", timestamp: 300 });
 		const boundaries: Array<SessionBeforeSwitchEvent | SessionBeforeForkEvent | SessionBeforeTreeEvent> = [
 			{ type: "session_before_switch", reason: "new" },
@@ -538,7 +538,7 @@ test("index cancels main switch/fork/tree during password entry and the revoked 
 			(result as { cancel?: unknown }).cancel === true);
 		for (const boundary of boundaries) {
 			const manager = h.ctx.sessionManager, sessionId = manager.getSessionId();
-			const unlocking = h.command("jarvis-archive", "unlock process");
+			const unlocking = h.command("noodle-archive", "unlock process");
 			await until(() => f.activeDialog?.component instanceof ArchiveSecretInput);
 			const dialog = f.activeDialog!, component = dialog.component as ArchiveSecretInput;
 			for (const char of PASSWORD) f.routeInput(char);
@@ -555,7 +555,7 @@ test("index cancels main switch/fork/tree during password entry and the revoked 
 				assert.equal(cancelled(await h.lane.emit(repeated, h.ctx)), true, `${repeated.type} stays blocked while the cancellation sink owns input`);
 				assert.equal(f.activeDialog, dialog); assert.equal(dialog.closed, false);
 			}
-			await h.command("jarvis-archive", "unlock session");
+			await h.command("noodle-archive", "unlock session");
 			assert.equal(f.secretDialogs.length, promptCount, "cancelled sink retains the cross-lane prompt busy gate");
 			assert.equal(f.activeDialog, dialog); assert.equal(dialog.closed, false);
 			// Delayed hostile tails stay hidden in the cancellation sink. Neither
@@ -578,13 +578,13 @@ test("index cancels main switch/fork/tree during password entry and the revoked 
 				assert.equal(cancelled(await h.lane.emit(allowed, h.ctx)), false, "verified exit restores ordinary cancellable navigation");
 			}
 		}
-		const unlock = h.command("jarvis-archive", "unlock session"); await answer(f, 1); await unlock;
+		const unlock = h.command("noodle-archive", "unlock session"); await answer(f, 1); await unlock;
 		assert.equal(f.service.policy(h.ctx).enabled, true, "fresh explicit input can unlock after the old sink is released");
 		assert.equal(f.runtimes.length, 0); await h.shutdown("quit");
 	});
 });
 
-test("own main memory reviews, Jarvis and model pickers cannot steal private password or cancellation-sink focus", bounded, async t => {
+test("own main memory reviews, Noodle and model pickers cannot steal private password or cancellation-sink focus", bounded, async t => {
 	await isolated(t, async f => {
 		writeFileSync(join(f.agentDir, "extensions", "pi-jarvis.json"), JSON.stringify({ memory: { enabled: true, capture: true, recall: true } }));
 		// This is an input-ownership test, not memory storage coverage. No memory
@@ -596,15 +596,15 @@ test("own main memory reviews, Jarvis and model pickers cannot steal private pas
 		}));
 		t.mock.method(SharedMemoryService.prototype, "forget", () => assert.fail("private input cannot authorize a memory deletion"));
 		const h = f.mount(); await h.start();
-		const encryption = h.command("jarvis-archive", ENCRYPT);
+		const encryption = h.command("noodle-archive", ENCRYPT);
 		await until(() => f.activeDialog?.component instanceof ArchiveSecretInput);
 		const dialog = f.activeDialog!, count = f.dialogs.length;
 		for (const phase of ["password", "cancel-sink"] as const) {
 			if (phase === "cancel-sink") { revokeArchiveSecretPrompt(); await encryption; }
-			const forget = h.lane.tools.get("jarvis_memory_forget")!;
+			const forget = h.lane.tools.get("noodle_memory_forget")!;
 			const result = await forget.execute("review", { id: "review-fixture" }, undefined, undefined, h.ctx as any);
 			assert.match(JSON.stringify(result.content), /not forgotten/);
-			await h.command("jarvis"); await h.command("jarvis-model");
+			await h.command("noodle"); await h.command("noodle-model");
 			assert.equal(f.dialogs.length, count); assert.equal(f.activeDialog, dialog);
 			assert.equal(dialog.closed, false); assert.equal(isArchiveSecretPromptActive(), true);
 			assert.equal(f.runtimes.length, 0); assert.equal(f.foregroundCalls, 0);
@@ -691,7 +691,7 @@ function publicIndexHost(f: Fixture, h: Mount, options: { deferSecretFactory?: b
 	};
 }
 
-test("actual index reserves before overlay-close yield: raced memory/Jarvis/picker admission cannot install late reviewAbort beneath a sink", bounded, async t => {
+test("actual index reserves before overlay-close yield: raced memory/Noodle/picker admission cannot install late reviewAbort beneath a sink", bounded, async t => {
 	await isolated(t, async f => {
 		syntheticReview(t, f);
 		const h = f.mount(); await h.start();
@@ -701,12 +701,12 @@ test("actual index reserves before overlay-close yield: raced memory/Jarvis/pick
 			assert.equal(isArchiveSecretPromptActive(), true, "reservation covers the actual beforeSecretPrompt yield");
 			assert.equal(f.dialogs.filter(dialog => dialog.component instanceof ArchiveSecretInput).length, 0,
 				"race runs before any private factory");
-			reviewWork = h.lane.tools.get("jarvis_memory_forget")!.execute("review", { id: "review-fixture" }, reviewAbort.signal, undefined, h.ctx as any);
-			raced = Promise.all([reviewWork, h.command("jarvis"), h.command("jarvis-model")]);
+			reviewWork = h.lane.tools.get("noodle_memory_forget")!.execute("review", { id: "review-fixture" }, reviewAbort.signal, undefined, h.ctx as any);
+			raced = Promise.all([reviewWork, h.command("noodle"), h.command("noodle-model")]);
 		} });
 		try {
 			const { opened } = await open(f, h), overlay = f.activeDialog!, bootCount = f.runtimes.length;
-			const encryption = h.command("jarvis-archive", ENCRYPT);
+			const encryption = h.command("noodle-archive", ENCRYPT);
 			await until(() => raced !== undefined && publicHost.privateStarts.length === 1);
 			const results = await raced!;
 			assert.match(JSON.stringify(results[0]), /not forgotten/);
@@ -744,12 +744,12 @@ for (const ordinary of ["memory", "model"] as const) {
 			const reviewAbort = new AbortController();
 			try {
 				const ordinaryWork = ordinary === "memory" ?
-					h.lane.tools.get("jarvis_memory_forget")!.execute("review", { id: "review-fixture" }, reviewAbort.signal, undefined, h.ctx as any).catch(() => undefined) :
-					h.command("jarvis-model");
-				await until(() => ordinary === "memory" ? publicHost.confirms() === 1 : f.activeDialog?.component instanceof JarvisModelPicker);
+					h.lane.tools.get("noodle_memory_forget")!.execute("review", { id: "review-fixture" }, reviewAbort.signal, undefined, h.ctx as any).catch(() => undefined) :
+					h.command("noodle-model");
+				await until(() => ordinary === "memory" ? publicHost.confirms() === 1 : f.activeDialog?.component instanceof NoodleModelPicker);
 				const focus = publicHost.host.getFocusedComponent(), dialogs = f.dialogs.length;
 				assert.ok(focus); assert.equal(isArchiveSecretPromptActive(), false);
-				await h.command("jarvis-archive", ENCRYPT);
+				await h.command("noodle-archive", ENCRYPT);
 				assert.equal(publicHost.host.getFocusedComponent(), focus, "refusal must never request custom done/editor restoration");
 				assert.equal(f.dialogs.length, dialogs); assert.equal(publicHost.confirms(), ordinary === "memory" ? 1 : 0);
 				assert.equal(isArchiveSecretPromptActive(), false, "failed preparation releases only its reservation");
@@ -760,7 +760,7 @@ for (const ordinary of ["memory", "model"] as const) {
 				assert.equal(publicHost.reviewRestores(), ordinary === "memory" ? 1 : 0, "ordinary reviewAbort still works when it owns input");
 				// A later explicit request proves neither reservation nor index dialog
 				// flag leaked on refusal. Stop before password/KDF/native credentials.
-				const next = h.command("jarvis-archive", ENCRYPT);
+				const next = h.command("noodle-archive", ENCRYPT);
 				await until(() => f.activeDialog?.component instanceof ArchiveSecretInput);
 				const component = f.activeDialog!.component as ArchiveSecretInput;
 				revokeArchiveSecretPrompt(); await next;

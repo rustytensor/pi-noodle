@@ -10,7 +10,7 @@ import { openEncryptedArchiveDatabase, type ArchiveDatabase, type ArchiveNativeD
 
 const require = createRequire(import.meta.url);
 function fixture(t: TestContext) {
-	const root = fs.mkdtempSync(join(tmpdir(), "pi-jarvis-encrypted-sqlite-test-"));
+	const root = fs.mkdtempSync(join(tmpdir(), "pi-noodle-encrypted-sqlite-test-"));
 	fs.chmodSync(root, 0o700);
 	const databases: ArchiveDatabase[] = [];
 	t.after(() => { for (const db of databases) db.close(); fs.rmSync(root, { recursive: true, force: true }); });

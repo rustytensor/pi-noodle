@@ -149,7 +149,7 @@ export class NativeMcpController {
 	}
 
 	private assertLive(generation: Generation, signal?: AbortSignal): void {
-		if (!this.isLive(generation) || signal?.aborted) throw new Error("/jarvis native MCP access is disabled, cancelled, or belongs to an expired permission generation.");
+		if (!this.isLive(generation) || signal?.aborted) throw new Error("/noodle native MCP access is disabled, cancelled, or belongs to an expired permission generation.");
 	}
 
 	private revoke(event: SessionShutdownEvent): Promise<void> {
@@ -176,7 +176,7 @@ export class NativeMcpController {
 			if (start) await handler(event, start.ctx);
 		})).then((results) => {
 			for (const result of results) if (result.status === "rejected") errors.push(result.reason);
-			if (errors.length > 0) throw new AggregateError(errors, "/jarvis native MCP shutdown encountered errors.");
+			if (errors.length > 0) throw new AggregateError(errors, "/noodle native MCP shutdown encountered errors.");
 		});
 	}
 
@@ -192,18 +192,18 @@ export class NativeMcpController {
 			const register = pi.on as (name: ExtensionEvent["type"], handler: NativeHandler) => () => void;
 			const unsubscribe = register(name, async (event, ctx) => {
 				if (!this.isLive(generation)) {
-					if (event.type === "tool_call" && generation.definitions.has(event.toolName)) return { block: true, reason: "/jarvis native MCP access is disabled." };
+					if (event.type === "tool_call" && generation.definitions.has(event.toolName)) return { block: true, reason: "/noodle native MCP access is disabled." };
 					return;
 				}
 				const result = await handler(event, ctx);
 				if (!this.isLive(generation)) {
-					if (event.type === "tool_call" && generation.definitions.has(event.toolName)) return { block: true, reason: "/jarvis native MCP permission expired while preparing the call." };
+					if (event.type === "tool_call" && generation.definitions.has(event.toolName)) return { block: true, reason: "/noodle native MCP permission expired while preparing the call." };
 					return;
 				}
 				if (event.type === "before_agent_start") {
 					const promptEvent = event as BeforeAgentStartEvent;
 					const section = promptEvent.systemPromptOptions.sections.mcp_servers;
-					// Jarvis uses a forced identity/context prompt. Native structured
+					// Noodle uses a forced identity/context prompt. Native structured
 					// sections alone would be lost; append ONLY the SIDE discovery list.
 					return { systemPrompt: [stripMcpServerSection(promptEvent.systemPrompt), section ? `<mcp_servers>\n${section}\n</mcp_servers>` : ""].filter(Boolean).join("\n\n") };
 				}
@@ -252,7 +252,7 @@ export class NativeMcpController {
 				this.assertLive(generation, signal);
 				// A tools/list_changed withdrawal can happen within the same
 				// permission epoch, after an SDK call already captured this definition.
-				if (!this.isToolAvailable(definition.name)) throw new Error("/jarvis native MCP tool is disabled or withdrawn.");
+				if (!this.isToolAvailable(definition.name)) throw new Error("/noodle native MCP tool is disabled or withdrawn.");
 				const signals = [generation.abort.signal, signal, this.options.lifetimeSignal].filter((value): value is AbortSignal => !!value);
 				const callSignal = AbortSignal.any(signals);
 				// An OLD codemode script must not call tools from a NEW permission

@@ -11,7 +11,7 @@ export function createMemoryEditorBackend(service: MemoryEditorService, ctx: Mem
 		check();
 		const policy = service.editorAccess(ctx);
 		check();
-		if (!policy.enabled) throw new Error("Shared memory access is paused. Use /jarvis-memory status.");
+		if (!policy.enabled) throw new Error("Shared memory access is paused. Use /noodle-memory status.");
 	};
 	const operation = <T>(run: () => T): T => {
 		ensureActive();
@@ -66,7 +66,7 @@ export async function openMemoryEditor(state: MemoryEditorHostState, ctx: Extens
 		return;
 	}
 	if (isArchiveSecretPromptActive() || state.modelPickerOpen || state.memoryReviewOpen || state.memoryEditorOwner) {
-		ctx.ui.notify("Finish the private archive prompt or current Jarvis picker/memory dialog before opening the memory editor.", "warning");
+		ctx.ui.notify("Finish the private archive prompt or current Noodle picker/memory dialog before opening the memory editor.", "warning");
 		return;
 	}
 	const owner = {}, queue = state.queuedMessages, boot = state.bootGeneration;
@@ -113,7 +113,7 @@ export async function openMemoryEditor(state: MemoryEditorHostState, ctx: Extens
 		state.memoryEditorOwner = undefined;
 		state.closeMemoryEditor = undefined;
 		finish = undefined;
-		// A forced boundary must also retire the exact pending Jarvis handoff.
+		// A forced boundary must also retire the exact pending Noodle handoff.
 		// Neither wait depends on the abandoned public custom promise settling.
 		cancelHandoff?.(owner);
 		resolveRetired();
@@ -126,7 +126,7 @@ export async function openMemoryEditor(state: MemoryEditorHostState, ctx: Extens
 		if (!owns() || lifetime.signal.aborted) return;
 		lifetime.abort();
 		if (!customRequested) { release(true); return; }
-		component?.invalidateAccess("Memory access or editor ownership expired. Close and reopen after reviewing /jarvis-memory status.");
+		component?.invalidateAccess("Memory access or editor ownership expired. Close and reopen after reviewing /noodle-memory status.");
 	};
 	const backend = createMemoryEditorBackend(state.memory, ctx, check);
 	state.closeMemoryEditor = release;
@@ -145,7 +145,7 @@ export async function openMemoryEditor(state: MemoryEditorHostState, ctx: Extens
 		const waitOverlayClosed = state.waitOverlayClosed;
 		state.closeOverlay?.(false, owner); // Ordinary close: assigned work and grants survive.
 		await Promise.race([waitOverlayClosed?.() ?? Promise.resolve(), retired]);
-		await Promise.resolve(); // Let the host unmount Jarvis before the next custom UI.
+		await Promise.resolve(); // Let the host unmount Noodle before the next custom UI.
 		backend.ensureActive();
 		customRequested = true;
 		const custom = ctx.ui.custom<void>((tui, theme, keybindings, done) => {
@@ -199,7 +199,7 @@ export async function openMemoryEditor(state: MemoryEditorHostState, ctx: Extens
 		await Promise.race([custom, retired]);
 	} catch {
 		// Fixed text: never echo raw DB/settings/input/credential errors.
-		if (owns()) ctx.ui.notify("Memory editor unavailable or access expired. Review /jarvis-memory status and reopen.", "warning");
+		if (owns()) ctx.ui.notify("Memory editor unavailable or access expired. Review /noodle-memory status and reopen.", "warning");
 	} finally {
 		// A settled/failed public lifecycle is already unmounted; no stale done.
 		release(true);

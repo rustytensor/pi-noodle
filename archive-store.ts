@@ -326,6 +326,8 @@ function guardedDatabase(db: ArchiveDatabase, guard: () => void): ArchiveDatabas
 }
 
 export interface ArchiveStoreOptions {
+	/** Owner selects layout lazily once; never probe layout metadata inside database observations. */
+	layout?: () => "legacy" | "noodle";
 	/** Code-owned vault layout; metadata and operation locking belong to the caller. */
 	managed?: boolean;
 	/** Live operation/revision guard; no automatic close/retry inside the guard. */
@@ -340,8 +342,13 @@ export interface ArchiveStoreOptions {
  * Deletion is logical, not forensic erasure. Public SQLite opens by path: these
  * checks are not a sandbox against malicious concurrent same-user renames. */
 export class ArchiveStore {
-	readonly path: string;
+	get path(): string { return this.storagePath(this.agentDir); }
 	private readonly agentDir: string;
+	private readonly layout?: ArchiveStoreOptions["layout"];
+	private selectedDirectory?: string;
+	private storageDirectory(): string {
+		return this.selectedDirectory ??= this.layout?.() === "noodle" ? "pi-noodle-archive" : "pi-jarvis-archive"; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
+	}
 	private readonly databaseFactory?: ArchiveStoreOptions["databaseFactory"];
 	private readonly managed: boolean;
 	private readonly guard?: () => void;
@@ -364,16 +371,17 @@ export class ArchiveStore {
 			(options.managed !== undefined && typeof options.managed !== "boolean") ||
 			(options.storageId !== undefined && (options.managed !== true || typeof options.storageId !== "string" ||
 				!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(options.storageId)))) failure("managed storage options");
+		if (options.layout !== undefined && typeof options.layout !== "function") failure("storage layout");
+		this.layout = options.layout;
 		this.databaseFactory = options.databaseFactory;
 		this.managed = options.managed === true;
 		this.guard = options.guard;
 		this.storageId = options.storageId;
 		this.agentDir = resolve(agentDir);
-		this.path = this.storagePath(this.agentDir);
 	}
 	private get databasePath(): string { return this.canonicalPath ?? this.path; }
 	private storagePath(root: string): string {
-		const archive = join(root, "extensions", "pi-jarvis-archive");
+		const archive = join(root, "extensions", this.storageDirectory()); // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 		return this.storageId ? join(archive, "vaults", this.storageId, "archive.sqlite") : join(archive, "archive.sqlite");
 	}
 	private pinDirectory(directory: string, info: Stats): void {
@@ -427,7 +435,7 @@ export class ArchiveStore {
 		if (this.root && root !== this.root) failure("replaced agent root");
 		this.root = root;
 		this.canonicalPath = this.storagePath(root);
-		const archive = join(root, "extensions", "pi-jarvis-archive");
+		const archive = join(root, "extensions", this.storageDirectory()); // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 		const directories = [root, join(root, "extensions"), archive];
 		if (this.storageId) directories.push(join(archive, "vaults"), dirname(this.databasePath));
 		for (const directory of directories) {

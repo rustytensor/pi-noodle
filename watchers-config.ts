@@ -2,6 +2,7 @@ import { closeSync, constants, fstatSync, fsyncSync, lstatSync, mkdirSync, openS
 import { randomUUID } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { isUtf8 } from "node:buffer";
+import { storageName } from "./storage-layout.js";
 import { WATCHER_DEFAULTS, type WatcherPolicy, type WatcherScope } from "./watchers-types.js";
 
 type Config = Record<string, unknown>;
@@ -12,7 +13,7 @@ const ranges: Record<Exclude<keyof WatcherPolicy, "enabled">, [number, number]> 
 };
 export function watcherConfigPath(cwd: string, agentDir: string, scope: WatcherScope): string {
 	if (scope !== "global" && scope !== "project") throw new Error("Invalid watcher settings scope.");
-	return scope === "global" ? join(agentDir, "extensions", "pi-jarvis-watchers.json") : join(cwd, ".pi", "jarvis-watchers.json");
+	return scope === "global" ? join(agentDir, "extensions", storageName(agentDir, "pi-jarvis-watchers.json")) : join(cwd, ".pi", storageName(cwd, "jarvis-watchers.json", "project")); // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 }
 function parse(value: unknown): Partial<WatcherPolicy> {
 	if (value === undefined) return {};

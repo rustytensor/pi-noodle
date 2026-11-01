@@ -226,7 +226,7 @@ function initializeWal(db: DatabaseSync): void {
  * logical, not forensic erasure. Path checks mitigate accidents, not concurrent
  * malicious same-user OS races. SQLite coordinates cooperating processes. */
 export class MemoryStore {
-	readonly path: string;
+	get path(): string { return join(this.agentDir, "extensions", this.storageDirectory(), "memory.sqlite"); } // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 	private readonly agentDir: string;
 	private db?: DatabaseSync;
 	private file?: Stats;
@@ -236,10 +236,13 @@ export class MemoryStore {
 	private editorTransactionActive = false;
 	private editorCloseRequested = false;
 
-	constructor(agentDir: string) {
+	private selectedDirectory?: string;
+	private storageDirectory(): string {
+		return this.selectedDirectory ??= this.layout?.() === "noodle" ? "pi-noodle-memory" : "pi-jarvis-memory"; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
+	}
+	constructor(agentDir: string, private readonly layout?: () => "legacy" | "noodle") {
 		string(agentDir, "agent directory", 4096);
 		this.agentDir = resolve(agentDir);
-		this.path = join(this.agentDir, "extensions", "pi-jarvis-memory", "memory.sqlite");
 	}
 
 	private get databasePath(): string { return this.canonicalPath ?? this.path; }
@@ -261,7 +264,7 @@ export class MemoryStore {
 		if (!rootInfo?.isDirectory()) failure("agent directory");
 		owner(rootInfo!);
 		this.root = root;
-		this.canonicalPath = join(root, "extensions", "pi-jarvis-memory", "memory.sqlite");
+		this.canonicalPath = join(root, "extensions", this.storageDirectory(), "memory.sqlite"); // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 		for (const directory of [join(root, "extensions"), dirname(this.databasePath)]) {
 			let info = stat(directory);
 			if (!info && create) {
@@ -678,7 +681,7 @@ export class MemoryStore {
 		const note = editorInput(input), id = identity(note);
 		return this.editorRun("create", () => editorError("storage", "Curated-note storage is unavailable."), () => {
 			if (this.prepare("SELECT 1 FROM records WHERE id=?").get(id)) editorError("collision", "Curated-note title already exists in the destination. Review it instead of overwriting.");
-			if (this.prepare("SELECT 1 FROM tombstones WHERE id=?").get(id)) editorError("forgotten", "Curated-note title was forgotten; use explicit /jarvis-memory remember to restore it.");
+			if (this.prepare("SELECT 1 FROM tombstones WHERE id=?").get(id)) editorError("forgotten", "Curated-note title was forgotten; use explicit /noodle-memory remember to restore it.");
 			if (this.count("records", "note") >= MEMORY_STORE_LIMITS.notes) editorError("limit", "Memory note limit reached (1000); no notes were automatically deleted.");
 			this.editorReserveIdentity();
 			const now = Date.now();
@@ -709,7 +712,7 @@ export class MemoryStore {
 			if (!sameRecord(existing, reviewed) || !accessibleNote(existing!, currentProject, scope)) editorError("conflict", "Curated note changed or is no longer accessible. Reload and review; your draft was not saved.");
 			if (id !== reviewed.id) {
 				if (this.prepare("SELECT 1 FROM records WHERE id=?").get(id)) editorError("collision", "Curated-note title already exists in the destination. No changes were saved.");
-				if (this.prepare("SELECT 1 FROM tombstones WHERE id=?").get(id)) editorError("forgotten", "Curated-note destination was forgotten; use explicit /jarvis-memory remember to restore it.");
+				if (this.prepare("SELECT 1 FROM tombstones WHERE id=?").get(id)) editorError("forgotten", "Curated-note destination was forgotten; use explicit /noodle-memory remember to restore it.");
 				this.editorReserveIdentity();
 				this.addTombstone(reviewed.id);
 			}

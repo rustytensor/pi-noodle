@@ -1,6 +1,6 @@
 /** Optional, unredacted finalized-session archive. Separate from curated memory. */
 export type ArchiveScope = "global" | "project";
-export type ArchiveLane = "main" | "jarvis" | "import";
+export type ArchiveLane = "main" | "jarvis" | "import"; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 export interface ArchivePolicy { enabled: boolean; capture: boolean; modelAccess: boolean; modelWideSearch: boolean }
 export interface ArchiveInput {
 	project: string;

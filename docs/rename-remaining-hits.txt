@@ -1,0 +1,53 @@
+Fixture ./test/rename-migration.test.ts:25:const FACT = "The fictional jarvis observatory has 17 blue chairs.";
+Fixture ./test/rename-migration.test.ts:27:const OLD_SERVICE = "pi-jarvis-archive";
+Fixture ./test/rename-migration.test.ts:54:	assert.equal(db.prepare("SELECT lane FROM records").get()?.lane, "jarvis");
+Fixture ./test/rename-migration.test.ts:89:		put(join(agent, "extensions", `pi-jarvis-${suffix}.json`), config);
+Fixture ./test/rename-migration.test.ts:90:		put(join(project, ".pi", `jarvis-${suffix}.json`), config);
+Fixture ./test/rename-migration.test.ts:94:		title: "Synthetic observatory", text: FACT, source: { lane: "jarvis", sessionId: "side-fixture", eventId: "note-fixture" } });
+Fixture ./test/rename-migration.test.ts:101:	const input = { project, sessionId: "side-fixture", lane: "jarvis" as const, entry };
+Fixture ./test/rename-migration.test.ts:106:	const state: VaultReady = { format: "pi-jarvis-archive-vault", version: 1, phase: "ready", revision: randomUUID(),
+Fixture ./test/rename-migration.test.ts:115:	const sideRelative = "agent/jarvis-sessions/fixture.jsonl";
+Fixture ./test/rename-migration.test.ts:134:		["agent/extensions/pi-jarvis.json", "agent/extensions/pi-noodle.json"],
+Fixture ./test/rename-migration.test.ts:135:		["agent/extensions/pi-jarvis-archive.json", "agent/extensions/pi-noodle-archive.json"],
+Fixture ./test/rename-migration.test.ts:136:		["agent/extensions/pi-jarvis-watchers.json", "agent/extensions/pi-noodle-watchers.json"],
+Fixture ./test/rename-migration.test.ts:137:		["project/.pi/jarvis.json", "project/.pi/noodle.json"],
+Fixture ./test/rename-migration.test.ts:138:		["project/.pi/jarvis-archive.json", "project/.pi/noodle-archive.json"],
+Fixture ./test/rename-migration.test.ts:139:		["project/.pi/jarvis-watchers.json", "project/.pi/noodle-watchers.json"],
+Fixture ./test/rename-migration.test.ts:140:		["agent/extensions/pi-jarvis-memory", "agent/extensions/pi-noodle-memory"],
+Fixture ./test/rename-migration.test.ts:141:		["agent/extensions/pi-jarvis-archive", "agent/extensions/pi-noodle-archive"],
+Fixture ./test/rename-migration.test.ts:142:		["plain-agent/extensions/pi-jarvis-archive", "plain-agent/extensions/pi-noodle-archive"],
+Fixture ./test/rename-migration.test.ts:171:		assert.equal(memoryDb.prepare("SELECT lane FROM records WHERE id=?").get(memoryId)?.lane, "jarvis");
+Alias ./test/archive-integration.test.ts:3:const COMPAT_ARCHIVE_TOOLS = ["noodle_archive_search", "noodle_archive_read", "noodle_archive_session", "jarvis_archive_search", "jarvis_archive_read", "jarvis_archive_session"];
+Alias ./test/archive-vault-integration.test.ts:3:const COMPAT_ARCHIVE_TOOLS = ["noodle_archive_search", "noodle_archive_read", "noodle_archive_session", "jarvis_archive_search", "jarvis_archive_read", "jarvis_archive_session"];
+Alias ./test/branding.test.ts:18:	const saved = { motion: process.env.PI_JARVIS_NO_ANIMATION, color: process.env.NO_COLOR, term: process.env.TERM };
+Alias ./test/branding.test.ts:19:	delete process.env.PI_JARVIS_NO_ANIMATION; delete process.env.NO_COLOR; process.env.TERM = "xterm-256color";
+Alias ./test/branding.test.ts:44:			for (const [key, value] of [["PI_JARVIS_NO_ANIMATION", saved.motion], ["NO_COLOR", saved.color], ["TERM", saved.term]]) {
+Alias ./test/branding.test.ts:171:		for (const [key, value] of [["PI_JARVIS_NO_ANIMATION", "1"], ["NO_COLOR", "1"], ["TERM", "dumb"]]) {
+Alias ./test/index-regression.test.ts:420:		const saved = { motion: process.env.PI_JARVIS_NO_ANIMATION, color: process.env.NO_COLOR, term: process.env.TERM };
+Alias ./test/index-regression.test.ts:421:		delete process.env.PI_JARVIS_NO_ANIMATION; delete process.env.NO_COLOR; process.env.TERM = "xterm-256color";
+Alias ./test/index-regression.test.ts:449:			for (const [key, value] of [["PI_JARVIS_NO_ANIMATION", saved.motion], ["NO_COLOR", saved.color], ["TERM", saved.term]]) {
+Alias ./test/memory-integration.test.ts:3:const COMPAT_MEMORY_TOOLS = ["noodle_memory_search", "noodle_memory_remember", "noodle_memory_forget", "jarvis_memory_search", "jarvis_memory_remember", "jarvis_memory_forget"];
+Alias ./test/noodle.test.ts:3563:				["jarvis_send_follow_up_to_main", "jarvis_send_steer_to_main", "noodle_send_follow_up_to_main", "noodle_send_steer_to_main"],
+Alias ./test/overlay-regression.test.ts:284:		const saved = { motion: process.env.PI_JARVIS_NO_ANIMATION, color: process.env.NO_COLOR, term: process.env.TERM };
+Alias ./test/overlay-regression.test.ts:285:		delete process.env.PI_JARVIS_NO_ANIMATION; delete process.env.NO_COLOR; process.env.TERM = "xterm-256color";
+Alias ./test/overlay-regression.test.ts:321:			for (const [key, value] of [["PI_JARVIS_NO_ANIMATION", saved.motion], ["NO_COLOR", saved.color], ["TERM", saved.term]]) {
+Alias ./test/archive-extension.test.ts:3:const COMPAT_ARCHIVE_TOOLS = ["noodle_archive_search", "noodle_archive_read", "noodle_archive_session", "jarvis_archive_search", "jarvis_archive_read", "jarvis_archive_session"];
+Repository ./package.json:31:    "url": "git+https://github.com/rustytensor/pi-jarvis.git"
+Repository ./package.json:33:  "homepage": "https://github.com/rustytensor/pi-jarvis#readme",
+Repository ./package.json:35:    "url": "https://github.com/rustytensor/pi-jarvis/issues"
+Alias ./AGENTS.md:43:- Suppress with `PI_NOODLE_NO_ANIMATION=1` (legacy `PI_JARVIS_NO_ANIMATION=1` remains an alias), non-empty `NO_COLOR`, or `TERM=dumb`. Use compact/no intro on small terminals and readable palettes for light themes and 256-color output.
+Repository ./README.md:5:<img src="https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-neon-skull.png" alt="Noodle neon skull and ramen bowl" width="720">
+Repository ./README.md:7:<img src="https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-dark-512.png" alt="pi-noodle icon" width="96">
+Repository ./README.md:25:[![CI](https://img.shields.io/github/actions/workflow/status/rustytensor/pi-jarvis/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/rustytensor/pi-jarvis/actions/workflows/ci.yml)
+Repository ./README.md:28:[![Pi extension](https://img.shields.io/badge/Pi-extension-06b6d4?style=for-the-badge)](https://github.com/rustytensor/pi-jarvis)
+Rename ./README.md:56:## Renamed from pi-jarvis
+Alias ./README.md:59:Use `/noodle`, `/noodle-model`, `/noodle-thinking`, `/noodle-memory`, `/noodle-archive` and `/noodle-watchers`; the old `/jarvis` command family and `jarvis_*` tools remain compatibility aliases for their `noodle_*` counterparts.
+Repository ./README.md:61:Saved memory, archives, watcher state and session references are untouched by the rename. Existing settings and stores keep their legacy paths, including `extensions/pi-jarvis.json`, `.pi/jarvis.json`, their archive/watchers equivalents, `pi-jarvis-memory`, `extensions/pi-jarvis-archive` and `jarvis-sessions/`. No automatic data move or privacy/default change occurs. The GitHub repository remains `rustytensor/pi-jarvis`.
+Repository ./README.md:130:![Curated memory editor, actual renderer with synthetic notes](https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-memory-editor.svg)
+Repository ./README.md:132:*Actual component with synthetic notes and a custom palette—not a live memory database. [Open the full-size preview](https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-memory-editor.svg).*
+Repository ./README.md:154:![Noodle compact overlay, rendered with deterministic demo data](https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-overlay.svg)
+Repository ./README.md:264:<img src="https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-workspace.svg" alt="Main Pi and Noodle are separate conversation lanes. Main-session context flows to Noodle; both share local plaintext memory, on in trusted projects. Recalled facts may reach the model/provider. Archive and tool permissions remain separate." width="640">
+Repository ./README.md:449:<img src="https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-history.svg" alt="Optional archive workflow: preview the selected history files, confirm the exact reviewed set, import with duplicate skipping and per-file reporting, then search recorded entries. Archive and model access are off by default. Content defaults to unredacted plaintext and may hold secrets; model reads can reach the provider even with encryption. Encryption protects only the active archive." width="640">
+Alias ./README.md:738:To skip the intro, start Pi with `PI_NOODLE_NO_ANIMATION=1` (the old `PI_JARVIS_NO_ANIMATION=1` alias still works). A non-empty `NO_COLOR` or `TERM=dumb` also suppresses it. These switches affect the intro, not Pi's other animations or colors.
+Repository ./README.md:776:<img src="https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-access.svg" alt="A fresh owner starts with Repo tools, Note main and Redirect off. Each is a separate opt-in; Redirect requires visible per-send confirmation. Ordinary close preserves same-owner work and grants. Explicit stop and access-off remain available." width="640">
+Repository ./README.md:935:CI reports violations; protected-branch/tag rules must be configured separately for enforcement. See [RELEASING.md](https://github.com/rustytensor/pi-jarvis/blob/main/RELEASING.md) for atomic tagged pushes, fork/merge handling, reruns, and manual npm publication.

@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+// Explicit expected registration set: three new tools plus the three required legacy aliases.
+const COMPAT_ARCHIVE_TOOLS = ["noodle_archive_search", "noodle_archive_read", "noodle_archive_session", "jarvis_archive_search", "jarvis_archive_read", "jarvis_archive_session"];
 import { spawnSync } from "node:child_process";
 import fs, { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire, syncBuiltinESMExports } from "node:module";
@@ -74,7 +76,7 @@ interface Fixture {
 	recreate: (options?: ArchiveServiceOptions) => SharedArchiveService;
 }
 function fixture(t: TestContext): Fixture {
-	const root = mkdtempSync(join(tmpdir(), "pi-jarvis-vault-integration-"));
+	const root = mkdtempSync(join(tmpdir(), "pi-noodle-vault-integration-"));
 	const agentDir = join(root, "agent"), project = join(root, "project"), otherProject = join(root, "other-project");
 	for (const path of [agentDir, project, otherProject]) mkdirSync(path);
 	const keychain = new FakeKeychain(), notices: string[] = [], foreground: string[] = [], services: SharedArchiveService[] = [];
@@ -121,7 +123,7 @@ function mount(f: Fixture, lane: "main" | "jarvis", ctx: ExtensionContext, optio
 	return {
 		tools, activeTools: () => [...activeTools], foregroundCalls: () => forbiddenForeground,
 		setRepoTools(enabled: boolean) {
-			activeTools = [...(enabled ? ["read", "bash", "edit", "write"] : []), ...activeTools.filter(name => ARCHIVE_TOOL_NAMES.some(tool => tool === name))];
+			activeTools = [...(enabled ? ["read", "bash", "edit", "write"] : []), ...activeTools.filter(name => COMPAT_ARCHIVE_TOOLS.some(tool => tool === name))];
 		},
 		async emit(name: string, event: any = { type: name }) {
 			let result: any;
@@ -227,7 +229,7 @@ test("vault commands require literal acknowledgements, reject inline secrets/ext
 	assert.equal(f.prompt.calls.length, 0); assert.equal(f.keychain.calls.length, 0); assert.equal(existsSync(f.service.store.path), false);
 	assert.equal(new ArchiveVaultFiles(f.agentDir).read(), undefined);
 	assert.deepEqual(main.activeTools(), []); assert.deepEqual(side.activeTools(), []);
-	assert.deepEqual([...main.tools.keys()].sort(), [...ARCHIVE_TOOL_NAMES].sort(), "models receive read-only tools, never vault controls");
+	assert.deepEqual([...main.tools.keys()].sort(), [...COMPAT_ARCHIVE_TOOLS].sort(), "models receive read-only tools, never vault controls");
 	assert.equal(main.foregroundCalls() + side.foregroundCalls(), 0); assert.deepEqual(f.foreground, []);
 });
 
@@ -286,13 +288,13 @@ test("human plaintext-to-cipher conversion preserves raw/provenance/FTS/tombston
 	assert.throws(() => f.service.search({ query: "vaultfixture" }, mainCtx), /model access/);
 	main.setRepoTools(true); side.setRepoTools(true); await main.emit("agent_settled"); await side.emit("agent_settled");
 	assert.deepEqual(main.activeTools().sort(), ["bash", "edit", "read", "write"]);
-	assert.ok(!side.activeTools().some(name => name.startsWith("jarvis_archive_")));
+	assert.ok(!side.activeTools().some(name => name.startsWith("noodle_archive_")));
 	await f.service.command("model-access on --confirm-sensitive", mainCtx);
 	main.setRepoTools(false); side.setRepoTools(false);
 	for (const [extension, sessionCount] of [[main, 2], [side, 1]] as const) {
-		await extension.emit("agent_settled"); assert.deepEqual(extension.activeTools().sort(), [...ARCHIVE_TOOL_NAMES].sort());
-		assert.equal(page(toolText(await extension.execute("jarvis_archive_search", { query: "vaultfixture" }))).records.length, sessionCount, "session-default reach finds only this session's records");
-		assert.equal(page(toolText(await extension.execute("jarvis_archive_search", { query: "vaultfixture", scope: "current" }))).records.length, 3);
+		await extension.emit("agent_settled"); assert.deepEqual(extension.activeTools().sort(), [...COMPAT_ARCHIVE_TOOLS].sort());
+		assert.equal(page(toolText(await extension.execute("noodle_archive_search", { query: "vaultfixture" }))).records.length, sessionCount, "session-default reach finds only this session's records");
+		assert.equal(page(toolText(await extension.execute("noodle_archive_search", { query: "vaultfixture", scope: "current" }))).records.length, 3);
 	}
 	await f.service.command("model-access off", mainCtx);
 	append(sideCtx, "AFTER_MODEL_OFF_VAULT_CANARY"); await side.emit("turn_end");
@@ -345,7 +347,7 @@ test("lock revokes captured definitions in both lanes with no record/journal acc
 	assert.match(await f.service.command("unlock", mainCtx), /unlocked \(session\)/);
 	await assert.rejects(f.service.command(`import-all --confirm-sensitive --preview ${token}`, mainCtx), /matching prior preview/);
 	for (const [i, extension] of [main, side].entries()) {
-		assert.deepEqual(extension.activeTools().sort(), [...ARCHIVE_TOOL_NAMES].sort());
+		assert.deepEqual(extension.activeTools().sort(), [...COMPAT_ARCHIVE_TOOLS].sort());
 		for (const [j, name] of ARCHIVE_TOOL_NAMES.entries()) await assert.rejects(extension.execute(name, {}, oldDefinitions[i]![j]!), /expired/);
 	}
 	for (const [ctx, extension] of [[mainCtx, main], [sideCtx, side]] as const) {
@@ -353,7 +355,7 @@ test("lock revokes captured definitions in both lanes with no record/journal acc
 	}
 	assert.equal(page(f.service.search({ query: "BEFORE_LOCK_VAULT_CANARY" }, mainCtx, false)).records.length, 2);
 	assert.equal(page(f.service.search({ query: "AFTER_UNLOCK_VAULT_CANARY" }, mainCtx, false)).records.length, 2);
-	for (const query of ["LOCKED_main_VAULT_CANARY", "LOCKED_jarvis_VAULT_CANARY", "LOCKED_DIRECT_VAULT_CANARY", "LOCKED_PREVIEW_VAULT_CANARY"]) {
+	for (const query of ["LOCKED_main_VAULT_CANARY", "LOCKED_noodle_VAULT_CANARY", "LOCKED_DIRECT_VAULT_CANARY", "LOCKED_PREVIEW_VAULT_CANARY"]) {
 		assert.equal(page(f.service.search({ query }, mainCtx, false)).records.length, 0, "unlock must never backfill locked records/imports");
 	}
 	assert.equal(main.foregroundCalls() + side.foregroundCalls(), 0); noLeak(f);
@@ -372,12 +374,12 @@ test("fresh services hand off process unlock on new/resume/fork, revoke old owne
 	const promptCount = f.prompt.calls.length;
 	for (const reason of ["new", "resume", "fork"] as const) {
 		const old = f.service, oldContext = ctx, oldMount = mount(f, "main", oldContext); await oldMount.emit("session_start");
-		const stale = oldMount.tools.get("jarvis_archive_search")!;
+		const stale = oldMount.tools.get("noodle_archive_search")!;
 		old.close(reason); f.recreate(); ctx = f.context(`process-after-${reason}`); await f.service.start(ctx);
 		assert.equal(f.service.policy(ctx).enabled, true, `${reason} must adopt the process-local lease in a new service`);
 		assert.equal(page(f.service.search({ query: "LIFECYCLE_VAULT_CANARY" }, ctx, false)).records.length, 1);
 		assert.throws(() => old.search({ query: "LIFECYCLE_VAULT_CANARY" }, oldContext, false), /disabled|revoked|locked/);
-		await assert.rejects(oldMount.execute("jarvis_archive_search", { query: "LIFECYCLE_VAULT_CANARY" }, stale), /expired|disabled/);
+		await assert.rejects(oldMount.execute("noodle_archive_search", { query: "LIFECYCLE_VAULT_CANARY" }, stale), /expired|disabled/);
 	}
 	assert.equal(f.prompt.calls.length, promptCount); assert.equal(f.keychain.calls.length, 0);
 	for (const reason of ["quit", "reload"] as const) {
@@ -508,16 +510,16 @@ test("observed main, side and supplemental trust loss revokes the shared lease, 
 	writeFileSync(join(history, "fixture.jsonl"), JSON.stringify({ type: "session", version: 3, id: "trust-import", timestamp: "2026-01-01T00:00:00.000Z", cwd: f.project }) + "\n");
 	for (const reason of ["main", "side", "supplemental"] as const) {
 		const preview = JSON.parse(await f.service.command(`import-all ${history}`, ctx)).previewId;
-		const oldMain = main.tools.get("jarvis_archive_search")!, oldSide = side.tools.get("jarvis_archive_search")!;
+		const oldMain = main.tools.get("noodle_archive_search")!, oldSide = side.tools.get("noodle_archive_search")!;
 		const promptCount = f.prompt.calls.length;
 		if (reason === "main") mainTrusted = false;
 		else if (reason === "side") sideTrusted = false;
 		else supplemental = false;
 		await (reason === "main" ? main : side).emit("agent_settled");
-		assert.ok(!main.activeTools().includes("jarvis_archive_search"));
-		assert.ok(!side.activeTools().includes("jarvis_archive_search"));
-		await assert.rejects(main.execute("jarvis_archive_search", { query: "fixture" }, oldMain), /expired|disabled|untrusted/);
-		await assert.rejects(side.execute("jarvis_archive_search", { query: "fixture" }, oldSide), /expired|disabled|untrusted/);
+		assert.ok(!main.activeTools().includes("noodle_archive_search"));
+		assert.ok(!side.activeTools().includes("noodle_archive_search"));
+		await assert.rejects(main.execute("noodle_archive_search", { query: "fixture" }, oldMain), /expired|disabled|untrusted/);
+		await assert.rejects(side.execute("noodle_archive_search", { query: "fixture" }, oldSide), /expired|disabled|untrusted/);
 		mainTrusted = sideTrusted = supplemental = true;
 		await main.emit("agent_settled"); await side.emit("agent_settled");
 		assert.equal(f.service.policy(ctx).enabled, false, "restoring trust is not an implicit unlock");

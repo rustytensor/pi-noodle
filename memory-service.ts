@@ -7,11 +7,12 @@ import { extractMemoryText, sanitizeMemoryText } from "./memory-content.js";
 import { MemoryStore } from "./memory-store.js";
 import type { MemoryEditorPage, MemoryEditorQuery, MemoryEditorScope, MemoryEditorService, MemoryNoteDraft } from "./memory-editor-types.js";
 import { MemoryEditorDataError, type MemoryCategory, type MemoryLane, type MemoryPolicy, type MemoryQuery, type MemoryRecord, type MemoryScope, type MemorySource } from "./memory-types.js";
+import { selectedStorageLayout } from "./storage-layout.js";
 
 export type MemoryContext = Pick<ExtensionContext, "cwd" | "isProjectTrusted" | "sessionManager" | "ui" | "hasUI" | "mode">;
-export const MEMORY_TOOL_NAMES = ["jarvis_memory_search", "jarvis_memory_remember", "jarvis_memory_forget"] as const;
-export const MEMORY_CONTEXT_TYPE = "jarvis_shared_memory";
-export const MEMORY_POLICY_CONTEXT_TYPE = "jarvis_shared_memory_policy";
+export const MEMORY_TOOL_NAMES = ["noodle_memory_search", "noodle_memory_remember", "noodle_memory_forget"] as const;
+export const MEMORY_CONTEXT_TYPE = "jarvis_shared_memory"; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
+export const MEMORY_POLICY_CONTEXT_TYPE = "jarvis_shared_memory_policy"; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 const OFF: MemoryPolicy = { enabled: false, capture: false, recall: false };
 const QUERY_STOP_WORDS = new Set("a an and are as at be been but by can could did do does for from had has have how i if in is it its me my of on or our please should that the their them then there these they this to was we were what when where which who why will with would you your remember recall tell about".split(" "));
 
@@ -25,18 +26,18 @@ export function memoryRecallQuery(prompt: string): string {
 	}
 	return selected.join(" ");
 }
-const HELP = `Shared main Pi / Jarvis memory commands:
-/jarvis-memory status
-/jarvis-memory [--global|--project] on|off|clear
-/jarvis-memory [--global|--project] capture|recall on|off
-/jarvis-memory editor (TUI; curated notes only)
-/jarvis-memory list [--all|--global]
-/jarvis-memory search [--all|--global] <words>
-/jarvis-memory show [--all] <id>
-/jarvis-memory remember [--global|--project] <title> | <fact>
-/jarvis-memory edit <id> <replacement fact>
-/jarvis-memory forget [--all] <id>
-/jarvis-memory forget-all --confirm [--global|--all]
+const HELP = `Shared main Pi / Noodle memory commands:
+/noodle-memory status
+/noodle-memory [--global|--project] on|off|clear
+/noodle-memory [--global|--project] capture|recall on|off
+/noodle-memory editor (TUI; curated notes only)
+/noodle-memory list [--all|--global]
+/noodle-memory search [--all|--global] <words>
+/noodle-memory show [--all] <id>
+/noodle-memory remember [--global|--project] <title> | <fact>
+/noodle-memory edit <id> <replacement fact>
+/noodle-memory forget [--all] <id>
+/noodle-memory forget-all --confirm [--global|--all]
 Controls default to global; global off is a master switch. Notes and bulk-forget default to this project. clear removes settings, NOT memories. Full disable retains data but blocks even inspection until re-enabled. No historical import or background model calls.`;
 
 /** One service per loaded extension; the main and side SDK runtimes share it. */
@@ -51,7 +52,7 @@ export class SharedMemoryService implements MemoryEditorService {
 	private notifying = false;
 	private notifyAgain = false;
 
-	constructor(readonly agentDir: string) { this.store = new MemoryStore(agentDir); }
+	constructor(readonly agentDir: string) { this.store = new MemoryStore(agentDir, () => selectedStorageLayout(agentDir)); }
 	get epoch(): number { return this.generation; }
 	onChange(listener: () => void): () => void { this.changes.add(listener); return () => this.changes.delete(listener); }
 	onNotesChange(listener: () => void): () => void { this.noteChanges.add(listener); return () => this.noteChanges.delete(listener); }
@@ -98,7 +99,7 @@ export class SharedMemoryService implements MemoryEditorService {
 			}
 		}
 		if (previous !== undefined && previous !== key) this.invalidate();
-		if (resolution.errors.length) this.warn(ctx, "config", "Shared memory is paused: its settings could not be read safely. Check the global/project jarvis.json files.");
+		if (resolution.errors.length) this.warn(ctx, "config", "Shared memory is paused: its settings could not be read safely. Check the reported global/project settings files.");
 		return policy;
 	}
 
@@ -107,7 +108,7 @@ export class SharedMemoryService implements MemoryEditorService {
 		if (!policy.enabled || this.disclosed) return policy;
 		try {
 			if (!hasMemoryDisclosure(this.agentDir)) {
-				const notice = "Shared Pi/Jarvis memory is ON. With capture on, bounded new user/assistant text and curated facts are saved locally in plaintext across sessions. With recall on, global and current-project memories may be sent to your active model; explicit search can access other projects. No old-session import or background model calls. Secret filtering is best-effort. /jarvis-memory off disables all access; capture off / recall off control saving and recall separately. Store: " + JSON.stringify(this.store.path);
+				const notice = "Shared Pi/Noodle memory is ON. With capture on, bounded new user/assistant text and curated facts are saved locally in plaintext across sessions. With recall on, global and current-project memories may be sent to your active model; explicit search can access other projects. No old-session import or background model calls. Secret filtering is best-effort. /noodle-memory off disables all access; capture off / recall off control saving and recall separately. Store: " + JSON.stringify(this.store.path);
 				this.notice(ctx, notice, "info");
 				// Record only AFTER a user-visible notice, never in a constructor.
 				markMemoryDisclosure(this.agentDir);
@@ -122,8 +123,8 @@ export class SharedMemoryService implements MemoryEditorService {
 
 	canUse(name: string, ctx: MemoryContext): boolean {
 		const policy = this.prepare(ctx);
-		return policy.enabled && (name === "jarvis_memory_remember" ? policy.capture :
-			(name === "jarvis_memory_search" || name === "jarvis_memory_forget") && policy.recall);
+		return policy.enabled && (name === "noodle_memory_remember" ? policy.capture :
+			(name === "noodle_memory_search" || name === "noodle_memory_forget") && policy.recall);
 	}
 
 	capture(message: unknown, lane: "main" | "jarvis", ctx: MemoryContext): void {
@@ -139,7 +140,7 @@ export class SharedMemoryService implements MemoryEditorService {
 		try {
 			this.store.save({
 				kind: "conversation", category: "reference", scope: "project", project: this.project(ctx),
-				title: `${lane === "main" ? "Main Pi" : "Jarvis"} ${extracted.role} message`, text: clean.text,
+				title: `${lane === "main" ? "Main Pi" : "Noodle"} ${extracted.role} message`, text: clean.text,
 				source: this.source(ctx, lane, extracted.eventId, extracted.role),
 			});
 		} catch { this.warn(ctx, "capture", "Shared memory could not save this message. It was not retried; Pi's session history is unchanged."); }
@@ -181,7 +182,7 @@ export class SharedMemoryService implements MemoryEditorService {
 		const result = this.store.save({ kind: "note", category: input.category ?? "project", scope: input.scope ?? "project",
 			project: this.project(ctx), title, text, source: this.source(ctx, lane, eventId) }, { explicit });
 		if (result.outcome === "saved" || result.outcome === "updated") this.notesChanged();
-		return result.outcome === "forgotten" ? "Not saved: this memory was previously forgotten. Only an explicit /jarvis-memory remember command can restore it." :
+		return result.outcome === "forgotten" ? "Not saved: this memory was previously forgotten. Only an explicit /noodle-memory remember command can restore it." :
 			`${result.outcome}: ${result.record?.id ?? "memory"} (${input.scope ?? "project"})`;
 	}
 
@@ -206,7 +207,7 @@ export class SharedMemoryService implements MemoryEditorService {
 			// Cancellation/owner expiry is NOT a synthetic trust denial: keep other
 			// mounted lanes, policy epochs and pending capture anchors independent.
 			try { check?.(); } catch { throw new MemoryEditorDataError("access", "Curated-memory editor ownership expired or the operation was cancelled. No automatic retry."); }
-			if (!this.editorAccess(ctx).enabled) throw new MemoryEditorDataError("access", "Shared memory access is paused or the project is untrusted. Use /jarvis-memory status.");
+			if (!this.editorAccess(ctx).enabled) throw new MemoryEditorDataError("access", "Shared memory access is paused or the project is untrusted. Use /noodle-memory status.");
 			try { check?.(); } catch { throw new MemoryEditorDataError("access", "Curated-memory editor ownership expired or the operation was cancelled. No automatic retry."); }
 		};
 		try { guard(); return action(guard); } catch (error) {
@@ -339,12 +340,12 @@ export class SharedMemoryService implements MemoryEditorService {
 
 	status(ctx: MemoryContext): string {
 		const policy = this.prepare(ctx);
-		return `Shared memory ${policy.enabled ? "ON" : "OFF"}${ctx.isProjectTrusted() ? "" : " (paused: project is untrusted)"}; capture ${policy.capture ? "on" : "off"}; recall ${policy.recall ? "on" : "off"}${policy.enabled ? "" : " (all access paused)"}.\nStore: ${JSON.stringify(this.store.path)}\n/jarvis-memory help for controls, inspect/edit/forget. Settings default to global; global off cannot be overridden by a project.`;
+		return `Shared memory ${policy.enabled ? "ON" : "OFF"}${ctx.isProjectTrusted() ? "" : " (paused: project is untrusted)"}; capture ${policy.capture ? "on" : "off"}; recall ${policy.recall ? "on" : "off"}${policy.enabled ? "" : " (all access paused)"}.\nStore: ${JSON.stringify(this.store.path)}\n/noodle-memory help for controls, inspect/edit/forget. Settings default to global; global off cannot be overridden by a project.`;
 	}
 
 	private require(ctx: MemoryContext, capability?: "capture" | "recall"): void {
 		const policy = this.prepare(ctx);
-		if (!policy.enabled || (capability && !policy[capability])) throw new Error(`Shared memory ${capability ?? "access"} is disabled or the project is untrusted. Use /jarvis-memory status.`);
+		if (!policy.enabled || (capability && !policy[capability])) throw new Error(`Shared memory ${capability ?? "access"} is disabled or the project is untrusted. Use /noodle-memory status.`);
 	}
 	private cleanFact(text: string, maxBytes = 16_384): string {
 		const clean = sanitizeMemoryText(text, maxBytes);
@@ -367,7 +368,7 @@ export class SharedMemoryService implements MemoryEditorService {
 	}
 	private notice(ctx: MemoryContext, text: string, level: "info" | "warning"): void {
 		if (ctx.hasUI) ctx.ui.notify(text, level);
-		else process.stderr.write(`[pi-jarvis] ${text}\n`);
+		else process.stderr.write(`[pi-noodle] ${text}\n`);
 	}
 }
 

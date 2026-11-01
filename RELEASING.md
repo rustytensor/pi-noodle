@@ -12,8 +12,8 @@ Every new commit uses an annotated **stable `vX.Y.Z` tag**. This is a released e
    ```sh
    git fetch origin --tags
    # Choose X.Y.Z and update/validate all release metadata before committing.
-   git commit -m "Release pi-jarvis X.Y.Z"
-   git tag -a vX.Y.Z -m "pi-jarvis X.Y.Z"
+   git commit -m "Release pi-noodle X.Y.Z"
+   git tag -a vX.Y.Z -m "pi-noodle X.Y.Z"
    npm run check:tags
    git push --atomic origin HEAD refs/tags/vX.Y.Z
    ```
@@ -44,8 +44,8 @@ Every pushed `vX.Y.Z` tag triggers release automation, including tags on interme
 After the workflow succeeds, download and inspect the attached archive, then publish it yourself:
 
 ```sh
-npm publish ./pi-jarvis-X.Y.Z.tgz --access public
-npm view pi-jarvis@X.Y.Z version dist.integrity
+npm publish ./pi-noodle-X.Y.Z.tgz --access public
+npm view pi-noodle@X.Y.Z version dist.integrity
 ```
 
 Confirm the npm integrity matches the GitHub package. Update release notes to confirm npm publication only after that check succeeds.

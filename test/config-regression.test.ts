@@ -5,10 +5,10 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import {
-	clearJarvisModelSelectionSetting, clearJarvisThinkingSelectionSetting, getJarvisConfigPath, MalformedJarvisConfigError,
-	loadJarvisModelSelectionSetting, loadJarvisThinkingSelectionSetting,
-	saveJarvisModelSelectionSetting, saveJarvisThinkingSelectionSetting,
-} from "../jarvis-config.js";
+	clearNoodleModelSelectionSetting, clearNoodleThinkingSelectionSetting, getNoodleConfigPath, MalformedNoodleConfigError,
+	loadNoodleModelSelectionSetting, loadNoodleThinkingSelectionSetting,
+	saveNoodleModelSelectionSetting, saveNoodleThinkingSelectionSetting,
+} from "../noodle-config.js";
 
 // Deterministic fault injection works even when tests run as root. Never touches host config.
 function withFsFault<K extends "readFileSync" | "writeFileSync" | "renameSync" | "fsyncSync" | "openSync" | "rmSync">(
@@ -24,12 +24,12 @@ function withFsFault<K extends "readFileSync" | "writeFileSync" | "renameSync" |
 }
 
 export async function runConfigRegressionTests(): Promise<void> {
-	const root = fs.mkdtempSync(join(tmpdir(), "pi-jarvis-config-regression-"));
+	const root = fs.mkdtempSync(join(tmpdir(), "pi-noodle-config-regression-"));
 	const cwd = join(root, "project");
 	const agentDir = join(root, "agent");
 	try {
 		for (const scope of ["project", "global"] as const) {
-			const path = getJarvisConfigPath(cwd, scope, agentDir);
+			const path = getNoodleConfigPath(cwd, scope, agentDir);
 			fs.mkdirSync(dirname(path), { recursive: true });
 			const initial = JSON.stringify({
 				modelSelection: { mode: "follow-main" },
@@ -39,13 +39,13 @@ export async function runConfigRegressionTests(): Promise<void> {
 			});
 			const reset = () => fs.writeFileSync(path, initial);
 			reset();
-			saveJarvisThinkingSelectionSetting(cwd, scope, { mode: "pinned", thinkingLevel: "max" }, agentDir);
-			assert.deepEqual(loadJarvisThinkingSelectionSetting(cwd, scope, agentDir), { mode: "pinned", thinkingLevel: "max" });
-			assert.deepEqual(loadJarvisModelSelectionSetting(cwd, scope, agentDir), { mode: "follow-main" });
-			clearJarvisModelSelectionSetting(cwd, scope, agentDir);
+			saveNoodleThinkingSelectionSetting(cwd, scope, { mode: "pinned", thinkingLevel: "max" }, agentDir);
+			assert.deepEqual(loadNoodleThinkingSelectionSetting(cwd, scope, agentDir), { mode: "pinned", thinkingLevel: "max" });
+			assert.deepEqual(loadNoodleModelSelectionSetting(cwd, scope, agentDir), { mode: "follow-main" });
+			clearNoodleModelSelectionSetting(cwd, scope, agentDir);
 			assert.deepEqual(JSON.parse(fs.readFileSync(path, "utf8")).unknown, { keep: [1, 2] });
-			assert.deepEqual(loadJarvisThinkingSelectionSetting(cwd, scope, agentDir), { mode: "pinned", thinkingLevel: "max" });
-			clearJarvisThinkingSelectionSetting(cwd, scope, agentDir);
+			assert.deepEqual(loadNoodleThinkingSelectionSetting(cwd, scope, agentDir), { mode: "pinned", thinkingLevel: "max" });
+			clearNoodleThinkingSelectionSetting(cwd, scope, agentDir);
 			assert.deepEqual(JSON.parse(fs.readFileSync(path, "utf8")), {
 				memory: { enabled: false, capture: false, recall: false },
 				unknown: { keep: [1, 2] },
@@ -60,12 +60,12 @@ export async function runConfigRegressionTests(): Promise<void> {
 					return (originalRead as Function)(...args);
 				}) as typeof fs.readFileSync, () => {
 					for (const action of [
-						() => loadJarvisModelSelectionSetting(cwd, scope, agentDir),
-						() => loadJarvisThinkingSelectionSetting(cwd, scope, agentDir),
-						() => clearJarvisModelSelectionSetting(cwd, scope, agentDir),
-						() => clearJarvisThinkingSelectionSetting(cwd, scope, agentDir),
-						() => saveJarvisModelSelectionSetting(cwd, scope, { mode: "follow-main" }, agentDir),
-						() => saveJarvisThinkingSelectionSetting(cwd, scope, { mode: "auto" }, agentDir),
+						() => loadNoodleModelSelectionSetting(cwd, scope, agentDir),
+						() => loadNoodleThinkingSelectionSetting(cwd, scope, agentDir),
+						() => clearNoodleModelSelectionSetting(cwd, scope, agentDir),
+						() => clearNoodleThinkingSelectionSetting(cwd, scope, agentDir),
+						() => saveNoodleModelSelectionSetting(cwd, scope, { mode: "follow-main" }, agentDir),
+						() => saveNoodleThinkingSelectionSetting(cwd, scope, { mode: "auto" }, agentDir),
 					]) assert.throws(action, (caught) => caught === error, `${code} must not trigger malformed-file recovery`);
 				});
 				assert.equal(fs.readFileSync(path, "utf8"), initial);
@@ -79,7 +79,7 @@ export async function runConfigRegressionTests(): Promise<void> {
 					if (key === "writeFileSync") originalWrite(args[0] as number, "partial JSON");
 					throw error;
 				}) as typeof fs[typeof key], () => {
-					assert.throws(() => saveJarvisThinkingSelectionSetting(cwd, scope, { mode: "auto" }, agentDir), (caught) => caught === error);
+					assert.throws(() => saveNoodleThinkingSelectionSetting(cwd, scope, { mode: "auto" }, agentDir), (caught) => caught === error);
 				});
 				assert.equal(fs.readFileSync(path, "utf8"), initial, `${key} failure must preserve previous bytes`);
 				assert.deepEqual(fs.readdirSync(dirname(path)), [scope === "project" ? "jarvis.json" : "pi-jarvis.json"], "failed writes must clean temporary files");
@@ -89,7 +89,7 @@ export async function runConfigRegressionTests(): Promise<void> {
 			const originalFailure = new Error("primary write failure");
 			withFsFault("rmSync", (() => { throw new Error("secondary cleanup failure"); }) as typeof fs.rmSync, () => {
 				withFsFault("writeFileSync", (() => { throw originalFailure; }) as typeof fs.writeFileSync, () => {
-					assert.throws(() => saveJarvisThinkingSelectionSetting(cwd, scope, { mode: "auto" }, agentDir), (caught) => caught === originalFailure, "cleanup failure must not mask write failure");
+					assert.throws(() => saveNoodleThinkingSelectionSetting(cwd, scope, { mode: "auto" }, agentDir), (caught) => caught === originalFailure, "cleanup failure must not mask write failure");
 				});
 			});
 			assert.equal(fs.readFileSync(path, "utf8"), initial);
@@ -109,26 +109,26 @@ export async function runConfigRegressionTests(): Promise<void> {
 				assert.equal(JSON.parse(fs.readFileSync(from, "utf8")).thinkingSelection.mode, "auto");
 				renamed = true;
 				originalRename(from, to);
-			}) as typeof fs.renameSync, () => saveJarvisThinkingSelectionSetting(cwd, scope, { mode: "auto" }, agentDir));
+			}) as typeof fs.renameSync, () => saveNoodleThinkingSelectionSetting(cwd, scope, { mode: "auto" }, agentDir));
 			assert.ok(renamed, "successful writes replace atomically");
 			if (process.platform !== "win32") assert.equal(fs.statSync(path).mode & 0o777, 0o640, "replacement preserves existing permissions");
 
 			const settingActions = [
 				{
 					name: "set model", setting: "modelSelection", replacement: { mode: "follow-main" },
-					run: () => saveJarvisModelSelectionSetting(cwd, scope, { mode: "follow-main" }, agentDir),
+					run: () => saveNoodleModelSelectionSetting(cwd, scope, { mode: "follow-main" }, agentDir),
 				},
 				{
 					name: "clear model", setting: "modelSelection", replacement: undefined,
-					run: () => clearJarvisModelSelectionSetting(cwd, scope, agentDir),
+					run: () => clearNoodleModelSelectionSetting(cwd, scope, agentDir),
 				},
 				{
 					name: "set thinking", setting: "thinkingSelection", replacement: { mode: "auto" },
-					run: () => saveJarvisThinkingSelectionSetting(cwd, scope, { mode: "auto" }, agentDir),
+					run: () => saveNoodleThinkingSelectionSetting(cwd, scope, { mode: "auto" }, agentDir),
 				},
 				{
 					name: "clear thinking", setting: "thinkingSelection", replacement: undefined,
-					run: () => clearJarvisThinkingSelectionSetting(cwd, scope, agentDir),
+					run: () => clearNoodleThinkingSelectionSetting(cwd, scope, agentDir),
 				},
 			] as const;
 			const privateConfig = '{"memory":{"enabled":false},"private":"fixture-private-sentinel"}';
@@ -146,11 +146,11 @@ export async function runConfigRegressionTests(): Promise<void> {
 				const before = fs.statSync(path);
 				for (const { name, run } of [
 					...settingActions,
-					{ name: "load model", run: () => loadJarvisModelSelectionSetting(cwd, scope, agentDir) },
-					{ name: "load thinking", run: () => loadJarvisThinkingSelectionSetting(cwd, scope, agentDir) },
+					{ name: "load model", run: () => loadNoodleModelSelectionSetting(cwd, scope, agentDir) },
+					{ name: "load thinking", run: () => loadNoodleThinkingSelectionSetting(cwd, scope, agentDir) },
 				]) {
 					assert.throws(run, (error) => {
-						assert.ok(error instanceof MalformedJarvisConfigError);
+						assert.ok(error instanceof MalformedNoodleConfigError);
 						assert.equal(error.message, parseError
 							? `Invalid JSON in ${path}. Repair this file manually before changing settings to preserve memory/privacy settings.`
 							: `Expected ${path} to contain a JSON object. Repair this file manually before changing settings to preserve memory/privacy settings.`);
@@ -176,8 +176,8 @@ export async function runConfigRegressionTests(): Promise<void> {
 			};
 			for (const { name, setting, replacement, run } of settingActions) {
 				fs.writeFileSync(path, JSON.stringify(malformedFields));
-				assert.throws(() => loadJarvisModelSelectionSetting(cwd, scope, agentDir), MalformedJarvisConfigError);
-				assert.throws(() => loadJarvisThinkingSelectionSetting(cwd, scope, agentDir), MalformedJarvisConfigError);
+				assert.throws(() => loadNoodleModelSelectionSetting(cwd, scope, agentDir), MalformedNoodleConfigError);
+				assert.throws(() => loadNoodleThinkingSelectionSetting(cwd, scope, agentDir), MalformedNoodleConfigError);
 				run();
 				const expected: Record<string, unknown> = { ...malformedFields };
 				if (replacement === undefined) delete expected[setting];
@@ -186,11 +186,11 @@ export async function runConfigRegressionTests(): Promise<void> {
 			}
 
 			fs.rmSync(path);
-			assert.equal(loadJarvisModelSelectionSetting(cwd, scope, agentDir), undefined);
-			clearJarvisModelSelectionSetting(cwd, scope, agentDir);
-			saveJarvisThinkingSelectionSetting(cwd, scope, { mode: "auto" }, agentDir);
+			assert.equal(loadNoodleModelSelectionSetting(cwd, scope, agentDir), undefined);
+			clearNoodleModelSelectionSetting(cwd, scope, agentDir);
+			saveNoodleThinkingSelectionSetting(cwd, scope, { mode: "auto" }, agentDir);
 			if (process.platform !== "win32") assert.equal(fs.statSync(path).mode & 0o777, 0o600);
-			clearJarvisThinkingSelectionSetting(cwd, scope, agentDir);
+			clearNoodleThinkingSelectionSetting(cwd, scope, agentDir);
 			assert.ok(!fs.existsSync(path));
 		}
 	} finally { fs.rmSync(root, { recursive: true, force: true }); }

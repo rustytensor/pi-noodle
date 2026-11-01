@@ -3,7 +3,7 @@ import {
 } from "node:crypto";
 import { types } from "node:util";
 
-export const ARCHIVE_ENVELOPE_FORMAT = "pi-jarvis-archive-key";
+export const ARCHIVE_ENVELOPE_FORMAT = "pi-jarvis-archive-key"; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 export const ARCHIVE_ENVELOPE_VERSION = 1;
 export const ARCHIVE_ENVELOPE_CIPHER = "sqlcipher4";
 const WRAP_CIPHER = "aes-256-gcm";

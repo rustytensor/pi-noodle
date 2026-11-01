@@ -314,7 +314,7 @@ test("forced host replacement/disposal revokes without stale done; quarantine ca
 test("SharedArchiveService protective OFF/config-error/untrusted observation cancels backend without releasing public UI", async (t) => {
 	for (const policyChange of ["off", "config-error", "untrusted"] as const) {
 		await t.test(policyChange, async (t) => {
-			const root = mkdtempSync(join(tmpdir(), "pi-jarvis-secret-policy-"));
+			const root = mkdtempSync(join(tmpdir(), "pi-noodle-secret-policy-"));
 			const agentDir = join(root, "agent"), project = join(root, "project");
 			mkdirSync(join(agentDir, "extensions"), { recursive: true }); mkdirSync(project);
 			const config = join(agentDir, "extensions", "pi-jarvis-archive.json");
@@ -378,7 +378,7 @@ test("public regular renderer: synchronous preparation abort reserves before cal
 });
 
 test("default SharedArchiveService prompt reserves during preparation and policy revocation cannot release its later public sink", async t => {
-	const root = mkdtempSync(join(tmpdir(), "pi-jarvis-secret-default-prepare-"));
+	const root = mkdtempSync(join(tmpdir(), "pi-noodle-secret-default-prepare-"));
 	const agentDir = join(root, "agent"), project = join(root, "project");
 	mkdirSync(join(agentDir, "extensions"), { recursive: true }); mkdirSync(project);
 	const config = join(agentDir, "extensions", "pi-jarvis-archive.json");

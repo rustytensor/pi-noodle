@@ -76,6 +76,6 @@ try {
 		paint(line.slice(offset));
 	}
 	mkdirSync("docs/assets", { recursive: true });
-	writeFileSync("docs/assets/jarvis-memory-editor.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title desc"><title id="title">Curated memory editor — renderer fixture</title><desc id="desc">Actual memory-editor component with three synthetic notes and a custom dark palette. Not a live user database or provider session. Browser, full note inspection and independent human editing controls.</desc><rect width="${width}" height="${height}" rx="12" fill="#0b1221"/><g font-family="'DejaVu Sans Mono',Consolas,monospace" font-size="13" xml:space="preserve">${nodes.join("\n")}</g></svg>\n`);
-	console.log("Generated docs/assets/jarvis-memory-editor.svg from synthetic notes only.");
+	writeFileSync("docs/assets/noodle-memory-editor.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title desc"><title id="title">Curated memory editor — renderer fixture</title><desc id="desc">Actual memory-editor component with three synthetic notes and a custom dark palette. Not a live user database or provider session. Browser, full note inspection and independent human editing controls.</desc><rect width="${width}" height="${height}" rx="12" fill="#0b1221"/><g font-family="'DejaVu Sans Mono',Consolas,monospace" font-size="13" xml:space="preserve">${nodes.join("\n")}</g></svg>\n`);
+	console.log("Generated docs/assets/noodle-memory-editor.svg from synthetic notes only.");
 } finally { editor.dispose(); }

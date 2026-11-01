@@ -34,12 +34,12 @@ function harness(enabled = true) {
 	const controller = createWatcherExtension(pi, f.agentDir, { clock, available: () => available });
 	return { ...f, ctx, pi, clock, tools, commands, entries, notices, updates, sends, repeats, launches, statuses, controller, emit,
 		available: (v: boolean) => { available = v; }, trusted: (v: boolean) => { trusted = v; }, deny: () => { deny = true; }, mutate: () => { mutate = true; }, gate: (g: Promise<void>) => { firstGate = g; }, busy: (v: boolean) => { busy = v; if (!v) for (const send of sends) send.delivered = true; },
-		set: (params: WatcherRequest = request as WatcherRequest) => tools.get("jarvis_watcher_set").execute("setup-fixture", params, undefined, (u: any) => { updates.push(u); }, ctx),
+		set: (params: WatcherRequest = request as WatcherRequest) => tools.get("noodle_watcher_set").execute("setup-fixture", params, undefined, (u: any) => { updates.push(u); }, ctx),
 		shutdown: async () => { await emit("session_shutdown"); f.close(); },
 	};
 }
 test("factory exposes only hidden declarations, starts no timers and writes no session entries", async () => {
-	const h = harness(false); try { assert.equal(h.tools.get("jarvis_watcher_set").exposure, "hidden"); assert.equal(h.clock.timers.size,0); assert.equal(h.entries.length,0); await h.emit("session_start"); assert.equal(h.entries.length,0); } finally { await h.shutdown(); }
+	const h = harness(false); try { assert.equal(h.tools.get("noodle_watcher_set").exposure, "hidden"); assert.equal(h.clock.timers.size,0); assert.equal(h.entries.length,0); await h.emit("session_start"); assert.equal(h.entries.length,0); } finally { await h.shutdown(); }
 });
 test("displayed, launched and repeated command bytes and cwd are identical, supervisor included", async () => {
 	const h = harness(); try {
@@ -54,7 +54,7 @@ test("watcher launch and final result collapse to themed plain-language summarie
 	const h = harness(); try {
 		await h.emit("session_start");
 		const params: WatcherRequest = { ...request, condition: { kind: "file_lines", path: "watcher-demo.txt", minLines: 3 } };
-		const final = await h.set(params), tool = h.tools.get("jarvis_watcher_set"), record = h.controller.service.list()[0]!;
+		const final = await h.set(params), tool = h.tools.get("noodle_watcher_set"), record = h.controller.service.list()[0]!;
 		const colours: string[] = [], theme = { fg: (colour: string, text: string) => { colours.push(colour); return text; } };
 		const context = { args: params, cwd: h.cwd, state: {}, expanded: false, isError: false };
 		for (const result of [h.updates[0], final]) {
@@ -77,7 +77,7 @@ test("Pi-expanded watcher launch and final result show the exact immutable comma
 	const h = harness(); try {
 		await h.emit("session_start");
 		const params: WatcherRequest = { ...request, condition: { kind: "file_lines", path: "watcher-demo.txt", minLines: 3 } };
-		const final = await h.set(params), tool = h.tools.get("jarvis_watcher_set"), record = h.controller.service.list()[0]!;
+		const final = await h.set(params), tool = h.tools.get("noodle_watcher_set"), record = h.controller.service.list()[0]!;
 		const painted: string[] = [], theme = { fg: (_colour: string, text: string) => { painted.push(text); return text; } };
 		const context = { args: params, cwd: h.cwd, state: {}, expanded: true, isError: false };
 		for (const result of [h.updates[0], final]) {
@@ -109,7 +109,7 @@ test("local status and cancellation work without a tool call or side boot", asyn
 	const h = harness(); try { await h.emit("session_start"); await h.set(); const r = h.controller.service.list()[0]!; await h.controller.command("status",h.ctx); assert.match(h.notices.at(-1)!,/waited 0s · ends/); await h.controller.command(`cancel ${r.id}`,h.ctx); await h.clock.advance(120_000); assert.equal(h.repeats.length,0); assert.equal(h.launches.length,1); } finally { await h.shutdown(); }
 });
 test("prepared tool refuses execution after trust denial", async () => {
-	const h = harness(); try { await h.emit("session_start"); const prepared = h.tools.get("jarvis_watcher_set"); h.trusted(false); await assert.rejects(prepared.execute("fixture",request,undefined,undefined,h.ctx),/permission expired/); assert.equal(h.launches.length,0); } finally { await h.shutdown(); }
+	const h = harness(); try { await h.emit("session_start"); const prepared = h.tools.get("noodle_watcher_set"); h.trusted(false); await assert.rejects(prepared.execute("fixture",request,undefined,undefined,h.ctx),/permission expired/); assert.equal(h.launches.length,0); } finally { await h.shutdown(); }
 });
 test("main lifecycle replacement aborts pending setup and rejects its late result", async () => {
 	const h = harness(), gate = deferred<void>(); try { await h.emit("session_start"); h.gate(gate.promise); const pending = h.set(); await drain(); assert.equal(h.controller.hasPendingSetup(),true); await h.emit("session_shutdown"); gate.resolve(); await assert.rejects(pending,/permission expired/); assert.equal(h.repeats.length,0); assert.equal(h.sends.length,0); } finally { h.close(); }
@@ -118,7 +118,7 @@ test("private input holds a timeout notification until the fake-clock admission 
 	const h = harness(); try { await h.emit("session_start"); await h.set(); h.available(false); await h.clock.advance(120_000); assert.equal(h.sends.length,0); h.available(true); await h.clock.advance(1000); assert.equal(h.sends.length,1); assert.match(h.sends[0].m.content,/"reason": "timed out"/); } finally { await h.shutdown(); }
 });
 test("off control cancels checks without touching shared memory or archive files", async () => {
-	const h = harness(); try { await h.emit("session_start"); await h.set(); await h.controller.command("off",h.ctx); assert.equal(h.tools.get("jarvis_watcher_set").exposure,"hidden"); await h.clock.advance(120_000); assert.equal(h.repeats.length,0); assert.equal(h.sends.length,0); } finally { await h.shutdown(); }
+	const h = harness(); try { await h.emit("session_start"); await h.set(); await h.controller.command("off",h.ctx); assert.equal(h.tools.get("noodle_watcher_set").exposure,"hidden"); await h.clock.advance(120_000); assert.equal(h.repeats.length,0); assert.equal(h.sends.length,0); } finally { await h.shutdown(); }
 });
 
 const model: Model<any> = { id: "local-fixture", name: "Local watcher fixture", provider: "watcher-fixture", api: "watcher-fixture-api", baseUrl: "https://never-requested.invalid", reasoning: false, input: ["text"], contextWindow: 128000, maxTokens: 4096, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } };
@@ -146,7 +146,7 @@ async function sdk(streamSimple: Provider["streamSimple"], run: (f: ReturnType<t
 }
 test("real Pi idle wake uses normal initial bash hooks, with no fixture model calls while waiting", async () => {
 	let requests = 0, marker = "";
-	await sdk((_m,context) => { requests++; return requests === 1 ? response([{ type: "toolCall", id: "set-real", name: "jarvis_watcher_set", arguments: { ...request, condition: { kind: "command", command: `test -e '${marker}'` } } }]) : response(); }, async (f,clock,session,controller,repeatDone) => {
+	await sdk((_m,context) => { requests++; return requests === 1 ? response([{ type: "toolCall", id: "set-real", name: "noodle_watcher_set", arguments: { ...request, condition: { kind: "command", command: `test -e '${marker}'` } } }]) : response(); }, async (f,clock,session,controller,repeatDone) => {
 		marker = join(f.cwd,"done"); await session.prompt("Set the fixture watcher."); assert.equal(requests,2); assert.equal(controller.service.list()[0]!.state,"running");
 		const notification = deferred<void>(); session.subscribe(e => { if (e.type === "message_end" && e.message.role === "custom" && e.message.customType === WATCHER_MESSAGE_TYPE) notification.resolve(); });
 		writeFileSync(marker,"fixture"); await clock.advance(10_000); await repeatDone.promise; await notification.promise; await session.waitForIdle(); assert.equal(requests,3);
@@ -157,7 +157,7 @@ test("real Pi busy wake is queued after the held turn and delivered once", async
 	let requests = 0, marker = "", release!: () => void; const started = deferred<void>();
 	await sdk((_m,context) => {
 		requests++;
-		if (requests === 1) return response([{ type: "toolCall", id: "set-busy", name: "jarvis_watcher_set", arguments: { ...request, condition: { kind: "command", command: `test -e '${marker}'` } } }]);
+		if (requests === 1) return response([{ type: "toolCall", id: "set-busy", name: "noodle_watcher_set", arguments: { ...request, condition: { kind: "command", command: `test -e '${marker}'` } } }]);
 		if (requests === 3) {
 			const stream = createAssistantMessageEventStream();
 			release = () => { const done = response(); void done.result().then(m => { stream.push({ type: "done", reason: "stop", message: m }); stream.end(); }); }; started.resolve(); return stream;
@@ -173,8 +173,8 @@ test("real Pi busy wake is queued after the held turn and delivered once", async
 });
 test("real Pi bash permission denial cannot start the predicate or schedule repeats", async () => {
 	let requests = 0;
-	await sdk(() => { requests++; return requests === 1 ? response([{ type: "toolCall", id: "set-denied", name: "jarvis_watcher_set", arguments: request }]) : response(); }, async (_f,clock,session,controller) => {
+	await sdk(() => { requests++; return requests === 1 ? response([{ type: "toolCall", id: "set-denied", name: "noodle_watcher_set", arguments: request }]) : response(); }, async (_f,clock,session,controller) => {
 		await session.prompt("Attempt denied fixture watcher."); assert.equal(controller.service.list().length,0); assert.equal(clock.timers.size,0); assert.equal(requests,2);
-		const tool = session.messages.find(m => m.role === "toolResult" && m.toolName === "jarvis_watcher_set") as any; assert.equal(tool.isError,true); assert.match(tool.content[0].text,/launch was denied/);
+		const tool = session.messages.find(m => m.role === "toolResult" && m.toolName === "noodle_watcher_set") as any; assert.equal(tool.isError,true); assert.match(tool.content[0].text,/launch was denied/);
 	}, true);
 });

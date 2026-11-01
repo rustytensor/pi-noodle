@@ -3,16 +3,16 @@ import { test } from "node:test";
 import { readFileSync } from "node:fs";
 import { Theme } from "@earendil-works/pi-coding-agent";
 import { colorToRgb, mixColors, stripTerminalSequences, visibleWidth, type Color } from "@earendil-works/pi-tui";
-import { jarvisSurface, renderJarvisActivity, renderJarvisHeader, renderJarvisControls, type JarvisHeaderOptions } from "../overlay-layout.js";
-import { JarvisOverlayBridge, JarvisOverlayComponent, type JarvisOverlaySnapshot, type JarvisOverlayView } from "../overlay.js";
+import { noodleSurface, renderNoodleActivity, renderNoodleHeader, renderNoodleControls, type NoodleHeaderOptions } from "../overlay-layout.js";
+import { NoodleOverlayBridge, NoodleOverlayComponent, type NoodleOverlaySnapshot, type NoodleOverlayView } from "../overlay.js";
 
 const plainTheme = { fg: (_: string, text: string) => text, bold: (text: string) => text } as Theme;
-const collapsed: JarvisHeaderOptions = { expanded: false, focusTarget: "input", focused: true };
+const collapsed: NoodleHeaderOptions = { expanded: false, focusTarget: "input", focused: true };
 const focusTargets = ["input", "tools", "followUp", "steer"] as const;
 const plain = (lines: string[]) => lines.map(stripTerminalSequences);
 const forbidden = () => { throw new Error("layout must not perform actions or inspect transcript/activity"); };
 
-function fixture(overrides: Partial<JarvisOverlayView> = {}): JarvisOverlayView {
+function fixture(overrides: Partial<NoodleOverlayView> = {}): NoodleOverlayView {
 	return {
 		isReady: forbidden,
 		isStreaming: forbidden,
@@ -61,9 +61,9 @@ function assertBounds(lines: string[], width: number) {
 }
 
 test("default header is two compact rows, with side model and named permissions; focus is diagnostic", () => {
-	const rows = plain(renderJarvisHeader(plainTheme, fixture(), 80, collapsed));
+	const rows = plain(renderNoodleHeader(plainTheme, fixture(), 80, collapsed));
 	assert.deepEqual(rows, [
-		"Jarvis · Main idle · gpt-side",
+		"Noodle · Main idle · gpt-side",
 		"Repo tools: off  Note main: off  Redirect: off",
 	]);
 	assert.ok(!rows.join("\n").includes("openai-codex"));
@@ -78,34 +78,34 @@ test("collapsed rendering does not even request detail getters", () => {
 		getMainDeltaLabel: forbidden,
 		getRepoToolsDetailLabel: forbidden,
 	});
-	assert.equal(renderJarvisHeader(plainTheme, view, 80, collapsed).length, 2);
+	assert.equal(renderNoodleHeader(plainTheme, view, 80, collapsed).length, 2);
 });
 
 test("expanded details include both full models, mode, delta and access, keeping permissions last", () => {
 	const view = fixture();
-	const compact = renderJarvisHeader(plainTheme, view, 80, collapsed);
-	const rows = plain(renderJarvisHeader(plainTheme, view, 80, { ...collapsed, expanded: true }));
+	const compact = renderNoodleHeader(plainTheme, view, 80, collapsed);
+	const rows = plain(renderNoodleHeader(plainTheme, view, 80, { ...collapsed, expanded: true }));
 	assert.deepEqual(rows, [
-		"Jarvis · Main idle · gpt-side",
+		"Noodle · Main idle · gpt-side",
 		"Focus: reviewing layout",
 		"Main model: openai-codex/gpt-main",
-		"Jarvis model: openai-codex/gpt-side (pinned project)",
+		"Noodle model: openai-codex/gpt-side (pinned project)",
 		"Since last: 3 new messages",
 		"Access: trusted project; read/bash/edit/write only",
 		"Repo tools: off  Note main: off  Redirect: off",
 	]);
-	assert.deepEqual(renderJarvisHeader(plainTheme, view, 80, collapsed), compact, "no retained details state");
+	assert.deepEqual(renderNoodleHeader(plainTheme, view, 80, collapsed), compact, "no retained details state");
 });
 
 test("focused permission names and state remain first and complete on narrow rows", () => {
 	for (const expanded of [false, true]) {
 		for (const [focusTarget, label] of [["tools", "Repo tools"], ["followUp", "Note main"], ["steer", "Redirect"]] as const) {
 			for (const width of [17, 20, 24, 28, 40]) {
-				const rows = renderJarvisHeader(plainTheme, fixture(), width, { expanded, focusTarget, focused: true });
+				const rows = renderNoodleHeader(plainTheme, fixture(), width, { expanded, focusTarget, focused: true });
 				assert.ok(plain(rows).at(-1)!.startsWith(`[${label}: off]`), `${width}: ${plain(rows).at(-1)}`);
 				assertBounds(rows, width);
 			}
-			const minimum = renderJarvisHeader(plainTheme, fixture(), label.length, { expanded, focusTarget, focused: true });
+			const minimum = renderNoodleHeader(plainTheme, fixture(), label.length, { expanded, focusTarget, focused: true });
 			assert.equal(plain(minimum).at(-1), label, "retain complete name when only the name fits");
 		}
 	}
@@ -115,17 +115,17 @@ test("wide permissions retain canonical order; inactive overlay has no focus bra
 	const view = fixture({ isToolAccessEnabled: () => true, isSteerToMainEnabled: () => true });
 	for (const focusTarget of focusTargets) {
 		const options = { ...collapsed, focusTarget };
-		const row = plain(renderJarvisHeader(plainTheme, view, 80, options)).at(-1)!;
+		const row = plain(renderNoodleHeader(plainTheme, view, 80, options)).at(-1)!;
 		assert.ok(row.indexOf("Repo tools") < row.indexOf("Note main"));
 		assert.ok(row.indexOf("Note main") < row.indexOf("Redirect"));
 		assert.equal(row.includes("["), focusTarget !== "input");
-		const inactive = plain(renderJarvisHeader(plainTheme, view, 80, { ...options, focused: false })).at(-1)!;
+		const inactive = plain(renderNoodleHeader(plainTheme, view, 80, { ...options, focused: false })).at(-1)!;
 		assert.equal(inactive, "Repo tools: on  Note main: off  Redirect: on");
 	}
 });
 
 test("narrow permission rows omit whole secondary controls rather than clipping their state", () => {
-	const row = plain(renderJarvisHeader(plainTheme, fixture(), 28, { ...collapsed, focusTarget: "steer" })).at(-1)!;
+	const row = plain(renderNoodleHeader(plainTheme, fixture(), 28, { ...collapsed, focusTarget: "steer" })).at(-1)!;
 	assert.equal(row, "[Redirect: off] …");
 	assert.ok(!row.includes("Repo") && !row.includes("Note"));
 });
@@ -133,7 +133,7 @@ test("narrow permission rows omit whole secondary controls rather than clipping 
 test("busy, idle, unknown and enabled permissions use semantic colors", () => {
 	for (const [status, role] of [["busy", "warning"], ["idle", "success"], ["unavailable", "muted"]]) {
 		const recorded = recordingTheme();
-		renderJarvisHeader(recorded.theme, fixture({ getMainStatusLabel: () => status, isToolAccessEnabled: () => true }), 80, collapsed);
+		renderNoodleHeader(recorded.theme, fixture({ getMainStatusLabel: () => status, isToolAccessEnabled: () => true }), 80, collapsed);
 		assert.ok(recorded.calls.some((call) => call.text === status && call.role === role));
 		assert.ok(recorded.calls.some((call) => call.text === "Repo tools: on" && call.role === "success"));
 		assert.ok(recorded.calls.some((call) => call.text === "Note main: off" && call.role === "muted"));
@@ -145,12 +145,12 @@ test("rendering always uses the supplied theme without retaining styled strings"
 	const firstTheme = recordingTheme();
 	const secondTheme = recordingTheme(10);
 	const options = { ...collapsed, focusTarget: "tools" as const, expanded: true };
-	const first = renderJarvisHeader(firstTheme.theme, view, 80, options);
-	const second = renderJarvisHeader(secondTheme.theme, view, 80, options);
+	const first = renderNoodleHeader(firstTheme.theme, view, 80, options);
+	const second = renderNoodleHeader(secondTheme.theme, view, 80, options);
 	assert.deepEqual(plain(first), plain(second));
 	assert.notDeepEqual(first, second);
-	assert.ok(first.join("").includes("\x1b[36mJarvis"));
-	assert.ok(second.join("").includes("\x1b[46mJarvis"));
+	assert.ok(first.join("").includes("\x1b[36mNoodle"));
+	assert.ok(second.join("").includes("\x1b[46mNoodle"));
 	assert.ok(!second.join("").includes("\x1b[36m"));
 	assertBounds(first, 80);
 	assertBounds(second, 80);
@@ -170,7 +170,7 @@ test("all tiny widths, focus targets and detail modes stay bounded with wide Uni
 		for (const expanded of [false, true]) {
 			for (const focusTarget of focusTargets) {
 				for (let width = 0; width <= 80; width++) {
-					const rows = renderJarvisHeader(theme, view, width, { expanded, focusTarget, focused: true });
+					const rows = renderNoodleHeader(theme, view, width, { expanded, focusTarget, focused: true });
 					assert.equal(rows.length, width === 0 ? 0 : expanded ? 7 : 2);
 					assertBounds(rows, width);
 				}
@@ -182,9 +182,9 @@ test("all tiny widths, focus targets and detail modes stay bounded with wide Uni
 test("truncation preserves emoji graphemes and compact model IDs containing slashes", () => {
 	const family = "👨‍👩‍👧‍👦";
 	const view = fixture({ getModelLabel: () => "openai-codex/中文/model", getMainFocusLabel: () => `中文${family}e\u0301 ending` });
-	assert.ok(plain(renderJarvisHeader(plainTheme, view, 80, collapsed))[0]!.endsWith("中文/model"));
+	assert.ok(plain(renderNoodleHeader(plainTheme, view, 80, collapsed))[0]!.endsWith("中文/model"));
 	for (let width = 1; width <= 30; width++) {
-		const focus = plain(renderJarvisHeader(plainTheme, view, width, { ...collapsed, expanded: true }))[1]!;
+		const focus = plain(renderNoodleHeader(plainTheme, view, width, { ...collapsed, expanded: true }))[1]!;
 		for (const member of ["👨", "👩", "👧", "👦"]) {
 			if (focus.includes(member)) assert.ok(focus.includes(family), "split ZWJ grapheme");
 		}
@@ -205,7 +205,7 @@ test("every untrusted label is flattened and CSI/OSC/DCS/C1 payloads are removed
 		getRepoToolsDetailLabel: () => unsafe,
 	});
 	for (const theme of [plainTheme, recordingTheme().theme]) {
-		const rows = renderJarvisHeader(theme, view, 200, { ...collapsed, expanded: true });
+		const rows = renderNoodleHeader(theme, view, 200, { ...collapsed, expanded: true });
 		assertBounds(rows, 200);
 		const text = plain(rows).join("\n");
 		assert.ok(!text.includes("hidden-"));
@@ -218,12 +218,12 @@ test("every untrusted label is flattened and CSI/OSC/DCS/C1 payloads are removed
 test("rendering is read-only and invalid widths request no view state", () => {
 	const view = Object.freeze(fixture());
 	const options = Object.freeze({ ...collapsed });
-	assert.deepEqual(renderJarvisHeader(plainTheme, view, 80, options), renderJarvisHeader(plainTheme, view, 80, options));
-	const emptyView = new Proxy({} as JarvisOverlayView, { get: forbidden });
+	assert.deepEqual(renderNoodleHeader(plainTheme, view, 80, options), renderNoodleHeader(plainTheme, view, 80, options));
+	const emptyView = new Proxy({} as NoodleOverlayView, { get: forbidden });
 	for (const width of [-1, 0, 0.5, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
-		assert.deepEqual(renderJarvisHeader(plainTheme, emptyView, width, options), []);
+		assert.deepEqual(renderNoodleHeader(plainTheme, emptyView, width, options), []);
 	}
-	assertBounds(renderJarvisHeader(plainTheme, view, 10.8, options), 10);
+	assertBounds(renderNoodleHeader(plainTheme, view, 10.8, options), 10);
 });
 
 function activityFixture(state: { ready?: boolean; streaming?: boolean; processing?: boolean; queued?: number } = {}) {
@@ -235,12 +235,12 @@ function activityFixture(state: { ready?: boolean; streaming?: boolean; processi
 	});
 }
 
-const snapshot: JarvisOverlaySnapshot = { statuses: [], notifications: [] };
+const snapshot: NoodleOverlaySnapshot = { statuses: [], notifications: [] };
 
 test("activity priority covers startup, active work, queued and ready without stale working text", () => {
 	const working = { ...snapshot, workingMessage: "Thinking about the layout" };
 	for (const [state, expected] of [
-		[{ ready: false, streaming: true, processing: true, queued: 2 }, "Starting Jarvis… · 2 queued"],
+		[{ ready: false, streaming: true, processing: true, queued: 2 }, "Starting Noodle… · 2 queued"],
 		[{ ready: false }, "Not ready"],
 		[{ ready: false, queued: 2 }, "Waiting to start… · 2 queued"],
 		[{ streaming: true, processing: true, queued: 2 }, "Working… · 2 queued · Thinking about the layout"],
@@ -248,24 +248,24 @@ test("activity priority covers startup, active work, queued and ready without st
 		[{ queued: 3 }, "3 queued"],
 		[{}, "Ready"],
 	] as const) {
-		assert.equal(stripTerminalSequences(renderJarvisActivity(plainTheme, working, activityFixture(state), 80)), expected);
+		assert.equal(stripTerminalSequences(renderNoodleActivity(plainTheme, working, activityFixture(state), 80)), expected);
 	}
-	assert.equal(renderJarvisActivity(plainTheme, snapshot, activityFixture({ streaming: true }), 80), "Working…");
-	assert.equal(renderJarvisActivity(plainTheme, snapshot, activityFixture({ processing: true }), 80), "Processing…");
+	assert.equal(renderNoodleActivity(plainTheme, snapshot, activityFixture({ streaming: true }), 80), "Working…");
+	assert.equal(renderNoodleActivity(plainTheme, snapshot, activityFixture({ processing: true }), 80), "Processing…");
 });
 
 test("activity supports legacy views without optional queue/processing getters and clamps counts", () => {
 	const legacy = fixture({ isReady: () => true, isStreaming: () => false });
-	assert.equal(renderJarvisActivity(plainTheme, snapshot, legacy, 80), "Ready");
+	assert.equal(renderNoodleActivity(plainTheme, snapshot, legacy, 80), "Ready");
 	for (const queued of [-5, 0, Number.NaN, Number.POSITIVE_INFINITY]) {
-		assert.equal(renderJarvisActivity(plainTheme, snapshot, activityFixture({ queued }), 80), "Ready");
+		assert.equal(renderNoodleActivity(plainTheme, snapshot, activityFixture({ queued }), 80), "Ready");
 	}
-	assert.equal(renderJarvisActivity(plainTheme, snapshot, activityFixture({ queued: 2.9 }), 80), "2 queued");
+	assert.equal(renderNoodleActivity(plainTheme, snapshot, activityFixture({ queued: 2.9 }), 80), "2 queued");
 });
 
 test("activity colors remain semantic and state/queue precede long working text", () => {
 	for (const [state, text, role] of [
-		[{ ready: false, processing: true }, "Starting Jarvis…", "warning"],
+		[{ ready: false, processing: true }, "Starting Noodle…", "warning"],
 		[{ ready: false }, "Not ready", "warning"],
 		[{ streaming: true }, "Working…", "accent"],
 		[{ processing: true }, "Processing…", "accent"],
@@ -273,16 +273,16 @@ test("activity colors remain semantic and state/queue precede long working text"
 		[{}, "Ready", "success"],
 	] as const) {
 		const recorded = recordingTheme();
-		renderJarvisActivity(recorded.theme, snapshot, activityFixture(state), 80);
+		renderNoodleActivity(recorded.theme, snapshot, activityFixture(state), 80);
 		assert.ok(recorded.calls.some((call) => call.role === role && call.text === text));
 	}
-	const row = renderJarvisActivity(plainTheme, { ...snapshot, workingMessage: "very long custom work text".repeat(10) }, activityFixture({ streaming: true, queued: 2 }), 24);
+	const row = renderNoodleActivity(plainTheme, { ...snapshot, workingMessage: "very long custom work text".repeat(10) }, activityFixture({ streaming: true, queued: 2 }), 24);
 	assert.ok(stripTerminalSequences(row).startsWith("Working… · 2 queued"));
 	assertBounds([row], 24);
 });
 
 test("activity is a sanitized bounded row, ignoring notices, status and transcript contents", () => {
-	const work: JarvisOverlaySnapshot = {
+	const work: NoodleOverlaySnapshot = {
 		statuses: ["hidden status"],
 		notifications: [{ message: "hidden notification", type: "error", timestamp: 0 }],
 		workingMessage: "中文👨‍👩‍👧‍👦\nlabel\x1b[2J\x1b]0;hidden payload\x07\r\tend",
@@ -290,17 +290,17 @@ test("activity is a sanitized bounded row, ignoring notices, status and transcri
 	for (const theme of [plainTheme, recordingTheme().theme]) {
 		for (const state of [{ ready: false }, { streaming: true, queued: 2 }, { processing: true }, {}, { queued: 2 }]) {
 			for (let width = 0; width <= 80; width++) {
-				const row = renderJarvisActivity(theme, work, activityFixture(state), width);
+				const row = renderNoodleActivity(theme, work, activityFixture(state), width);
 				assertBounds([row], width);
 				assert.ok(!row.includes("hidden"));
 				if (width === 0) assert.equal(row, "");
 			}
 		}
 	}
-	const row = renderJarvisActivity(plainTheme, work, activityFixture({ streaming: true }), 80);
+	const row = renderNoodleActivity(plainTheme, work, activityFixture({ streaming: true }), 80);
 	assert.equal(stripTerminalSequences(row), "Working… · 中文👨‍👩‍👧‍👦 label end");
-	const emptyView = new Proxy({} as JarvisOverlayView, { get: forbidden });
-	assert.equal(renderJarvisActivity(plainTheme, snapshot, emptyView, 0), "");
+	const emptyView = new Proxy({} as NoodleOverlayView, { get: forbidden });
+	assert.equal(renderNoodleActivity(plainTheme, snapshot, emptyView, 0), "");
 });
 
 test("picker/history controls retain discoverable shortcuts and focused target across widths/themes", () => {
@@ -308,7 +308,7 @@ test("picker/history controls retain discoverable shortcuts and focused target a
 	for (const theme of [plainTheme, recordingTheme().theme]) {
 		for (const focusTarget of ["input", "model", "thinking", "history"] as const) {
 			for (let width = 0; width <= 100; width++) {
-				const row = renderJarvisControls(theme, view, width, { ...collapsed, focusTarget });
+				const row = renderNoodleControls(theme, view, width, { ...collapsed, focusTarget });
 				assertBounds([row], width);
 				if (width >= 48) {
 					assert.ok(stripTerminalSequences(row).includes("F2 Model"));
@@ -317,10 +317,10 @@ test("picker/history controls retain discoverable shortcuts and focused target a
 			}
 		}
 	}
-	assert.match(renderJarvisControls(plainTheme, view, 80, collapsed), /Thinking: high/);
-	assert.doesNotMatch(renderJarvisControls(plainTheme, view, 80, collapsed), /pinned|auto/);
-	assert.match(renderJarvisControls(plainTheme, view, 100, { ...collapsed, expanded: true }), /auto → high/);
-	assert.match(renderJarvisControls(plainTheme, view, 20, { ...collapsed, focusTarget: "history" }), /^\[History ↑\/↓\]/);
+	assert.match(renderNoodleControls(plainTheme, view, 80, collapsed), /Thinking: high/);
+	assert.doesNotMatch(renderNoodleControls(plainTheme, view, 80, collapsed), /pinned|auto/);
+	assert.match(renderNoodleControls(plainTheme, view, 100, { ...collapsed, expanded: true }), /auto → high/);
+	assert.match(renderNoodleControls(plainTheme, view, 20, { ...collapsed, focusTarget: "history" }), /^\[History ↑\/↓\]/);
 });
 
 function publicPalette(name: "dark" | "light", mode: "truecolor" | "256color", purple = false): Theme {
@@ -356,7 +356,7 @@ test("real public light/dark/purple-heavy palettes produce quiet readable surfac
 			backgrounds.push(options.bg as Color);
 			return style(text, options);
 		};
-		const surfaces = ["chrome", "conversation", "prompt"].map(surface => jarvisSurface(palette, "body 中文🙂   ", surface as "chrome" | "conversation" | "prompt"));
+		const surfaces = ["chrome", "conversation", "prompt"].map(surface => noodleSurface(palette, "body 中文🙂   ", surface as "chrome" | "conversation" | "prompt"));
 		assert.equal(backgrounds.length, 3);
 		for (const background of backgrounds) assert.ok(contrast(background, palette.colors.text) >= 4.5, `${appearance}: actual surface contrast`);
 		assert.ok(surfaces.every(line => stripTerminalSequences(line) === "body 中文🙂   "));
@@ -370,12 +370,12 @@ test("real public light/dark/purple-heavy palettes produce quiet readable surfac
 test("surface rendering reads live theme colors and minimal legacy themes use semantic fallbacks", () => {
 	let active = publicPalette("dark", "truecolor", true);
 	const proxy = { get colors() { return active.colors; }, get appearance() { return active.appearance; }, style: (text: string, options: Parameters<Theme["style"]>[1]) => active.style(text, options) } as Theme;
-	const dark = jarvisSurface(proxy, "body", "conversation"); active = publicPalette("light", "truecolor");
-	assert.notEqual(dark, jarvisSurface(proxy, "body", "conversation"));
-	assert.equal(jarvisSurface(plainTheme, "body", "conversation"), "body");
+	const dark = noodleSurface(proxy, "body", "conversation"); active = publicPalette("light", "truecolor");
+	assert.notEqual(dark, noodleSurface(proxy, "body", "conversation"));
+	assert.equal(noodleSurface(plainTheme, "body", "conversation"), "body");
 	const calls: string[] = [];
 	const legacy = { ...plainTheme, bg: (role: string, text: string) => { calls.push(role); return text; } } as Theme;
-	for (const surface of ["chrome", "conversation", "prompt"] as const) jarvisSurface(legacy, "body", surface);
+	for (const surface of ["chrome", "conversation", "prompt"] as const) noodleSurface(legacy, "body", surface);
 	assert.deepEqual(calls, ["toolPendingBg", "toolPendingBg", "userMessageBg"]);
 });
 
@@ -385,7 +385,7 @@ test("gray tool surfaces borrow message color without changing text or washing o
 		let painted: Color | undefined;
 		const style = palette.style.bind(palette);
 		palette.style = (text, options) => { painted = options.bg as Color; return style(text, options); };
-		jarvisSurface(palette, "sample", "chrome");
+		noodleSurface(palette, "sample", "chrome");
 		const blended = mixColors(palette.colors.toolPendingBg, palette.colors.userMessageBg, 0.7, "srgb");
 		assert.deepEqual(painted, contrast(blended, palette.colors.text) >= 4.5 ? blended : palette.colors.toolPendingBg);
 		if (appearance === "dark") assert.notDeepEqual(painted, palette.colors.toolPendingBg, "do not retain the flat tool gray");
@@ -396,13 +396,13 @@ test("gray tool surfaces borrow message color without changing text or washing o
 test("keyboard focus adds a visible themed chip without changing control labels or grant states", () => {
 	const palette = publicPalette("dark", "truecolor", true), view = fixture();
 	for (const focusTarget of ["tools", "followUp", "steer"] as const) {
-		const focused = renderJarvisHeader(palette, view, 100, { ...collapsed, focusTarget }).join("\n");
+		const focused = renderNoodleHeader(palette, view, 100, { ...collapsed, focusTarget }).join("\n");
 		assert.ok(focused.includes(palette.getBgAnsi("selectedBg")));
 		for (const label of ["Repo tools: off", "Note main: off", "Redirect: off"]) assert.ok(stripTerminalSequences(focused).includes(label));
 	}
 	for (const focusTarget of ["model", "thinking", "history"] as const) {
-		assert.ok(renderJarvisControls(palette, view, 100, { ...collapsed, focusTarget }).includes(palette.getBgAnsi("selectedBg")));
-		assert.ok(!renderJarvisControls(palette, view, 100, { ...collapsed, focusTarget, focused: false }).includes(palette.getBgAnsi("selectedBg")));
+		assert.ok(renderNoodleControls(palette, view, 100, { ...collapsed, focusTarget }).includes(palette.getBgAnsi("selectedBg")));
+		assert.ok(!renderNoodleControls(palette, view, 100, { ...collapsed, focusTarget, focused: false }).includes(palette.getBgAnsi("selectedBg")));
 	}
 });
 
@@ -430,8 +430,8 @@ test("complete focused control rows restore chrome after nested chips and leave 
 	for (const appearance of ["dark", "light"] as const) for (const mode of ["truecolor", "256color"] as const) {
 		const palette = publicPalette(appearance, mode, appearance === "dark");
 		const view = fixture({ isReady: () => true, isStreaming: () => false, getDisplayEntries: () => [] });
-		const overlay = new JarvisOverlayComponent({ terminal: { rows: 40, columns: 100 }, requestRender() {} } as any,
-			palette, new JarvisOverlayBridge(), view, () => {});
+		const overlay = new NoodleOverlayComponent({ terminal: { rows: 40, columns: 100 }, requestRender() {} } as any,
+			palette, new NoodleOverlayBridge(), view, () => {});
 		overlay.focused = true;
 		try {
 			const baseline = backgrounds(overlay.render(100).find(line => stripTerminalSequences(line).includes("Repo tools: off"))!);
@@ -446,7 +446,7 @@ test("complete focused control rows restore chrome after nested chips and leave 
 				assert.ok(painted.cells.slice(end + 1, -2).every(bg => bg === chrome), "every later label and padding cell must retain chrome");
 				assert.equal(painted.final, "default", "surface must not leak past the rendered row");
 			}
-			const reset = backgrounds(jarvisSurface(palette, "before\x1b[0mafter", "chrome"));
+			const reset = backgrounds(noodleSurface(palette, "before\x1b[0mafter", "chrome"));
 			assert.ok(reset.cells.every(bg => bg === chrome)); assert.equal(reset.final, "default");
 		} finally { overlay.dispose(); }
 	}
@@ -454,6 +454,6 @@ test("complete focused control rows restore chrome after nested chips and leave 
 
 test("default controls summarize effective thinking, while diagnostics retain the public requested/scope label", () => {
 	const view = fixture({ getThinkingLabel: () => "thinking auto (effective high; project setting)" });
-	assert.equal(renderJarvisControls(plainTheme, view, 80, collapsed), "F2 Model • F3 Thinking: high • History ↑/↓");
-	assert.match(renderJarvisControls(plainTheme, view, 140, { ...collapsed, expanded: true }), /thinking auto \(effective high; project setting\)/);
+	assert.equal(renderNoodleControls(plainTheme, view, 80, collapsed), "F2 Model • F3 Thinking: high • History ↑/↓");
+	assert.match(renderNoodleControls(plainTheme, view, 140, { ...collapsed, expanded: true }), /thinking auto \(effective high; project setting\)/);
 });

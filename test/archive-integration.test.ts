@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+// Explicit expected registration set: three new tools plus the three required legacy aliases.
+const COMPAT_ARCHIVE_TOOLS = ["noodle_archive_search", "noodle_archive_read", "noodle_archive_session", "jarvis_archive_search", "jarvis_archive_read", "jarvis_archive_session"];
 import {
 	appendFileSync, existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, readdirSync,
 	rmSync, statSync, symlinkSync, writeFileSync,
@@ -22,8 +24,8 @@ import { ARCHIVE_WARNING, SharedArchiveService } from "../archive-service.js";
 import type { ArchiveInput, ArchivePage, ArchiveRead, ArchiveSummary } from "../archive-types.js";
 import type { MainSessionContextPayload } from "../main-context.js";
 import { saveMemoryPolicy } from "../memory-config.js";
-import { JarvisOverlayBridge } from "../overlay.js";
-import { createSideSessionFile, JarvisSideSessionRuntime } from "../side-session.js";
+import { NoodleOverlayBridge } from "../overlay.js";
+import { createSideSessionFile, NoodleSideSessionRuntime } from "../side-session.js";
 
 // Minimal copies of the memory integration fixtures: every settings/journal/
 // database path is temporary, auth is in-memory, and only our stub streams run.
@@ -387,20 +389,20 @@ test("new capture never silently imports historical/disabled entries, and stale 
 		assert.equal(page(f.service.search({ query: "newfixture" }, mainCtx, false)).records.length, 2);
 		assert.equal(page(f.service.search({ query: "HISTORICAL_PRIVATE_CANARY" }, mainCtx, false)).records.length, 0);
 		await f.service.command("model-access on --confirm-sensitive", mainCtx);
-		const stale = side.tools.get("jarvis_archive_search")!;
+		const stale = side.tools.get("noodle_archive_search")!;
 		// Default reach is this session only; an approved project reach finds both lanes.
-		assert.equal(page(toolText(await side.execute("jarvis_archive_search", { query: "newfixture" }))).records.length, 1);
+		assert.equal(page(toolText(await side.execute("noodle_archive_search", { query: "newfixture" }))).records.length, 1);
 		f.setConfirm(async () => true);
-		assert.equal(page(toolText(await side.execute("jarvis_archive_search", { query: "newfixture", scope: "current" }))).records.length, 2);
+		assert.equal(page(toolText(await side.execute("noodle_archive_search", { query: "newfixture", scope: "current" }))).records.length, 2);
 		f.setConfirm(async () => false);
 		await f.service.command("off", mainCtx);
 		(mainCtx.sessionManager as SessionManager).appendMessage(user("DISABLED_PRIVATE_CANARY"));
 		await main.emit("agent_settled"); await enable(f, mainCtx); await main.emit("agent_settled");
 		assert.equal(page(f.service.search({ query: "DISABLED_PRIVATE_CANARY" }, mainCtx, false)).records.length, 0);
-		await assert.rejects(side.execute("jarvis_archive_search", { query: "newfixture" }, undefined, stale), /expired/);
-		lifetime.abort(); await assert.rejects(side.execute("jarvis_archive_search", { query: "newfixture" }), /expired/);
+		await assert.rejects(side.execute("noodle_archive_search", { query: "newfixture" }, undefined, stale), /expired/);
+		lifetime.abort(); await assert.rejects(side.execute("noodle_archive_search", { query: "newfixture" }), /expired/);
 		f.setConfirm(async () => true);
-		assert.equal(page(toolText(await main.execute("jarvis_archive_search", { query: "newfixture", scope: "current" }))).records.length, 2, "side disposal does not revoke main archive");
+		assert.equal(page(toolText(await main.execute("noodle_archive_search", { query: "newfixture", scope: "current" }))).records.length, 2, "side disposal does not revoke main archive");
 	});
 });
 
@@ -612,12 +614,12 @@ const mainContext: MainSessionContextPayload = {
 };
 interface SDK {
 	journal: (lane?: "main" | "jarvis", after?: Array<(pi: ExtensionAPI) => void>, before?: Array<(pi: ExtensionAPI) => void>, manager?: SessionManager) => Promise<AgentSessionRuntime>;
-	side: (overrides?: Partial<Parameters<typeof JarvisSideSessionRuntime.create>[0]>) => Promise<JarvisSideSessionRuntime>;
+	side: (overrides?: Partial<Parameters<typeof NoodleSideSessionRuntime.create>[0]>) => Promise<NoodleSideSessionRuntime>;
 }
 async function sdkFixture(f: Fixture, streamSimple: Provider["streamSimple"], run: (sdk: SDK) => Promise<void>): Promise<void> {
 	const prior = process.env.PI_CODING_AGENT_DIR; process.env.PI_CODING_AGENT_DIR = f.agentDir;
 	writeFileSync(join(f.agentDir, "settings.json"), JSON.stringify({ retry: { enabled: false }, compaction: { enabled: false }, cacheWarming: "off" }));
-	const journals: AgentSessionRuntime[] = [], sides: JarvisSideSessionRuntime[] = [];
+	const journals: AgentSessionRuntime[] = [], sides: NoodleSideSessionRuntime[] = [];
 	try {
 		const runtime = await ModelRuntime.create({ credentials: new InMemoryCredentialStore(), modelsPath: null, refreshOnCreate: false });
 		const registry = new ModelRegistry(runtime);
@@ -646,7 +648,7 @@ async function sdkFixture(f: Fixture, streamSimple: Provider["streamSimple"], ru
 				owner.setRebindSession(bind); await bind(owner.session); return owner;
 			},
 			side: async (overrides = {}) => {
-				const side = await JarvisSideSessionRuntime.create({ bridge: new JarvisOverlayBridge(), cwd: f.projectA,
+				const side = await NoodleSideSessionRuntime.create({ bridge: new NoodleOverlayBridge(), cwd: f.projectA,
 					modelRegistry: host, model, thinkingLevel: "off", sessionFile: await createSideSessionFile(f.projectA),
 					projectTrusted: true, archive: f.service, archiveTrustProvider: () => true,
 					systemPromptProvider: () => "You are Main.", mainContextProvider: () => mainContext,
@@ -663,7 +665,7 @@ async function sdkFixture(f: Fixture, streamSimple: Provider["streamSimple"], ru
 	}
 }
 // Test-only inspection of our side wrapper, not private Pi model/auth state.
-const sessionOf = (side: JarvisSideSessionRuntime): AgentSession => (side as unknown as { session: AgentSession }).session;
+const sessionOf = (side: NoodleSideSessionRuntime): AgentSession => (side as unknown as { session: AgentSession }).session;
 
 test("side owner snapshots finalized custom/context edits before disposal, but never after trust loss", async () => {
 	for (const revoke of [false, true]) await fixture(async f => {
@@ -705,7 +707,7 @@ test("real main and overlay-side SDK default OFF reads no journals from archive 
 			repoAllowed = true; side.setToolAccessEnabled(true); await side.waitForToolAccessChange();
 			assert.deepEqual(sessionOf(side).getActiveToolNames().sort(), ["bash", "edit", "read", "write"]);
 			assert.equal(requests.length, 2);
-			for (const request of requests) assert.doesNotMatch(JSON.stringify(request), /jarvis_archive_|UNTRUSTED archive data/);
+			for (const request of requests) assert.doesNotMatch(JSON.stringify(request), /noodle_archive_|UNTRUSTED archive data/);
 			assert.equal(archiveReads, 0); assertNoAccess(); assert.equal(existsSync(dirname(f.service.store.path)), false);
 		});
 	});
@@ -719,24 +721,24 @@ test("real main/overlay-side capture and read-only model access are independent 
 		t.mock.method(globalThis, "fetch", async () => { assert.fail("SDK fixture must never use the network"); });
 		await sdkFixture(f, (selected, context) => {
 			assert.equal(selected.provider, model.provider); requests.push(structuredClone(context));
-			if (issueTool) { issueTool = false; return response(selected, [{ type: "toolCall", id: "archive-search", name: "jarvis_archive_search", arguments: { query: "orbitfixture", scope: "current" } }]); }
+			if (issueTool) { issueTool = false; return response(selected, [{ type: "toolCall", id: "archive-search", name: "noodle_archive_search", arguments: { query: "orbitfixture", scope: "current" } }]); }
 			return response(selected);
 		}, async sdk => {
-			const bridge = new JarvisOverlayBridge();
+			const bridge = new NoodleOverlayBridge();
 			// The side lane has no terminal UI: its reach approval arrives through the
 			// overlay bridge, which this fixture answers like a user clicking yes.
 			const approve = bridge.onChange(() => { if (bridge.getConfirmationToken()) bridge.resolveConfirmation(true); });
 			const main = (await sdk.journal()).session, side = await sdk.side({ toolAccessProvider: () => repoAllowed, bridge }), session = sessionOf(side);
 			assert.deepEqual(main.getActiveToolNames(), []); assert.deepEqual(session.getActiveToolNames(), []);
 			await main.prompt("capture main fixture"); await side.sendMessage("capture side fixture");
-			for (const request of requests) assert.doesNotMatch(JSON.stringify(request), /ARCHIVE_NO_AUTO_RECALL_CANARY|jarvis_archive_/);
+			for (const request of requests) assert.doesNotMatch(JSON.stringify(request), /ARCHIVE_NO_AUTO_RECALL_CANARY|noodle_archive_/);
 			const mainId = main.sessionManager.getSessionId(), sideId = session.sessionManager.getSessionId(); assert.notEqual(mainId, sideId);
 			assert.equal(sessionRecords(f, mainId).filter(record => record.role === "user" || record.role === "assistant").length, 2);
 			assert.equal(sessionRecords(f, sideId).filter(record => record.role === "user" || record.role === "assistant").length, 2);
 			await f.service.command("model-access on --confirm-sensitive", f.context());
-			assert.deepEqual(main.getActiveToolNames().sort(), [...ARCHIVE_TOOL_NAMES].sort());
-			assert.deepEqual(session.getActiveToolNames().sort(), [...ARCHIVE_TOOL_NAMES].sort());
-			const stale = session.getToolDefinition("jarvis_archive_search")!;
+			assert.deepEqual(main.getActiveToolNames().sort(), [...COMPAT_ARCHIVE_TOOLS].sort());
+			assert.deepEqual(session.getActiveToolNames().sort(), [...COMPAT_ARCHIVE_TOOLS].sort());
+			const stale = session.getToolDefinition("noodle_archive_search")!;
 			issueTool = true; await side.sendMessage("explicitly search this project for orbitfixture");
 			assert.match(JSON.stringify(requests.at(-1)!.messages), /ARCHIVE_NO_AUTO_RECALL_CANARY/i);
 			assert.match(JSON.stringify(requests.at(-1)!.messages), /UNTRUSTED archive data/);
@@ -747,8 +749,8 @@ test("real main/overlay-side capture and read-only model access are independent 
 			await assert.rejects(stale.execute("stale-archive", { query: "orbitfixture" }, undefined, undefined, session.extensionRunner.createContext() as ExtensionToolContext), /expired/);
 			await f.service.command("model-access on --confirm-sensitive", f.context());
 			side.setToolAccessEnabled(false); await side.waitForToolAccessChange();
-			assert.deepEqual(session.getActiveToolNames().sort(), [...ARCHIVE_TOOL_NAMES].sort());
-			const mainTool = main.getToolDefinition("jarvis_archive_search")!;
+			assert.deepEqual(session.getActiveToolNames().sort(), [...COMPAT_ARCHIVE_TOOLS].sort());
+			const mainTool = main.getToolDefinition("noodle_archive_search")!;
 			side.dispose(); await side.waitForDisposal(); approve();
 			f.setConfirm(async () => true);
 			assert.match(toolText(await mainTool.execute("main-still-live", { query: "orbitfixture", scope: "current" }, undefined, undefined, main.extensionRunner.createContext() as ExtensionToolContext)), /ARCHIVE_NO_AUTO_RECALL_CANARY/i);

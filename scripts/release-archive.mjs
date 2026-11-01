@@ -38,14 +38,14 @@ export function archiveFiles(bytes) {
 export function validateArchive(bytes, { name, version }) {
 	const files = archiveFiles(bytes);
 	for (const path of files.keys()) {
-		if (!path.startsWith("dist/") && !["package.json", "README.md", "AGENTS.md", "LICENSE", "docs/archive-encryption-design.md", "docs/watchers-host-investigation.md"].includes(path)) throw new Error(`Forbidden packaged path: ${path}`);
+		if (!path.startsWith("dist/") && !["package.json", "README.md", "AGENTS.md", "LICENSE", "docs/archive-encryption-design.md", "docs/watchers-host-investigation.md", "docs/storage-migration.md"].includes(path)) throw new Error(`Forbidden packaged path: ${path}`);
 		if (/(^|\/)(test|tmp|prompts|coord|node_modules|\.pi|\.git)\//.test(path) || path.endsWith(".tgz") || path.startsWith("dist/mcp-policy.")) throw new Error(`Forbidden packaged path: ${path}`);
 	}
 	for (const path of ["package.json", "README.md", "AGENTS.md", "LICENSE", "dist/index.js", "dist/index.d.ts"]) {
 		if (!files.has(path)) throw new Error(`Missing packaged path: ${path}`);
 	}
 	const manifest = JSON.parse(files.get("package.json").toString("utf8"));
-	if (name !== "pi-jarvis" || manifest.name !== name || manifest.version !== version) throw new Error("Packaged manifest does not match release");
+	if (name !== "pi-noodle" || manifest.name !== name || manifest.version !== version) throw new Error("Packaged manifest does not match release");
 	const readmeVersions = [...files.get("README.md").toString("utf8").matchAll(/<strong>Current version:<\/strong>\s*([^\s<]+)/g)];
 	if (readmeVersions.length !== 1 || readmeVersions[0][1] !== version) throw new Error("Packaged README does not match release");
 	return files;
@@ -55,6 +55,6 @@ export function validateBundle(bytes, bundle, release) {
 	for (const key of ["tag", "tagObject", "commit", "name", "version", "notes"]) {
 		if (bundle[key] !== release[key]) throw new Error(`Release bundle ${key} does not match exact tag checkout`);
 	}
-	if (bundle.filename !== `pi-jarvis-${release.version}.tgz` || bundle.sha256 !== sha256(bytes) || bundle.integrity !== integrity(bytes) || bundle.size !== bytes.length) throw new Error("Release archive digest, size, or filename mismatch");
+	if (bundle.filename !== `pi-noodle-${release.version}.tgz` || bundle.sha256 !== sha256(bytes) || bundle.integrity !== integrity(bytes) || bundle.size !== bytes.length) throw new Error("Release archive digest, size, or filename mismatch");
 	return validateArchive(bytes, release);
 }

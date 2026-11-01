@@ -7,7 +7,7 @@ export interface ArchiveKeychain {
 	delete(account: string): Promise<void>;
 }
 
-export const ARCHIVE_KEYCHAIN_SERVICE = "pi-jarvis-archive";
+export const ARCHIVE_KEYCHAIN_SERVICE = "pi-jarvis-archive"; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 
 /** Local structural types keep the native dependency optional at build/test time. */
 export interface ArchiveKeychainEntry {
@@ -85,11 +85,11 @@ function decodeKey(value: unknown): Buffer {
  * JS/native copies and immutable base64 strings cannot promise forensic erasure.
  */
 export class NativeArchiveKeychain implements ArchiveKeychain {
-	constructor(private readonly entryFactory: ArchiveKeychainEntryFactory = nativeEntry) {}
+	constructor(private readonly entryFactory: ArchiveKeychainEntryFactory = nativeEntry, private readonly service: () => string = () => ARCHIVE_KEYCHAIN_SERVICE) {}
 
 	private entry(account: string): ArchiveKeychainEntry {
 		// Accepted/ignored on macOS and Windows; on Linux it forbids auto-fallback.
-		return this.entryFactory(ARCHIVE_KEYCHAIN_SERVICE, account, { linux: { store: "secret-service" } });
+		return this.entryFactory(this.service(), account, { linux: { store: "secret-service" } });
 	}
 
 	async get(account: string): Promise<Buffer | undefined> {

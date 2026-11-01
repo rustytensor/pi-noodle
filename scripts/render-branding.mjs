@@ -3,8 +3,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { Theme } from "@earendil-works/pi-coding-agent";
 import { CURSOR_MARKER, visibleWidth } from "@earendil-works/pi-tui";
-import { renderJarvisIntro } from "../dist/jarvis-branding.js";
-import { JarvisOverlayBridge, JarvisOverlayComponent } from "../dist/overlay.js";
+import { renderNoodleIntro } from "../dist/noodle-branding.js";
+import { NoodleOverlayBridge, NoodleOverlayComponent } from "../dist/overlay.js";
 
 const fgNames = "accent border borderAccent borderMuted success error warning muted dim text thinkingText scrollbarTrack scrollbarThumb searchMatchText userMessageText customMessageText customMessageLabel toolTitle toolOutput mdHeading mdLink mdLinkUrl mdCode mdCodeBlock mdCodeBlockBorder mdQuote mdQuoteBorder mdHr mdListBullet toolDiffAdded toolDiffRemoved toolDiffContext syntaxComment syntaxKeyword syntaxFunction syntaxVariable syntaxString syntaxNumber syntaxType syntaxOperator syntaxPunctuation thinkingOff thinkingMinimal thinkingLow thinkingMedium thinkingHigh thinkingXhigh thinkingMax bashMode".split(" ");
 const fg = Object.fromEntries(fgNames.map((name) => [name, "#dcd9ef"]));
@@ -14,8 +14,8 @@ const bg = Object.fromEntries("selectedBg searchMatchBg userMessageBg customMess
 // background is saturated. This is demo artwork, not the user's live theme.
 bg.customMessageBg = "#3a3453";
 bg.userMessageBg = "#1e1b2d";
-bg.toolPendingBg = "#33383a"; // Deliberately gray: Jarvis borrows a softer message tint.
-const theme = new Theme(fg, bg, "truecolor", { name: "Jarvis demo", appearance: "dark" });
+bg.toolPendingBg = "#33383a"; // Deliberately gray: Noodle borrows a softer message tint.
+const theme = new Theme(fg, bg, "truecolor", { name: "Noodle demo", appearance: "dark" });
 const escape = (text) => text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 
 function svg(lines, title, description, columns, neon = false) {
@@ -66,8 +66,8 @@ function svg(lines, title, description, columns, neon = false) {
 }
 
 mkdirSync("docs/assets", { recursive: true });
-writeFileSync("docs/assets/jarvis-logo.svg", svg(renderJarvisIntro(theme, 68, 8, 900).slice(0, 7), "Jarvis / Pi", "Original ASCII wordmark with a cyan, violet, and pink chrome sweep. A second lane of thought.", 68, true));
-const bridge = new JarvisOverlayBridge();
+writeFileSync("docs/assets/noodle-logo.svg", svg(renderNoodleIntro(theme, 68, 8, 900).slice(0, 7), "Noodle / Pi", "Original ASCII wordmark with a cyan, violet, and pink chrome sweep. Pi / your agent's inner voice.", 68, true));
+const bridge = new NoodleOverlayBridge();
 const view = {
 	isReady: () => true, isStreaming: () => false,
 	getModelLabel: () => "demo/side", getModelModeLabel: () => "follow main",
@@ -88,10 +88,10 @@ const view = {
 	],
 	async sendMessage() { throw new Error("Documentation fixture must never send"); },
 };
-bridge.notify("Saved Jarvis thinking for this project. Effective thinking is medium.", "info");
-const overlay = new JarvisOverlayComponent({ terminal: { rows: 34, columns: 100 }, requestRender() {} }, theme, bridge, view, () => {});
+bridge.notify("Saved Noodle thinking for this project. Effective thinking is medium.", "info");
+const overlay = new NoodleOverlayComponent({ terminal: { rows: 34, columns: 100 }, requestRender() {} }, theme, bridge, view, () => {});
 try {
 	overlay.focused = true;
-	writeFileSync("docs/assets/jarvis-overlay.svg", svg(overlay.render(88), "Jarvis compact overlay preview", "Actual Jarvis renderer with deterministic demo conversation and a custom dark palette. Not a live provider session.", 88));
+	writeFileSync("docs/assets/noodle-overlay.svg", svg(overlay.render(88), "Noodle compact overlay preview", "Actual Noodle renderer with deterministic demo conversation and a custom dark palette. Not a live provider session.", 88));
 } finally { overlay.dispose(); }
-console.log("Generated docs/assets/jarvis-logo.svg and jarvis-overlay.svg (deterministic renderer fixtures).");
+console.log("Generated docs/assets/noodle-logo.svg and noodle-overlay.svg (deterministic renderer fixtures).");

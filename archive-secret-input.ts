@@ -21,7 +21,7 @@ function newChallenge(): string {
 	try { return Array.from(bytes, (byte) => CHALLENGE_ALPHABET[byte & 31]).join(""); }
 	finally { bytes.fill(0); }
 }
-// Main and Jarvis callers share this module; only one owned prompt may be active.
+// Main and Noodle callers share this module; only one owned prompt may be active.
 type PromptOwner = { revoke(): void; abandon(): void };
 let activePrompt: PromptOwner | undefined;
 
@@ -392,7 +392,7 @@ export class ArchiveSecretInput implements Component, Focusable {
  * injected public host.mode BEFORE creating/mounting any secret input. Fullscreen
  * has pre-component focus-stealing search; unknown/fullscreen must fail closed.
  * Optional prepare runs AFTER synchronous reservation and BEFORE custom UI request;
- * callers close/suspend Jarvis there, refusing already-open ordinary dialogs. The
+ * callers close/suspend Noodle there, refusing already-open ordinary dialogs. The
  * same owner spans preparation, deferred factory/mount and the entire UI lifetime.
  * Callers MUST retain custom input ownership.
  * EVERY input submit/cancel requires a fresh 60-bit post-intent code typed + Enter.

@@ -35,16 +35,16 @@ function annotate(cwd: string, sha: string, name = versionTagFor(cwd, sha)): str
 }
 function metadata(cwd: string, version = "1.5.0"): void {
 	writeFileSync(join(cwd, "package.json"), JSON.stringify({
-		name: "pi-jarvis", version, files: ["dist", "README.md", "AGENTS.md", "LICENSE"],
+		name: "pi-noodle", version, files: ["dist", "README.md", "AGENTS.md", "LICENSE"],
 		// prepare-release must never run a lifecycle script.
 		scripts: { prepack: "node -e 'process.exit(99)'" },
 	}, null, 2));
-	writeFileSync(join(cwd, "package-lock.json"), JSON.stringify({ name: "pi-jarvis", version, lockfileVersion: 3, packages: { "": { name: "pi-jarvis", version } } }));
+	writeFileSync(join(cwd, "package-lock.json"), JSON.stringify({ name: "pi-noodle", version, lockfileVersion: 3, packages: { "": { name: "pi-noodle", version } } }));
 	writeFileSync(join(cwd, "README.md"), `<p><strong>Current version:</strong> ${version}</p>\n`);
 	writeFileSync(join(cwd, "CHANGELOG.md"), `# Changelog\n\n## [Unreleased]\n\n### Changed\n- Future work.\n\n## [${version}] - 2026-10-03\n\n### Added\n- Release notes.\n\n## [1.4.0] - 2026-10-02\n\n- Old notes.\n`);
 }
 function repo(t: TestContext): Repo {
-	const root = mkdtempSync(join(tmpdir(), "pi-jarvis-release-test-"));
+	const root = mkdtempSync(join(tmpdir(), "pi-noodle-release-test-"));
 	t.after(() => rmSync(root, { recursive: true, force: true }));
 	const cwd = join(root, "repo");
 	mkdirSync(cwd);
@@ -285,7 +285,7 @@ test("prepare CLI packs actual validated bytes, skips scripts, and preserves exi
 	const r = repo(t);
 	const head = addCommit(r.cwd);
 	const object = annotate(r.cwd, head, "v1.5.0");
-	const oldTarball = join(r.cwd, "pi-jarvis-1.5.0.tgz");
+	const oldTarball = join(r.cwd, "pi-noodle-1.5.0.tgz");
 	writeFileSync(oldTarball, "preserve me exactly");
 	const out = join(r.root, "bundle");
 	const args = ["--baseline", r.baseline, "--tag", "v1.5.0", "--head", head, "--tag-object", object, "--out-dir", out];
@@ -344,7 +344,7 @@ async function mockGitHub(t: TestContext, r: ReturnType<typeof releaseFixture>, 
 	let asset = options.asset;
 	const requests: string[] = [];
 	let origin = "";
-	const filename = "pi-jarvis-1.5.0.tgz";
+	const filename = "pi-noodle-1.5.0.tgz";
 	const server = createServer(async (req, res) => {
 		const url = new URL(req.url!, origin);
 		requests.push(`${req.method} ${url.pathname}`);
@@ -353,7 +353,7 @@ async function mockGitHub(t: TestContext, r: ReturnType<typeof releaseFixture>, 
 		for await (const chunk of req) chunks.push(Buffer.from(chunk));
 		const body = Buffer.concat(chunks);
 		const send = (status: number, data: unknown) => { res.writeHead(status, { "Content-Type": "application/json" }); res.end(JSON.stringify(data)); };
-		const root = "/repos/example/pi-jarvis";
+		const root = "/repos/example/pi-noodle";
 		if (url.pathname === `${root}/git/ref/tags/v1.5.0`) return send(200, { object: { type: "tag", sha: options.movedTag ? "0".repeat(40) : r.object } });
 		if (url.pathname === `${root}/git/tags/${r.object}`) return send(200, { tag: "v1.5.0", object: { type: "commit", sha: r.head } });
 		if (url.pathname === `${root}/releases/tags/v1.5.0`) return send(release ? 200 : 404, release ?? {});
@@ -390,19 +390,19 @@ async function mockGitHub(t: TestContext, r: ReturnType<typeof releaseFixture>, 
 	return {
 		requests,
 		publish: (eventAfter = r.head) => cliAsync(r.cwd, "publish-github-release.mjs", ["--tag", "v1.5.0", "--head", r.head, "--event-after", eventAfter, "--bundle-dir", r.bundleDir], {
-			GITHUB_REPOSITORY: "example/pi-jarvis", GH_TOKEN: "mock-token-not-a-secret", GITHUB_API_URL: origin,
+			GITHUB_REPOSITORY: "example/pi-noodle", GH_TOKEN: "mock-token-not-a-secret", GITHUB_API_URL: origin,
 		}),
 	};
 }
 
 test("GitHub publication is draft-first, validated, idempotent, and never overwrites released bytes", async (t) => {
 	const r = releaseFixture(t);
-	const bytes = readFileSync(join(r.bundleDir, "pi-jarvis-1.5.0.tgz"));
+	const bytes = readFileSync(join(r.bundleDir, "pi-noodle-1.5.0.tgz"));
 	await t.test("new release and identical rerun", async (t) => {
 		const mock = await mockGitHub(t, r);
 		ok(await mock.publish(r.object));
 		ok(await mock.publish(r.head));
-		assert.equal(mock.requests.filter((req) => req === "POST /repos/example/pi-jarvis/releases").length, 1);
+		assert.equal(mock.requests.filter((req) => req === "POST /repos/example/pi-noodle/releases").length, 1);
 		assert.equal(mock.requests.filter((req) => req === "POST /uploads").length, 1);
 		assert.equal(mock.requests.filter((req) => req.startsWith("PATCH")).length, 1);
 		assert.equal(mock.requests.filter((req) => req.startsWith("DELETE")).length, 0);
@@ -442,7 +442,7 @@ test("GitHub publication is draft-first, validated, idempotent, and never overwr
 	await t.test("tampered local bundle fails before API access", async (t) => {
 		const corruptedDir = join(r.root, "corrupt"); mkdirSync(corruptedDir);
 		copyFileSync(join(r.bundleDir, "release.json"), join(corruptedDir, "release.json"));
-		writeFileSync(join(corruptedDir, "pi-jarvis-1.5.0.tgz"), "tampered");
+		writeFileSync(join(corruptedDir, "pi-noodle-1.5.0.tgz"), "tampered");
 		fails(await cliAsync(r.cwd, "publish-github-release.mjs", ["--tag", "v1.5.0", "--tag-object", r.object, "--bundle-dir", corruptedDir]), /digest, size, or filename mismatch/);
 	});
 	await t.test("bundle annotation is pinned even with a normalized commit event", async () => {

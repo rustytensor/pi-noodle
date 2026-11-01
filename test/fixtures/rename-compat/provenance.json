@@ -1,0 +1,37 @@
+{
+  "source": "Larra pi-jarvis read_file_at_point v1.14.0",
+  "files": {
+    "archive-vault-files.ts": 13231,
+    "archive-crypto.ts": 13231,
+    "archive-config.ts": 13231,
+    "archive-types.ts": 13231,
+    "archive-store.ts": 13231,
+    "archive-sqlite.ts": 13231,
+    "memory-config.ts": 13231,
+    "memory-types.ts": 13231,
+    "memory-store.ts": 13231,
+    "memory-editor-types.ts": 13231,
+    "memory-content.ts": 13231,
+    "jarvis-config.ts": 13231,
+    "memory-service.ts": 13231,
+    "archive-keychain.ts": 13231
+  },
+  "sha256": {
+    "archive-config.ts": "fecef12081a21e1b191849b703f15fe00ad2b2c3aa0a3f9d8258abb9497dfaf6",
+    "archive-crypto.ts": "4f016a5b111288cf52b37f6e4549704318d73dc3a19b42453718550b5d799976",
+    "archive-keychain.ts": "5f1afd300e95ece1c0f8e0606f5929bf84d041af5d425bf783a36d2b57b8a4df",
+    "archive-sqlite.ts": "54cd7c924f14774964b17f1fa16d4db67076ece226a6e51ae04d6df9c7588534",
+    "archive-store.ts": "d34951523e01f08acb9f47442ec980ef7e0ce119022e649976586377b8d72d2b",
+    "archive-types.ts": "014003c6d345df249ca7272fb8f11edb98aa90c4128d0a4a6d63338b20504047",
+    "archive-vault-files.ts": "3a7ff959719405e932c06eb907be07e8e132e72e5a3668ef951567aed2c6294a",
+    "jarvis-config.ts": "3db9b6935796abd997e4c8bd0b63024e60325b010cbe90f3f96d52c3be87fb81",
+    "memory-config.ts": "469c19104b50ca668afb65dbf84a25323e45f30d167ef05c713517dfae69ee83",
+    "memory-content.ts": "ba35024b2aad7b1ab917fb4d5208c4ca5e473cc69d6e0a5cee66d823f641a6bb",
+    "memory-editor-types.ts": "23b185fea8a4ea7e0292faa37220ce4aab67e360d0762864135e75cfb05efe66",
+    "memory-service.ts": "f9524961327d523418da8262be500cd5a1366d55de43584d16358949db3bb32e",
+    "memory-store.ts": "a51ed631b0bbb8c4d9baebe7492b3ccf96d7395dd3ca2aaa88bd357ebe62a58f",
+    "memory-types.ts": "e18a707f4b2773b4a05e6782e702079c92055f260c1ea5c69ba297255df1b408"
+  },
+  "gitTagCommit": "1dab7a41ad9c2a7a2a5249da396faa4aa316108b",
+  "gitVerification": "Every archived file byte-equal to git show v1.14.0:<path>"
+}

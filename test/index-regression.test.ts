@@ -4,11 +4,11 @@ import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getKeybindings } from "@earendil-works/pi-tui";
-import jarvisExtension from "../index.js";
-import { JarvisModelPicker } from "../model-picker.js";
-import { JarvisOverlayBridge } from "../overlay.js";
-import { JarvisSideSessionRuntime } from "../side-session.js";
-import { getJarvisConfigPath, saveJarvisModelSelectionSetting, saveJarvisThinkingSelectionSetting } from "../jarvis-config.js";
+import noodleExtension from "../index.js";
+import { NoodleModelPicker } from "../model-picker.js";
+import { NoodleOverlayBridge } from "../overlay.js";
+import { NoodleSideSessionRuntime } from "../side-session.js";
+import { getNoodleConfigPath, saveNoodleModelSelectionSetting, saveNoodleThinkingSelectionSetting } from "../noodle-config.js";
 
 function deferred<T = void>() {
 	let resolve!: (value: T) => void;
@@ -23,9 +23,9 @@ async function until(predicate: () => boolean) {
 }
 const model = (id: string) => ({ provider: "test", id, name: id }) as any;
 const theme = { fg: (_: string, text: string) => text, bold: (text: string) => text } as any;
-const originalCreate = JarvisSideSessionRuntime.create;
+const originalCreate = NoodleSideSessionRuntime.create;
 const originalAgentDir = process.env.PI_CODING_AGENT_DIR;
-const root = mkdtempSync(join(tmpdir(), "jarvis-index-regression-"));
+const root = mkdtempSync(join(tmpdir(), "noodle-index-regression-"));
 process.env.PI_CODING_AGENT_DIR = join(root, "agent");
 let harnessCount = 0;
 
@@ -46,7 +46,7 @@ class FakeRuntime {
 	setToolAccessEnabled() {}
 	addSystemMessage() {}
 	describeSessionTree() { return "tree"; }
-	async compactJarvisContext() {}
+	async compactNoodleContext() {}
 	async navigateSessionTree() { throw new Error("invalid tree target"); }
 	async syncModel(selected: any, thinking: string | undefined) { this.syncs.push({ model: selected, thinking }); await this.syncGate?.promise; }
 	async sendMessage(text: string) {
@@ -112,10 +112,10 @@ function harness(mode = "tui") {
 		appendEntry: (customType: string, data: unknown) => entries.push({ type: "custom", customType, data }),
 		sendUserMessage() {},
 	};
-	JarvisSideSessionRuntime.create = (async (options: any) => {
+	NoodleSideSessionRuntime.create = (async (options: any) => {
 		const runtime = new FakeRuntime(options); runtimes.push(runtime); return runtime;
 	}) as any;
-	jarvisExtension(pi);
+	noodleExtension(pi);
 	return {
 		ctx, models, runtimes, notices,
 		event: (name: string) => handlers.get(name)?.({}, ctx),
@@ -130,7 +130,7 @@ function harness(mode = "tui") {
 try {
 	{
 		const h = harness(); await h.event("session_start");
-		const opened = h.command("jarvis"); await until(() => h.runtimes.length === 1);
+		const opened = h.command("noodle"); await until(() => h.runtimes.length === 1);
 		assert.equal(typeof h.customOptions.overlayOptions, "function", "initial geometry must be calculated through Pi's public overlay options callback");
 		for (const [columns, width] of [[100, 80], [400, 118], [140, 112], [54, 68], [1, 68]]) {
 			h.terminal.columns = columns!;
@@ -143,8 +143,8 @@ try {
 	for (const mode of ["rpc", "json", "print"]) {
 		const h = harness(mode);
 		await h.event("session_start");
-		await h.command("jarvis", "must not run");
-		await h.command("jarvis-model");
+		await h.command("noodle", "must not run");
+		await h.command("noodle-model");
 		assert.equal(h.runtimes.length, 0);
 		assert.equal(h.customCalls, 0);
 		assert.ok(h.notices.some((text) => text.includes("interactive terminal")));
@@ -152,10 +152,10 @@ try {
 	{
 		const h = harness();
 		await h.event("session_start");
-		for (const initial of ["/memory off", "/jarvis-memory --project off", "/memory remember private | must not become a model prompt", "/jarvis-memory status",
-			"/archive off", "/jarvis-archive status", "/archive on", "/archive search private",
+		for (const initial of ["/memory off", "/noodle-memory --project off", "/memory remember private | must not become a model prompt", "/noodle-memory status",
+			"/archive off", "/noodle-archive status", "/archive on", "/archive search private",
 			"/archive import-all", "/archive import-all --confirm-sensitive --preview stale", "/archive import-report stale", "/archive import-cancel"]) {
-			const command = h.command("jarvis", initial);
+			const command = h.command("noodle", initial);
 			await tick();
 			assert.equal(h.runtimes.length, 0, "initial memory/archive commands must not boot a side runtime");
 			assert.equal(h.customCalls, 0, "initial memory/archive commands are local management, not an overlay/model prompt");
@@ -167,7 +167,7 @@ try {
 	{
 		const h = harness();
 		await h.event("session_start");
-		const oldOverlay = h.command("jarvis");
+		const oldOverlay = h.command("noodle");
 		await until(() => h.runtimes.length === 1);
 		const oldRuntime = h.runtimes[0]!;
 		const oldGate = deferred(); oldRuntime.gate = oldGate;
@@ -184,7 +184,7 @@ try {
 		await h.event("session_start");
 		assert.deepEqual(snapshotTrust, [true], "owner snapshots before its boot generation invalidates archive trust");
 		await oldOverlay;
-		const newOverlay = h.command("jarvis");
+		const newOverlay = h.command("noodle");
 		await until(() => h.runtimes.length === 2);
 		const newRuntime = h.runtimes[1]!;
 		const newGate = deferred(); newRuntime.gate = newGate;
@@ -200,7 +200,7 @@ try {
 	}
 	{
 		const h = harness(); await h.event("session_start");
-		const opened = h.command("jarvis"); await until(() => h.runtimes.length === 1);
+		const opened = h.command("noodle"); await until(() => h.runtimes.length === 1);
 		const view = h.overlay.view;
 		await view.sendMessage("/tree bad-target");
 		assert.ok(h.notices.length === 0); // processing errors belong to overlay bridge
@@ -223,15 +223,15 @@ try {
 	}
 	{
 		const h = harness();
-		saveJarvisModelSelectionSetting(h.ctx.cwd, "project", { mode: "pinned", provider: "test", modelId: "project" });
-		saveJarvisThinkingSelectionSetting(h.ctx.cwd, "project", { mode: "pinned", thinkingLevel: "high" });
+		saveNoodleModelSelectionSetting(h.ctx.cwd, "project", { mode: "pinned", provider: "test", modelId: "project" });
+		saveNoodleThinkingSelectionSetting(h.ctx.cwd, "project", { mode: "pinned", thinkingLevel: "high" });
 		await h.event("session_start");
-		await h.command("jarvis-model", "--global test/global");
-		await h.command("jarvis-thinking", "--global low");
-		const opened = h.command("jarvis"); await until(() => h.runtimes.length === 1);
+		await h.command("noodle-model", "--global test/global");
+		await h.command("noodle-thinking", "--global low");
+		const opened = h.command("noodle"); await until(() => h.runtimes.length === 1);
 		assert.equal(h.runtimes[0]!.options.model.id, "project");
 		assert.equal(h.runtimes[0]!.options.thinkingLevel, "high");
-		await h.command("jarvis-thinking", "max");
+		await h.command("noodle-thinking", "max");
 		assert.equal(h.runtimes[0]!.syncs.at(-1)!.thinking, "max");
 		await h.event("thinking_level_select");
 		assert.equal(h.runtimes[0]!.syncs.at(-1)!.thinking, "max", "pinned thinking must stay pinned");
@@ -239,26 +239,26 @@ try {
 	}
 	{
 		const h = harness();
-		saveJarvisModelSelectionSetting(h.ctx.cwd, "project", { mode: "pinned", provider: "test", modelId: "project" });
-		saveJarvisThinkingSelectionSetting(h.ctx.cwd, "project", { mode: "pinned", thinkingLevel: "high" });
+		saveNoodleModelSelectionSetting(h.ctx.cwd, "project", { mode: "pinned", provider: "test", modelId: "project" });
+		saveNoodleThinkingSelectionSetting(h.ctx.cwd, "project", { mode: "pinned", thinkingLevel: "high" });
 		await h.event("session_start");
-		const globalPath = getJarvisConfigPath(h.ctx.cwd, "global");
+		const globalPath = getNoodleConfigPath(h.ctx.cwd, "global");
 		const globalBefore = fs.readFileSync(globalPath, "utf8");
 		const originalRead = fs.readFileSync;
 		fs.readFileSync = ((...args: Parameters<typeof fs.readFileSync>) => {
-			if (args[0] === getJarvisConfigPath(h.ctx.cwd, "project")) throw Object.assign(new Error("EACCES project config"), { code: "EACCES" });
+			if (args[0] === getNoodleConfigPath(h.ctx.cwd, "project")) throw Object.assign(new Error("EACCES project config"), { code: "EACCES" });
 			return (originalRead as Function)(...args);
 		}) as typeof fs.readFileSync;
 		syncBuiltinESMExports();
 		try {
-			await h.command("jarvis-model", "--global follow-main");
-			await h.command("jarvis-thinking", "--global off");
+			await h.command("noodle-model", "--global follow-main");
+			await h.command("noodle-thinking", "--global off");
 		} finally {
 			fs.readFileSync = originalRead; syncBuiltinESMExports();
 		}
 		assert.equal(fs.readFileSync(globalPath, "utf8"), globalBefore, "read error must abort writes to the other scope");
 		assert.equal(h.notices.filter((text) => text.includes("EACCES")).length, 2);
-		const opened = h.command("jarvis"); await until(() => h.runtimes.length === 1);
+		const opened = h.command("noodle"); await until(() => h.runtimes.length === 1);
 		assert.equal(h.runtimes[0]!.options.model.id, "project");
 		assert.equal(h.runtimes[0]!.options.thinkingLevel, "high");
 		await h.event("session_shutdown"); await opened;
@@ -267,23 +267,23 @@ try {
 	{
 		const h = harness(); await h.event("session_start");
 		h.models.push({ ...model("virtual"), api: "pi-virtual" });
-		const opened = h.command("jarvis"); await until(() => h.runtimes.length === 1);
+		const opened = h.command("noodle"); await until(() => h.runtimes.length === 1);
 		const view = h.overlay.view, runtime = h.runtimes[0]!;
 		const choices = await view.getModelChoices();
 		assert.deepEqual(choices.map((choice: any) => choice.value), ["follow-main", "clear", "test/main", "test/project", "test/global"]);
 		assert.equal(h.customCalls, 1, "embedded choices use the public registry, never a host dialog");
 		await view.configureModel("test/project");
 		await view.configureThinking("max");
-		const projectPath = getJarvisConfigPath(h.ctx.cwd, "project");
+		const projectPath = getNoodleConfigPath(h.ctx.cwd, "project");
 		assert.equal(JSON.parse(fs.readFileSync(projectPath, "utf8")).modelSelection.modelId, "project");
 		assert.match(view.getThinkingLabel(), /max.*effective low/, "label reports configured and SDK-clamped actual levels");
-		assert.equal(h.ctx.model.id, "main", "Jarvis config never mutates the main model");
+		assert.equal(h.ctx.model.id, "main", "Noodle config never mutates the main model");
 		const before = fs.readFileSync(projectPath, "utf8");
 		const gate = deferred(); runtime.gate = gate;
 		const sending = view.sendMessage("busy turn"); await until(() => runtime.sent.length === 1);
 		for (const request of ["test/global", "follow-main", "clear"]) await view.configureModel(request);
 		for (const request of ["off", "clear"]) await view.configureThinking(request);
-		await h.command("jarvis-model", "--global follow-main"); await h.command("jarvis-thinking", "--global low");
+		await h.command("noodle-model", "--global follow-main"); await h.command("noodle-thinking", "--global low");
 		assert.equal(fs.readFileSync(projectPath, "utf8"), before, "busy choices are rejected BEFORE persistence");
 		assert.ok(runtime.options.bridge.snapshot().notifications.some((notice: any) => /busy/.test(notice.message)));
 		gate.resolve(); await sending; runtime.gate = undefined;
@@ -297,26 +297,26 @@ try {
 		// Registry refresh is an async boundary: an old embedded choice cannot
 		// persist after close/reopen, even when the main/side owner is unchanged.
 		const h = harness(); await h.event("session_start");
-		const opened = h.command("jarvis"); await until(() => h.runtimes.length === 1);
+		const opened = h.command("noodle"); await until(() => h.runtimes.length === 1);
 		const view = h.overlay.view, refresh = deferred(); h.setRefresh(() => refresh.promise);
 		const choosing = view.configureModel("test/project");
 		h.overlay.handleInput("\x1b"); await opened;
-		const reopened = h.command("jarvis"); refresh.resolve(); await choosing;
-		assert.equal(fs.existsSync(getJarvisConfigPath(h.ctx.cwd, "project")), false, "closed picker choice never persists after reopen");
+		const reopened = h.command("noodle"); refresh.resolve(); await choosing;
+		assert.equal(fs.existsSync(getNoodleConfigPath(h.ctx.cwd, "project")), false, "closed picker choice never persists after reopen");
 		await view.configureThinking("high");
-		assert.equal(fs.existsSync(getJarvisConfigPath(h.ctx.cwd, "project")), false, "stale view cannot configure the reopened presentation");
+		assert.equal(fs.existsSync(getNoodleConfigPath(h.ctx.cwd, "project")), false, "stale view cannot configure the reopened presentation");
 		await h.event("session_shutdown"); await reopened;
 	}
 	for (const kind of ["Model", "Thinking"] as const) {
 		const h = harness(); await h.event("session_start");
-		const opened = h.command("jarvis"); await until(() => h.runtimes.length === 1);
+		const opened = h.command("noodle"); await until(() => h.runtimes.length === 1);
 		const oldRuntime = h.runtimes[0]!, sync = deferred(); oldRuntime.syncGate = sync;
 		const selecting = h.overlay.view[`configure${kind}`](kind === "Model" ? "test/project" : "high");
 		await until(() => oldRuntime.syncs.length === 1);
 		h.clearBranch(); await h.event("session_start"); await opened;
-		const reopened = h.command("jarvis"); await until(() => h.runtimes.length === 2);
+		const reopened = h.command("noodle"); await until(() => h.runtimes.length === 2);
 		sync.resolve(); await selecting;
-		assert.equal(fs.existsSync(getJarvisConfigPath(h.ctx.cwd, "project")), false, "replaced owner must never write stale config after model sync");
+		assert.equal(fs.existsSync(getNoodleConfigPath(h.ctx.cwd, "project")), false, "replaced owner must never write stale config after model sync");
 		const current = h.runtimes[1]!;
 		assert.equal(current.syncs.length, 0, "stale rollback must not configure the new runtime");
 		await h.event("session_shutdown"); await reopened;
@@ -324,40 +324,40 @@ try {
 
 	{
 		const h = harness(); await h.event("session_start");
-		const opened = h.command("jarvis"); await until(() => h.runtimes.length === 1);
+		const opened = h.command("noodle"); await until(() => h.runtimes.length === 1);
 		const refresh = deferred(); let loads = 0;
 		h.setRefresh(() => ++loads === 1 ? refresh.promise : Promise.resolve());
 		const older = h.overlay.view.configureModel("test/project");
 		await tick();
 		await h.overlay.view.configureModel("test/global");
 		refresh.resolve(); await older;
-		assert.equal(JSON.parse(fs.readFileSync(getJarvisConfigPath(h.ctx.cwd, "project"), "utf8")).modelSelection.modelId,
+		assert.equal(JSON.parse(fs.readFileSync(getNoodleConfigPath(h.ctx.cwd, "project"), "utf8")).modelSelection.modelId,
 			"global", "late configuration must not overwrite a newer accepted choice in the same window");
 		await h.event("session_shutdown"); await opened;
 	}
 	{
 		const h = harness(); await h.event("session_start");
-		const opened = h.command("jarvis"); await until(() => h.runtimes.length === 1);
+		const opened = h.command("noodle"); await until(() => h.runtimes.length === 1);
 		const refresh = deferred(); let loads = 0;
 		h.setRefresh(() => ++loads === 1 ? refresh.promise : Promise.resolve());
 		const older = h.overlay.view.configureModel("test/project"); await tick();
 		await h.overlay.view.sendMessage("/new");
 		refresh.resolve(); await older;
-		assert.equal(fs.existsSync(getJarvisConfigPath(h.ctx.cwd, "project")), false,
+		assert.equal(fs.existsSync(getNoodleConfigPath(h.ctx.cwd, "project")), false,
 			"a same-main side reset must reject the old thread's uncommitted configuration");
 		await h.overlay.view.configureModel("test/global");
-		assert.equal(JSON.parse(fs.readFileSync(getJarvisConfigPath(h.ctx.cwd, "project"), "utf8")).modelSelection.modelId, "global");
+		assert.equal(JSON.parse(fs.readFileSync(getNoodleConfigPath(h.ctx.cwd, "project"), "utf8")).modelSelection.modelId, "global");
 		await h.event("session_shutdown"); await opened;
 	}
 	for (const kind of ["Model", "Thinking"] as const) {
 		const h = harness(); await h.event("session_start");
-		const opened = h.command("jarvis"); await until(() => h.runtimes.length === 1);
+		const opened = h.command("noodle"); await until(() => h.runtimes.length === 1);
 		const runtime = h.runtimes[0]!, sync = deferred(); runtime.syncGate = sync;
 		const first = h.overlay.view[`configure${kind}`](kind === "Model" ? "test/project" : "high");
 		await until(() => runtime.syncs.length === 1);
 		await h.overlay.view[`configure${kind}`](kind === "Model" ? "test/global" : "low");
 		sync.resolve(); await first;
-		const saved = JSON.parse(fs.readFileSync(getJarvisConfigPath(h.ctx.cwd, "project"), "utf8"));
+		const saved = JSON.parse(fs.readFileSync(getNoodleConfigPath(h.ctx.cwd, "project"), "utf8"));
 		assert.equal(kind === "Model" ? saved.modelSelection.modelId : saved.thinkingSelection.thinkingLevel,
 			kind === "Model" ? "project" : "high", "busy rejection must not supersede a valid admitted configuration");
 		await h.event("session_shutdown"); await opened;
@@ -366,21 +366,21 @@ try {
 		const h = harness("print"); await h.event("session_start");
 		const refresh = deferred(); h.setRefresh(() => refresh.promise);
 		let finished = false;
-		const command = h.command("jarvis-model", "test/project").then(() => { finished = true; });
+		const command = h.command("noodle-model", "test/project").then(() => { finished = true; });
 		await tick(); assert.equal(finished, false);
 		refresh.resolve(); await command;
 		h.setRefresh(async () => { throw new Error("refresh unavailable"); });
-		await h.command("jarvis-model", "test/global");
+		await h.command("noodle-model", "test/global");
 		assert.ok(h.notices.some((text) => text.includes("refresh unavailable")));
 	}
 	{
 		let selected: string | undefined;
-		const picker = new JarvisModelPicker({ terminal: { rows: 40 }, requestRender() {} } as any,
+		const picker = new NoodleModelPicker({ terminal: { rows: 40 }, requestRender() {} } as any,
 			theme, getKeybindings() as any, [model("one"), model("two")], (value) => { selected = value.id; }, () => {}, "two");
 		picker.focused = true;
 		assert.ok(picker.render(60).join("\n").includes("test/two"));
 		picker.handleInput("\r"); assert.equal(selected, "two");
-		const paging = new JarvisModelPicker({ terminal: { rows: 12 }, requestRender() {} } as any,
+		const paging = new NoodleModelPicker({ terminal: { rows: 12 }, requestRender() {} } as any,
 			theme, getKeybindings() as any, Array.from({ length: 20 }, (_, i) => model(`item-${i}`)),
 			(value) => { selected = value.id; }, () => {});
 		paging.focused = true; paging.render(60); // Selection requires a measured visible picker.
@@ -393,15 +393,15 @@ try {
 	}
 	{
 		const h = harness(); await h.event("session_start");
-		const opened = h.command("jarvis"); await until(() => h.runtimes.length === 1);
+		const opened = h.command("noodle"); await until(() => h.runtimes.length === 1);
 		h.clearBranch();
 		await h.event("session_tree"); await opened;
 		assert.equal(h.runtimes[0]!.disposed, true, "changing main branch reference disposes unrelated side thread");
-		const reopened = h.command("jarvis"); await until(() => h.runtimes.length === 2);
+		const reopened = h.command("noodle"); await until(() => h.runtimes.length === 2);
 		await h.event("session_shutdown"); await reopened;
 	}
 	{
-		const bridge = new JarvisOverlayBridge();
+		const bridge = new NoodleOverlayBridge();
 		const oldSignal = new AbortController();
 		const old = bridge.requestConfirmation("old", "old body", oldSignal.signal);
 		const currentSignal = new AbortController();
@@ -422,27 +422,27 @@ try {
 		let sessionId = "intro-first-main";
 		h.ctx.sessionManager.getSessionId = () => sessionId;
 		let opening: Promise<void> | undefined;
-		const hasIntro = () => h.overlay.render(80).join("\n").includes("A SECOND LANE OF THOUGHT");
+		const hasIntro = () => h.overlay.render(80).join("\n").includes("your agent's inner voice");
 		try {
 			await h.event("session_start");
-			opening = h.command("jarvis", "greet while intro runs");
+			opening = h.command("noodle", "greet while intro runs");
 			await until(() => h.runtimes[0]?.sent.includes("greet while intro runs") === true);
 			assert.equal(hasIntro(), true, "first actual TUI open shows the intro without blocking the initial prompt");
 			h.overlay.handleInput("x");
 			await h.overlay.view.sendMessage("/new");
 			assert.equal(hasIntro(), false, "side /new never replays presentation");
 			h.overlay.dispose(); await opening;
-			opening = h.command("jarvis");
+			opening = h.command("noodle");
 			assert.equal(hasIntro(), false, "reopen in the same main session skips the intro");
 			await h.event("session_tree");
 			assert.equal(hasIntro(), false, "tree navigation is not a first open");
 			h.overlay.dispose(); await opening;
 			sessionId = "intro-second-main"; h.clearBranch(); await h.event("session_start");
-			opening = h.command("jarvis");
+			opening = h.command("noodle");
 			assert.equal(hasIntro(), true, "a different main session gets its own first open");
 			h.overlay.dispose(); await opening;
 			sessionId = "intro-first-main"; h.clearBranch(); await h.event("session_start");
-			opening = h.command("jarvis");
+			opening = h.command("noodle");
 			assert.equal(hasIntro(), false, "returning to a seen main session does not replay");
 		} finally {
 			await h.event("session_shutdown"); await opening;
@@ -453,7 +453,7 @@ try {
 	}
 	console.log("index regression tests passed");
 } finally {
-	JarvisSideSessionRuntime.create = originalCreate;
+	NoodleSideSessionRuntime.create = originalCreate;
 	if (originalAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
 	else process.env.PI_CODING_AGENT_DIR = originalAgentDir;
 	rmSync(root, { recursive: true, force: true });

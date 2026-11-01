@@ -34,7 +34,7 @@ function transition(from: VaultReady | null = null): VaultTransition {
 	return { format: "pi-jarvis-archive-vault", version: 1, phase: "transition", revision: randomUUID(), from, to };
 }
 function fixture(t: TestContext) {
-	const base = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "pi-jarvis-vault-files-"))), agent = join(base, "agent");
+	const base = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "pi-noodle-vault-files-"))), agent = join(base, "agent");
 	const files = new ArchiveVaultFiles(agent), root = join(agent, "extensions", "pi-jarvis-archive");
 	const state = join(root, "archive.vault.json"), lock = join(root, "archive.vault.lock");
 	t.after(() => fs.rmSync(base, { recursive: true, force: true }));

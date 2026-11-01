@@ -13,13 +13,13 @@ try {
 	checkTags({ head: opts["--head"], baseline: opts["--baseline"] });
 	const release = checkReleaseTag(opts["--tag"], opts["--head"], opts["--tag-object"], opts["--event-after"]);
 	git("diff", "--exit-code", "HEAD", "--");
-	scratch = mkdtempSync(join(tmpdir(), "pi-jarvis-pack-"));
+	scratch = mkdtempSync(join(tmpdir(), "pi-noodle-pack-"));
 	const packed = JSON.parse(execFileSync("npm", ["pack", "--json", "--ignore-scripts", "--pack-destination", scratch], {
 		encoding: "utf8", timeout: 60000, maxBuffer: 10 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"],
 	}));
 	if (!Array.isArray(packed) || packed.length !== 1) throw new Error("npm pack must produce exactly one package");
 	const pack = packed[0];
-	const filename = `pi-jarvis-${release.version}.tgz`;
+	const filename = `pi-noodle-${release.version}.tgz`;
 	if (pack.filename !== filename || pack.name !== release.name || pack.version !== release.version) throw new Error("npm pack metadata does not match the tag");
 	const bytes = readFileSync(join(scratch, filename));
 	if (pack.integrity !== integrity(bytes) || pack.shasum !== shasum(bytes)) throw new Error("npm pack archive digest mismatch");

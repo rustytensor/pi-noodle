@@ -10,16 +10,16 @@ import {
 	type Theme, type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import { getKeybindings, Input, StdinBuffer, TuiMainScreen, type Component, type TUI, type Terminal } from "@earendil-works/pi-tui";
-import jarvisExtension from "../index.js";
+import noodleExtension from "../index.js";
 import { createMemoryEditorBackend } from "../memory-editor-controller.js";
 import type { MemoryEditorService } from "../memory-editor-types.js";
 import { MemoryEditorOverlay } from "../memory-editor.js";
 import { SharedMemoryService } from "../memory-service.js";
 import { NativeArchiveKeychain } from "../archive-keychain.js";
 import { abandonArchiveSecretPrompt, ArchiveSecretInput, isArchiveSecretPromptActive, promptArchiveSecret, revokeArchiveSecretPrompt } from "../archive-secret-input.js";
-import { JarvisModelPicker } from "../model-picker.js";
-import { JarvisOverlayComponent, type JarvisOverlayView } from "../overlay.js";
-import { JarvisSideSessionRuntime } from "../side-session.js";
+import { NoodleModelPicker } from "../model-picker.js";
+import { NoodleOverlayComponent, type NoodleOverlayView } from "../overlay.js";
+import { NoodleSideSessionRuntime } from "../side-session.js";
 
 const theme = { fg: (_: string, value: string) => value, bg: (_: string, value: string) => value, bold: (value: string) => value } as Theme;
 const model: Model<"openai-completions"> = {
@@ -45,7 +45,7 @@ class FakeRuntime {
 	readonly access: boolean[] = [];
 	disposed = false;
 	gate?: ReturnType<typeof deferred>;
-	constructor(readonly options: Parameters<typeof JarvisSideSessionRuntime.create>[0]) {}
+	constructor(readonly options: Parameters<typeof NoodleSideSessionRuntime.create>[0]) {}
 	isReady() { return true; }
 	isStreaming() { return Boolean(this.gate); }
 	getModelLabel() { return "fixture/memory-editor-fixture"; }
@@ -173,7 +173,7 @@ class Fixture {
 	command(name: string, args = "") { const command = this.commands.get(name); assert.ok(command); return command.handler(args, this.ctx); }
 	forget(signal?: AbortSignal) {
 		const note = this.note();
-		return this.tools.get("jarvis_memory_forget")!.execute("fixture-review", { id: note.id }, signal, undefined, this.ctx as any);
+		return this.tools.get("noodle_memory_forget")!.execute("fixture-review", { id: note.id }, signal, undefined, this.ctx as any);
 	}
 	note() {
 		assert.ok(this.service);
@@ -200,13 +200,13 @@ async function isolated(t: TestContext, run: (f: Fixture) => Promise<void>, mode
 	t.mock.method(SharedMemoryService.prototype, "prepare", function(this: SharedMemoryService, ctx: Parameters<SharedMemoryService["prepare"]>[0]) {
 		f.service = this; f.services.add(this); return prepare.call(this, ctx);
 	});
-	t.mock.method(JarvisSideSessionRuntime, "create", async (options: Parameters<typeof JarvisSideSessionRuntime.create>[0]) => {
-		const runtime = new FakeRuntime(options); f.runtimes.push(runtime); return runtime as unknown as JarvisSideSessionRuntime;
+	t.mock.method(NoodleSideSessionRuntime, "create", async (options: Parameters<typeof NoodleSideSessionRuntime.create>[0]) => {
+		const runtime = new FakeRuntime(options); f.runtimes.push(runtime); return runtime as unknown as NoodleSideSessionRuntime;
 	});
 	for (const name of ["get", "set", "delete"] as const) t.mock.method(NativeArchiveKeychain.prototype, name, async () => assert.fail("OS credentials forbidden"));
 	t.mock.method(globalThis, "fetch", async () => assert.fail("network forbidden"));
 	try {
-		jarvisExtension(f.api); await f.emit("session_start", { reason: "startup" });
+		noodleExtension(f.api); await f.emit("session_start", { reason: "startup" });
 		await run(f); assert.equal(f.forbiddenCalls, 0); assert.equal(f.ordinary.getValue(), ""); assert.deepEqual(f.submissions, []);
 	} finally {
 		abandonArchiveSecretPrompt(); f.forceUnmount(); f.stdin.destroy(); f.publicHost?.stop();
@@ -216,9 +216,9 @@ async function isolated(t: TestContext, run: (f: Fixture) => Promise<void>, mode
 		rmSync(f.root, { recursive: true, force: true });
 	}
 }
-function viewOf(component: Component): JarvisOverlayView {
+function viewOf(component: Component): NoodleOverlayView {
 	// Own extension seam, never a Pi SDK backing field.
-	return (component as unknown as { view: JarvisOverlayView }).view;
+	return (component as unknown as { view: NoodleOverlayView }).view;
 }
 async function close(f: Fixture, memoryEditor = true) {
 	const dialog = f.active!;
@@ -238,7 +238,7 @@ test("editor initial geometry caps wide terminals while preserving its review he
 		const custom = f.ctx.ui.custom;
 		let options: Parameters<ExtensionContext["ui"]["custom"]>[1];
 		f.ctx.ui.custom = ((factory, opts) => { options = opts; return custom(factory, opts); }) as typeof custom;
-		const opened = f.command("jarvis-memory", "editor"); await until(() => Boolean(f.active));
+		const opened = f.command("noodle-memory", "editor"); await until(() => Boolean(f.active));
 		assert.equal(typeof options?.overlayOptions, "function");
 		const geometry = options!.overlayOptions as () => { width: number; maxHeight: string; minWidth: number };
 		assert.equal(geometry().width, 99);
@@ -254,7 +254,7 @@ test("editor initial geometry caps wide terminals while preserving its review he
 
 for (const mode of ["rpc", "print", "json"] as const) test(`actual index editor is TUI-only in ${mode}, including initial aliases`, bounded, async t => {
 	await isolated(t, async f => {
-		await f.command("jarvis-memory", "editor"); await f.command("jarvis", "/memory editor"); await f.command("jarvis", "/jarvis-memory editor");
+		await f.command("noodle-memory", "editor"); await f.command("noodle", "/memory editor"); await f.command("noodle", "/noodle-memory editor");
 		assert.equal(f.dialogs.length, 0); assert.equal(f.runtimes.length, 0); assert.equal(f.registryCalls, 0);
 		assert.equal(existsSync(join(f.agentDir, "extensions", "pi-jarvis-memory", "memory.sqlite")), false);
 	}, mode);
@@ -262,26 +262,26 @@ for (const mode of ["rpc", "print", "json"] as const) test(`actual index editor 
 
 test("actual index local aliases never boot/queue/append; status and inline edit remain unchanged", bounded, async t => {
 	await isolated(t, async f => {
-		const record = f.note(); await f.command("jarvis-memory", `edit ${record.id} Inline replacement fact.`);
+		const record = f.note(); await f.command("noodle-memory", `edit ${record.id} Inline replacement fact.`);
 		assert.equal(f.service!.editorGet(record.id, f.ctx, "current")!.text, "Inline replacement fact.");
-		await f.command("jarvis-memory"); assert.match(f.notices.at(-1)!, /Shared memory ON/);
-		await f.command("jarvis-memory", "editor --all"); assert.equal(f.dialogs.length, 0);
+		await f.command("noodle-memory"); assert.match(f.notices.at(-1)!, /Shared memory ON/);
+		await f.command("noodle-memory", "editor --all"); assert.equal(f.dialogs.length, 0);
 		const before = f.manager.getEntries();
-		for (const [command, args] of [["jarvis-memory", "editor"], ["jarvis", "/memory editor"], ["jarvis", "/jarvis-memory editor"]]) {
+		for (const [command, args] of [["noodle-memory", "editor"], ["jarvis", "/memory editor"], ["jarvis", "/noodle-memory editor"]]) {
 			const opened = f.command(command!, args!); await until(() => Boolean(f.active)); await close(f); await opened;
 		}
 		assert.deepEqual(f.manager.getEntries(), before); assert.equal(f.runtimes.length, 0); assert.equal(f.registryCalls, 0);
 	});
 });
 
-test("synchronous editor reservation gates deferred factory, Jarvis, picker, forget review and archive preparation", bounded, async t => {
+test("synchronous editor reservation gates deferred factory, Noodle, picker, forget review and archive preparation", bounded, async t => {
 	await isolated(t, async f => {
 		f.note(); f.deferFactory = true;
 		writeFileSync(join(f.agentDir, "extensions", "pi-jarvis-archive.json"), JSON.stringify({ archive: { enabled: true, capture: false, modelAccess: false } }));
-		const opened = f.command("jarvis-memory", "editor");
-		await f.command("jarvis"); await f.command("jarvis-model"); await f.command("jarvis-memory", "editor");
+		const opened = f.command("noodle-memory", "editor");
+		await f.command("noodle"); await f.command("noodle-model"); await f.command("noodle-memory", "editor");
 		const review = await f.forget(); assert.match(JSON.stringify(review), /not forgotten/);
-		await f.command("jarvis-archive", "encryption on --confirm-sensitive --confirm-stopped");
+		await f.command("noodle-archive", "encryption on --confirm-sensitive --confirm-stopped");
 		assert.equal(isArchiveSecretPromptActive(), false, "refusal releases only private primitive's reservation");
 		assert.equal(f.confirmCalls, 0); assert.equal(f.registryCalls, 0); assert.equal(f.runtimes.length, 0);
 		assert.equal(f.starts.length, 1); assert.equal(f.dialogs.length, 0);
@@ -291,9 +291,9 @@ test("synchronous editor reservation gates deferred factory, Jarvis, picker, for
 
 test("editor admission remains reserved through reentrant host done until actual custom disposal", bounded, async t => {
 	await isolated(t, async f => {
-		f.note(); const opened = f.command("jarvis-memory", "editor"); await until(() => Boolean(f.active)); await tick();
+		f.note(); const opened = f.command("noodle-memory", "editor"); await until(() => Boolean(f.active)); await tick();
 		let raced: Promise<unknown[]> | undefined;
-		f.onDone = () => { f.onDone = undefined; raced = Promise.all([f.command("jarvis"), f.command("jarvis-model"), f.command("jarvis-memory", "editor"), f.forget()]); };
+		f.onDone = () => { f.onDone = undefined; raced = Promise.all([f.command("noodle"), f.command("noodle-model"), f.command("noodle-memory", "editor"), f.forget()]); };
 		await close(f); await opened; assert.ok(raced); await raced;
 		assert.equal(f.runtimes.length, 0); assert.equal(f.registryCalls, 0); assert.equal(f.confirmCalls, 0); assert.equal(f.dialogs.length, 1);
 	});
@@ -301,9 +301,9 @@ test("editor admission remains reserved through reentrant host done until actual
 
 test("clean pre-navigation can close a deferred editor factory without overlapping a fresh dialog", bounded, async t => {
 	await isolated(t, async f => {
-		f.deferFactory = true; const opened = f.command("jarvis-memory", "editor"); await until(() => f.starts.length === 1);
+		f.deferFactory = true; const opened = f.command("noodle-memory", "editor"); await until(() => f.starts.length === 1);
 		assert.ok(!(await f.emit("session_before_tree")).some(result => (result as { cancel?: boolean } | undefined)?.cancel));
-		await f.command("jarvis-memory", "editor"); assert.equal(f.starts.length, 1);
+		await f.command("noodle-memory", "editor"); assert.equal(f.starts.length, 1);
 		f.starts.shift()!(); await opened; assert.equal(f.dialogs[0]!.closed, true); assert.equal(f.active, undefined);
 	});
 });
@@ -313,9 +313,9 @@ test("private preparation and revoked cancel-only sink refuse editor without dat
 		let reads = 0; t.mock.method(SharedMemoryService.prototype, "editorList", () => { reads++; assert.fail("no reads under private input"); });
 		const prep = deferred(), result = promptArchiveSecret(f.ctx, "Synthetic private ownership", undefined, () => prep.promise);
 		assert.equal(isArchiveSecretPromptActive(), true);
-		await f.command("jarvis-memory", "editor"); assert.equal(f.dialogs.length, 0);
+		await f.command("noodle-memory", "editor"); assert.equal(f.dialogs.length, 0);
 		revokeArchiveSecretPrompt(); await result; prep.resolve(); await until(() => Boolean(f.active));
-		await f.command("jarvis-memory", "editor"); assert.equal(f.dialogs.length, 1); assert.equal(reads, 0);
+		await f.command("noodle-memory", "editor"); assert.equal(f.dialogs.length, 1); assert.equal(reads, 0);
 		const secret = f.active!.component as ArchiveSecretInput;
 		secret.handleInput("\x1b");
 		const code = secret.render(110).join("\n").match(/\b([A-HJ-NP-Z2-9]{4}) ([A-HJ-NP-Z2-9]{4}) ([A-HJ-NP-Z2-9]{4})\b/);
@@ -326,24 +326,24 @@ test("private preparation and revoked cancel-only sink refuse editor without dat
 
 test("inverse model picker and main forget review admission refuse editor", bounded, async t => {
 	await isolated(t, async f => {
-		const picker = f.command("jarvis-model"); await until(() => f.active?.component instanceof JarvisModelPicker);
-		await f.command("jarvis-memory", "editor"); assert.equal(f.dialogs.length, 1); await close(f, false); await picker;
+		const picker = f.command("noodle-model"); await until(() => f.active?.component instanceof NoodleModelPicker);
+		await f.command("noodle-memory", "editor"); assert.equal(f.dialogs.length, 1); await close(f, false); await picker;
 		f.note(); f.confirmGate = deferred<boolean>(); const review = f.forget(); await until(() => f.confirmCalls === 1);
-		await f.command("jarvis-memory", "editor"); assert.equal(f.dialogs.length, 1);
+		await f.command("noodle-memory", "editor"); assert.equal(f.dialogs.length, 1);
 		f.confirmGate.resolve(false); await review;
-		const opened = f.command("jarvis-memory", "editor"); await until(() => Boolean(f.active)); await close(f); await opened;
+		const opened = f.command("noodle-memory", "editor"); await until(() => Boolean(f.active)); await close(f); await opened;
 	});
 });
 
-test("public TUI close-to-editor preserves assigned Jarvis work and all grants; editor close never reopens", bounded, async t => {
+test("public TUI close-to-editor preserves assigned Noodle work and all grants; editor close never reopens", bounded, async t => {
 	await isolated(t, async f => {
 		f.usePublicHost();
-		const jarvis = f.command("jarvis"); await until(() => f.active?.component instanceof JarvisOverlayComponent && f.runtimes.length === 1);
+		const noodle = f.command("noodle"); await until(() => f.active?.component instanceof NoodleOverlayComponent && f.runtimes.length === 1);
 		const view = viewOf(f.active!.component), runtime = f.runtimes[0]!;
 		view.toggleToolAccess(); view.toggleFollowUpToMain(); view.toggleSteerToMain();
 		runtime.gate = deferred(); const work = view.sendMessage("Synthetic assigned work"); await until(() => runtime.sent.length === 1);
 		f.deferFactory = true; const opened = view.sendMessage("/memory editor");
-		await f.command("jarvis"); await f.command("jarvis-model"); await until(() => f.starts.length === 1); await jarvis;
+		await f.command("noodle"); await f.command("noodle-model"); await until(() => f.starts.length === 1); await noodle;
 		assert.equal(runtime.disposed, false); assert.equal(runtime.access.at(-1), true);
 		assert.equal(view.isFollowUpToMainEnabled(), true); assert.equal(view.isSteerToMainEnabled(), true);
 		f.starts.shift()!(); await until(() => Boolean(f.active)); f.publicHost!.renderNow();
@@ -358,7 +358,7 @@ test("public TUI close-to-editor preserves assigned Jarvis work and all grants; 
 test("dirty editor refuses cancellable navigation without nested review; normal journal append does not expire owner", bounded, async t => {
 	await isolated(t, async f => {
 		let dirty = true; t.mock.method(MemoryEditorOverlay.prototype, "isDirty", () => dirty);
-		const opened = f.command("jarvis-memory", "editor"); await until(() => Boolean(f.active));
+		const opened = f.command("noodle-memory", "editor"); await until(() => Boolean(f.active));
 		f.manager.appendMessage({ role: "user", content: "Synthetic append, not navigation", timestamp: 1 });
 		for (const event of ["session_before_switch", "session_before_fork", "session_before_tree"]) {
 			assert.ok((await f.emit(event)).some(result => (result as { cancel?: boolean } | undefined)?.cancel));
@@ -371,25 +371,25 @@ test("dirty editor refuses cancellable navigation without nested review; normal 
 
 test("forced unchanged-reference main tree disposes stale editor without done; deferred factory cannot restore it", bounded, async t => {
 	await isolated(t, async f => {
-		f.deferFactory = true; const old = f.command("jarvis-memory", "editor"); await until(() => f.starts.length === 1);
+		f.deferFactory = true; const old = f.command("noodle-memory", "editor"); await until(() => f.starts.length === 1);
 		await f.emit("session_tree"); await old; f.starts.shift()!(); await until(() => f.dialogs.length === 1);
 		assert.deepEqual(f.dialogs[0]!.component.render(110), []); assert.equal(f.dialogs[0]!.closed, false);
 		assert.equal(f.active, undefined, "exact hidden obsolete overlay never becomes active");
-		const fresh = f.command("jarvis-memory", "editor"); await until(() => f.starts.length === 1); f.starts.shift()!();
+		const fresh = f.command("noodle-memory", "editor"); await until(() => f.starts.length === 1); f.starts.shift()!();
 		await until(() => Boolean(f.active)); assert.match(f.active!.component.render(110).join(""), /memory/i);
 		await close(f); await fresh;
 		// The public promise can remain abandoned, but the owned command already settled without stale done.
 	});
 });
 
-test("deferred Jarvis factory is closed before editor custom request, with reservation across the wait", bounded, async t => {
+test("deferred Noodle factory is closed before editor custom request, with reservation across the wait", bounded, async t => {
 	await isolated(t, async f => {
 		f.deferFactory = true;
-		const jarvis = f.command("jarvis"); await until(() => f.starts.length === 1);
-		const opened = f.command("jarvis-memory", "editor");
-		await f.command("jarvis"); await f.command("jarvis-model");
+		const noodle = f.command("noodle"); await until(() => f.starts.length === 1);
+		const opened = f.command("noodle-memory", "editor");
+		await f.command("noodle"); await f.command("noodle-model");
 		assert.equal(f.starts.length, 1, "editor waits for prior public custom lifecycle rather than overlapping it");
-		f.starts.shift()!(); await jarvis; await until(() => f.starts.length === 1);
+		f.starts.shift()!(); await noodle; await until(() => f.starts.length === 1);
 		assert.equal(f.dialogs[0]!.closed, true); assert.deepEqual(f.dialogs[0]!.component.render(110), []);
 		f.starts.shift()!(); await until(() => Boolean(f.active)); await close(f); await opened;
 		assert.equal(f.runtimes.length, 1); assert.equal(f.runtimes[0]!.disposed, false);
@@ -399,9 +399,9 @@ test("deferred Jarvis factory is closed before editor custom request, with reser
 test("late forced editor factory cannot steal fresh public TUI focus and never invokes stale done", bounded, async t => {
 	await isolated(t, async f => {
 		f.usePublicHost(); f.deferFactory = true;
-		const old = f.command("jarvis-memory", "editor"); await until(() => f.starts.length === 1);
+		const old = f.command("noodle-memory", "editor"); await until(() => f.starts.length === 1);
 		const oldStart = f.starts.shift()!; await f.emit("session_tree");
-		f.deferFactory = false; const fresh = f.command("jarvis-memory", "editor"); await until(() => Boolean(f.active));
+		f.deferFactory = false; const fresh = f.command("noodle-memory", "editor"); await until(() => Boolean(f.active));
 		const current = f.active!; f.permitLateFactory = true; oldStart(); f.permitLateFactory = false; await tick();
 		assert.equal(f.active, current); assert.equal(f.publicHost!.getFocusedComponent(), current.component);
 		const late = f.dialogs.at(-1)!; assert.equal(late.closed, false); assert.deepEqual(late.component.render(110), []);
@@ -411,11 +411,11 @@ test("late forced editor factory cannot steal fresh public TUI focus and never i
 
 test("queued side /new invalidates dirty editor without changing the main archive lifetime order", bounded, async t => {
 	await isolated(t, async f => {
-		const jarvis = f.command("jarvis"); await until(() => Boolean(f.active) && f.runtimes.length === 1);
+		const noodle = f.command("noodle"); await until(() => Boolean(f.active) && f.runtimes.length === 1);
 		const view = viewOf(f.active!.component), first = f.runtimes[0]!;
 		first.gate = deferred(); const work = view.sendMessage("Assigned synthetic work"); await until(() => first.sent.length === 1);
 		const reset = view.sendMessage("/new");
-		const editor = view.sendMessage("/jarvis-memory editor"); await jarvis; await until(() => Boolean(f.active));
+		const editor = view.sendMessage("/noodle-memory editor"); await noodle; await until(() => Boolean(f.active));
 		await tick(); f.active!.component.handleInput?.("n"); f.active!.component.handleInput?.("DIRTY_SIDE_NEW_CANARY");
 		assert.match(f.active!.component.render(110).join(""), /DIRTY_SIDE_NEW_CANARY/);
 		const snapshot = first.flushArchive.bind(first); let mainTrustAtFinalization = false;
@@ -428,8 +428,8 @@ test("queued side /new invalidates dirty editor without changing the main archiv
 test("watchers off preserves the v1.13.1 synchronous owner-invalidation prefix at every session boundary", bounded, async t => {
 	for (const boundary of ["session_start", "session_tree", "session_shutdown", "session_before_switch", "session_before_fork", "session_before_tree"]) {
 		await isolated(t, async f => {
-			assert.equal(f.tools.get("jarvis_watcher_set")?.exposure, "hidden", "watchers must be off in this fixture");
-			const opened = f.command("jarvis-memory", "editor");
+			assert.equal(f.tools.get("noodle_watcher_set")?.exposure, "hidden", "watchers must be off in this fixture");
+			const opened = f.command("noodle-memory", "editor");
 			await until(() => Boolean(f.active));
 			const editor = f.active!.component;
 			assert.notDeepEqual(editor.render(110), [], "the editor starts with a live owner");
@@ -455,7 +455,7 @@ test("actual index owner expiry inside service SQLite guard prevents reviewed cr
 				check();
 			});
 		});
-		const opened = f.command("jarvis-memory", "editor"); await until(() => Boolean(f.active)); await tick();
+		const opened = f.command("noodle-memory", "editor"); await until(() => Boolean(f.active)); await tick();
 		const editor = f.active!.component;
 		editor.handleInput?.("n"); editor.handleInput?.("Cancelled create fixture"); editor.handleInput?.("\t");
 		editor.handleInput?.("Synthetic transaction cancellation fact."); editor.handleInput?.("\x13");
@@ -471,27 +471,27 @@ test("data changes flag refresh without policy invalidation; observed full off i
 	await isolated(t, async f => {
 		const pauses: string[] = [], invalidate = MemoryEditorOverlay.prototype.invalidateAccess;
 		t.mock.method(MemoryEditorOverlay.prototype, "invalidateAccess", function(this: MemoryEditorOverlay, reason: string) { pauses.push(reason); invalidate.call(this, reason); });
-		const opened = f.command("jarvis-memory", "editor"); await until(() => Boolean(f.active)); await tick();
+		const opened = f.command("noodle-memory", "editor"); await until(() => Boolean(f.active)); await tick();
 		f.active!.component.handleInput?.("n"); f.active!.component.handleInput?.("UNSAVED_HOST_DRAFT_CANARY");
 		const epoch = f.service!.epoch;
 		f.service!.editorCreate({ title: "External synthetic note", text: "External durable fixture fact.", scope: "project", category: "reference" }, f.ctx);
 		assert.equal(f.service!.epoch, epoch); assert.equal(pauses.length, 0);
 		assert.match(f.active!.component.render(110).join(""), /UNSAVED_HOST_DRAFT_CANARY/);
-		await f.command("jarvis-memory", "off"); assert.equal(pauses.length, 1);
+		await f.command("noodle-memory", "off"); assert.equal(pauses.length, 1);
 		assert.ok(!f.active!.component.render(110).join("").includes("External durable fixture fact"));
 		assert.ok(!f.active!.component.render(110).join("").includes("UNSAVED_HOST_DRAFT_CANARY"));
 		await close(f); await opened;
-		const count = f.dialogs.length; await f.command("jarvis-memory", "editor"); assert.equal(f.dialogs.length, count);
+		const count = f.dialogs.length; await f.command("noodle-memory", "editor"); assert.equal(f.dialogs.length, count);
 	});
 });
 
 test("human editor remains available with capture and recall paused, but full off/untrusted deny before data methods", bounded, async t => {
 	await isolated(t, async f => {
-		await f.command("jarvis-memory", "capture off"); await f.command("jarvis-memory", "recall off");
-		const opened = f.command("jarvis-memory", "editor"); await until(() => Boolean(f.active)); await close(f); await opened;
+		await f.command("noodle-memory", "capture off"); await f.command("noodle-memory", "recall off");
+		const opened = f.command("noodle-memory", "editor"); await until(() => Boolean(f.active)); await close(f); await opened;
 		let reads = 0; t.mock.method(SharedMemoryService.prototype, "editorList", () => { reads++; assert.fail("paused admission may not read records"); });
-		f.trusted = false; await f.command("jarvis-memory", "editor"); assert.equal(reads, 0);
-		f.trusted = true; await f.command("jarvis-memory", "off"); await f.command("jarvis-memory", "editor"); assert.equal(reads, 0);
+		f.trusted = false; await f.command("noodle-memory", "editor"); assert.equal(reads, 0);
+		f.trusted = true; await f.command("noodle-memory", "off"); await f.command("noodle-memory", "editor"); assert.equal(reads, 0);
 	});
 });
 
@@ -530,7 +530,7 @@ test("actual public in-memory SDK host executes editor commands with no model ca
 		const settings = SettingsManager.inMemory({ retry: { enabled: false }, compaction: { enabled: false }, cacheWarming: "off" }, { projectTrusted: true });
 		const loader = new DefaultResourceLoader({ cwd: f.project, agentDir: f.agentDir, settingsManager: settings,
 			noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,
-			systemPrompt: "Synthetic memory editor host.", extensionFactories: [jarvisExtension] });
+			systemPrompt: "Synthetic memory editor host.", extensionFactories: [noodleExtension] });
 		await loader.reload();
 		const manager = SessionManager.inMemory(f.project);
 		const { session } = await createAgentSession({ cwd: f.project, agentDir: f.agentDir, modelRuntime: runtime, model,
@@ -538,7 +538,7 @@ test("actual public in-memory SDK host executes editor commands with no model ca
 		try {
 			await session.bindExtensions({ mode: "tui", uiContext: f.ctx.ui, onError: error => assert.fail(error.error) });
 			const before = manager.getEntries();
-			for (const command of ["/jarvis-memory editor", "/jarvis /memory editor", "/jarvis /jarvis-memory editor"]) {
+			for (const command of ["/noodle-memory editor", "/noodle /memory editor", "/noodle /noodle-memory editor"]) {
 				const opened = session.prompt(command); await until(() => Boolean(f.active)); await close(f); await opened;
 			}
 			assert.deepEqual(manager.getEntries(), before); assert.equal(f.runtimes.length, 0);
@@ -546,23 +546,23 @@ test("actual public in-memory SDK host executes editor commands with no model ca
 	});
 });
 
-for (const boundary of ["session_tree", "session_start", "session_shutdown"] as const) test(`forced ${boundary} settles a pending Jarvis/editor handoff before its obsolete factory and preserves fresh foreground`, bounded, async t => {
+for (const boundary of ["session_tree", "session_start", "session_shutdown"] as const) test(`forced ${boundary} settles a pending Noodle/editor handoff before its obsolete factory and preserves fresh foreground`, bounded, async t => {
 	await isolated(t, async f => {
 		f.deferFactory = true;
-		const oldJarvis = f.command("jarvis"); await until(() => f.starts.length === 1 && f.runtimes.length === 1);
+		const oldNoodle = f.command("noodle"); await until(() => f.starts.length === 1 && f.runtimes.length === 1);
 		const obsoleteFactory = f.starts.shift()!, firstRuntime = f.runtimes[0]!;
-		const editor = f.command("jarvis-memory", "editor");
+		const editor = f.command("noodle-memory", "editor");
 		await f.emit(boundary, { reason: boundary === "session_shutdown" ? "reload" : "switch" });
 		// Both extension-owned requests settle even if the host never executes or
 		// settles the old public custom promise. No timeout/private-gate release.
-		let settled = false; void Promise.all([oldJarvis, editor]).then(() => { settled = true; });
+		let settled = false; void Promise.all([oldNoodle, editor]).then(() => { settled = true; });
 		await until(() => settled);
 		if (boundary === "session_tree") {
 			assert.equal(firstRuntime.disposed, false);
 			assert.equal(firstRuntime.options.archiveTrustProvider!(), true, "UI retirement must not increment the boot generation");
 		} else assert.equal(firstRuntime.disposed, true);
 		f.deferFactory = false;
-		const freshJarvis = f.command("jarvis"); await until(() => f.active?.component instanceof JarvisOverlayComponent);
+		const freshNoodle = f.command("noodle"); await until(() => f.active?.component instanceof NoodleOverlayComponent);
 		const fresh = f.active!, view = viewOf(fresh.component);
 		view.toggleToolAccess(); view.toggleFollowUpToMain(); view.toggleSteerToMain();
 		let obsoleteDone = 0; f.onDone = () => { obsoleteDone++; };
@@ -575,7 +575,7 @@ for (const boundary of ["session_tree", "session_start", "session_shutdown"] as 
 		f.onDone = undefined;
 		// Positive fresh UI control: late hidden overlay does not strand normal
 		// close/handoff or the next editor behind an abandoned wait reference.
-		const nextEditor = view.sendMessage("/memory editor"); await freshJarvis;
+		const nextEditor = view.sendMessage("/memory editor"); await freshNoodle;
 		await until(() => Boolean(f.active)); await tick();
 		assert.equal(f.publicHost!.getFocusedComponent(), f.active!.component);
 		f.stdin.process("\x1b"); await new Promise(resolve => setTimeout(resolve, 25));
@@ -585,36 +585,36 @@ for (const boundary of ["session_tree", "session_start", "session_shutdown"] as 
 	});
 });
 
-test("cancellation retires an unmounted Jarvis handoff without fake trust denial or waiting for the abandoned host promise", bounded, async t => {
+test("cancellation retires an unmounted Noodle handoff without fake trust denial or waiting for the abandoned host promise", bounded, async t => {
 	await isolated(t, async f => {
 		f.deferFactory = true;
-		const jarvis = f.command("jarvis"); await until(() => f.starts.length === 1 && f.runtimes.length === 1);
+		const noodle = f.command("noodle"); await until(() => f.starts.length === 1 && f.runtimes.length === 1);
 		const obsoleteFactory = f.starts.shift()!, runtime = f.runtimes[0]!;
 		const cancel = new AbortController(); f.ctx.signal = cancel.signal;
-		const oldEditor = f.command("jarvis-memory", "editor"); cancel.abort();
-		let settled = false; void Promise.all([jarvis, oldEditor]).then(() => { settled = true; }); await until(() => settled);
+		const oldEditor = f.command("noodle-memory", "editor"); cancel.abort();
+		let settled = false; void Promise.all([noodle, oldEditor]).then(() => { settled = true; }); await until(() => settled);
 		assert.equal(f.ctx.isProjectTrusted(), true); assert.equal(runtime.disposed, false);
 		assert.equal(runtime.options.archiveTrustProvider!(), true); f.ctx.signal = undefined;
-		f.deferFactory = false; const picker = f.command("jarvis-model"); await until(() => f.active?.component instanceof JarvisModelPicker);
+		f.deferFactory = false; const picker = f.command("noodle-model"); await until(() => f.active?.component instanceof NoodleModelPicker);
 		const current = f.active!; let obsoleteDone = 0; f.onDone = () => { obsoleteDone++; };
 		f.permitLateFactory = true; obsoleteFactory(); f.permitLateFactory = false; await tick();
 		assert.equal(obsoleteDone, 0); assert.equal(f.publicHost!.getFocusedComponent(), current.component);
 		f.onDone = undefined; await close(f, false); await picker;
-		const editor = f.command("jarvis-memory", "editor"); await until(() => Boolean(f.active)); await close(f); await editor;
+		const editor = f.command("noodle-memory", "editor"); await until(() => Boolean(f.active)); await close(f); await editor;
 	});
 });
 
-for (const phase of ["preparation", "password sink", "cancel-only sink"] as const) test(`late Jarvis factory never completes or steals private archive ${phase} ownership`, bounded, async t => {
+for (const phase of ["preparation", "password sink", "cancel-only sink"] as const) test(`late Noodle factory never completes or steals private archive ${phase} ownership`, bounded, async t => {
 	await isolated(t, async f => {
 		writeFileSync(join(f.agentDir, "extensions", "pi-jarvis-archive.json"), JSON.stringify({ archive: { enabled: true, capture: false, modelAccess: false } }));
 		f.deferFactory = true;
-		const jarvis = f.command("jarvis"); await until(() => f.starts.length === 1 && f.runtimes.length === 1);
+		const noodle = f.command("noodle"); await until(() => f.starts.length === 1 && f.runtimes.length === 1);
 		const obsoleteFactory = f.starts.shift()!;
 		// The real index beforeSecretPrompt hook reserves private input, revokes
-		// grants and retires Jarvis. No password is supplied or migration run.
-		const archive = f.command("jarvis-archive", "encryption on --confirm-sensitive --confirm-stopped");
+		// grants and retires Noodle. No password is supplied or migration run.
+		const archive = f.command("noodle-archive", "encryption on --confirm-sensitive --confirm-stopped");
 		await until(() => f.starts.length === 1 && isArchiveSecretPromptActive());
-		await jarvis; const secretFactory = f.starts.shift()!;
+		await noodle; const secretFactory = f.starts.shift()!;
 		if (phase !== "preparation") { secretFactory(); await until(() => f.active?.component instanceof ArchiveSecretInput); }
 		if (phase === "cancel-only sink") { revokeArchiveSecretPrompt(); await archive; assert.equal(isArchiveSecretPromptActive(), true); }
 		const sink = f.active; let obsoleteDone = 0; f.onDone = () => { obsoleteDone++; };
@@ -623,7 +623,7 @@ for (const phase of ["preparation", "password sink", "cancel-only sink"] as cons
 		if (sink) { assert.equal(f.active, sink); assert.equal(f.publicHost!.getFocusedComponent(), sink.component); }
 		else { assert.equal(f.active, undefined); secretFactory(); await until(() => f.active?.component instanceof ArchiveSecretInput); }
 		f.onDone = undefined;
-		await f.command("jarvis-memory", "editor"); await f.command("jarvis"); await f.command("jarvis-model");
+		await f.command("noodle-memory", "editor"); await f.command("noodle"); await f.command("noodle-model");
 		assert.equal(f.publicHost!.getFocusedComponent(), f.active!.component); assert.equal(f.registryCalls, 0);
 		f.stdin.process("\x1b"); await new Promise(resolve => setTimeout(resolve, 25));
 		const secret = f.active!.component as ArchiveSecretInput;
@@ -634,13 +634,13 @@ for (const phase of ["preparation", "password sink", "cancel-only sink"] as cons
 	});
 });
 
-test("ordinary Jarvis handoff without its own foreground retires exactly, never pops a trusted newer public overlay", bounded, async t => {
+test("ordinary Noodle handoff without its own foreground retires exactly, never pops a trusted newer public overlay", bounded, async t => {
 	await isolated(t, async f => {
-		const jarvis = f.command("jarvis"); await until(() => f.active?.component instanceof JarvisOverlayComponent && f.runtimes.length === 1);
+		const noodle = f.command("noodle"); await until(() => f.active?.component instanceof NoodleOverlayComponent && f.runtimes.length === 1);
 		const old = f.active!, view = viewOf(old.component), takeover = new Input();
 		const takeoverHandle = f.publicHost!.showOverlay(takeover); f.active = undefined; // Trusted host foreground replacement, not a custom completion.
 		let oldDone = 0; f.onDone = () => { oldDone++; };
-		const editor = view.sendMessage("/memory editor"); await jarvis;
+		const editor = view.sendMessage("/memory editor"); await noodle;
 		assert.equal(oldDone, 0); assert.equal(old.closed, false); assert.equal(old.component.focused, false);
 		await until(() => Boolean(f.active)); f.onDone = undefined;
 		await close(f); await editor;
@@ -653,7 +653,7 @@ test("ordinary Jarvis handoff without its own foreground retires exactly, never 
 
 test("clean editor close after trusted foreground replacement hides only itself and settles without topmost completion", bounded, async t => {
 	await isolated(t, async f => {
-		const editor = f.command("jarvis-memory", "editor"); await until(() => Boolean(f.active));
+		const editor = f.command("noodle-memory", "editor"); await until(() => Boolean(f.active));
 		const old = f.active!, takeover = new Input(), takeoverHandle = f.publicHost!.showOverlay(takeover);
 		let oldDone = 0; f.onDone = () => { oldDone++; };
 		await f.emit("session_before_tree"); await editor;

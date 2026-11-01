@@ -6,6 +6,7 @@ import { isUtf8 } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import { basename, dirname, join, parse, resolve } from "node:path";
 import type { ArchivePolicy, ArchiveScope } from "./archive-types.js";
+import { storageName } from "./storage-layout.js";
 
 type Scope = ArchiveScope;
 type Config = Record<string, unknown>;
@@ -23,7 +24,7 @@ class ArchiveSettingsReadRace extends Error {}
 /** Caller-spelled settings path, without I/O. Access canonicalizes only the chosen root. */
 export function archiveConfigPath(cwd: string, agentDir: string, scope: Scope): string {
 	if (scope !== "global" && scope !== "project") throw new Error("Invalid archive settings scope.");
-	return scope === "global" ? join(agentDir, "extensions", "pi-jarvis-archive.json") : join(cwd, ".pi", "jarvis-archive.json");
+	return scope === "global" ? join(agentDir, "extensions", storageName(agentDir, "pi-jarvis-archive.json")) : join(cwd, ".pi", storageName(cwd, "jarvis-archive.json", "project")); // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 }
 
 /** Reads settings only. Archiving defaults off; trust/read/validation failures disable every permission. */
@@ -100,7 +101,7 @@ function settingsPath(cwd: string, agentDir: string, scope: Scope): string {
 	// Validate scope before choosing/canonicalizing a root.
 	archiveConfigPath(cwd, agentDir, scope);
 	const root = canonicalRoot(scope === "global" ? agentDir : cwd);
-	return scope === "global" ? join(root, "extensions", "pi-jarvis-archive.json") : join(root, ".pi", "jarvis-archive.json");
+	return scope === "global" ? join(root, "extensions", storageName(root, "pi-jarvis-archive.json")) : join(root, ".pi", storageName(root, "jarvis-archive.json", "project")); // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 }
 
 /** Missing roots inherit the real path of their nearest existing directory ancestor. */

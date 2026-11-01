@@ -9,7 +9,7 @@ try {
 	if (!opts["--tag"] || !opts["--bundle-dir"] || (!opts["--tag-object"] && !opts["--event-after"])) throw new Error("Required: --tag --bundle-dir and --tag-object or --event-after (optionally --head)");
 	const release = checkReleaseTag(opts["--tag"], opts["--head"], opts["--tag-object"], opts["--event-after"]);
 	const bundle = JSON.parse(readFileSync(join(opts["--bundle-dir"], "release.json"), "utf8"));
-	if (bundle.filename !== `pi-jarvis-${release.version}.tgz`) throw new Error("Invalid bundle filename");
+	if (bundle.filename !== `pi-noodle-${release.version}.tgz`) throw new Error("Invalid bundle filename");
 	const bytes = readFileSync(join(opts["--bundle-dir"], bundle.filename));
 	validateBundle(bytes, bundle, release);
 	const repository = process.env.GITHUB_REPOSITORY;

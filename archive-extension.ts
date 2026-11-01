@@ -1,8 +1,9 @@
 import { Type } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext, ExtensionFactory } from "@earendil-works/pi-coding-agent";
 import type { ArchivePolicy } from "./archive-types.js";
+import { withLegacyAliases } from "./legacy-aliases.js";
 
-export const ARCHIVE_TOOL_NAMES = ["jarvis_archive_search", "jarvis_archive_read", "jarvis_archive_session"] as const;
+export const ARCHIVE_TOOL_NAMES = ["noodle_archive_search", "noodle_archive_read", "noodle_archive_session"] as const;
 
 type PageParameters = { scope?: "session" | "current" | "all"; offset?: number; limit?: number };
 /** Structural contract: the shared service is owned by the host, not a lane. */
@@ -22,7 +23,7 @@ export interface ArchiveExtensionOptions {
 	onToolsChanged?: () => void;
 	/** Owner invokes this before SDK disposal/permission lifetime revocation. */
 	registerFinalSnapshot?: (snapshot: () => void) => void;
-	/** Bridges Pi's normal approval prompt into the overlay for the Jarvis lane. */
+	/** Bridges Pi's normal approval prompt into the overlay for the Noodle lane. */
 	confirmReach?: (title: string, detail: string, signal?: AbortSignal) => Promise<boolean>;
 }
 
@@ -30,11 +31,12 @@ const OFF: ArchivePolicy = { enabled: false, capture: false, modelAccess: false,
 const owned = (name: string): boolean => ARCHIVE_TOOL_NAMES.some((tool) => tool === name);
 const permissionError = () => new Error("Session archive access expired, is disabled, untrusted, or was cancelled. A fresh tool definition is required.");
 
-/** Mount separately in main and Jarvis. No streams, history import, or recall. */
+/** Mount separately in main and Noodle. No streams, history import, or recall. */
 export function createArchiveExtensionFactory(
 	service: ArchiveExtensionService, lane: "main" | "jarvis", options: ArchiveExtensionOptions = {},
 ): ExtensionFactory {
 	return (pi: ExtensionAPI): void => {
+		pi = withLegacyAliases(pi);
 		let active = false;
 		let disposed = false;
 		let sessionGeneration = 0;
@@ -67,7 +69,7 @@ export function createArchiveExtensionFactory(
 			try {
 				if (ctx.hasUI) { ctx.ui.notify(text, "warning"); return; }
 			} catch { /* A replaced context cannot be used for UI. */ }
-			process.stderr.write(`[pi-jarvis] ${text}\n`);
+			process.stderr.write(`[pi-noodle] ${text}\n`);
 		};
 		const warnSnapshot = (ctx: ExtensionContext) => warn(ctx, "snapshot",
 			"Session archive could not observe some finalized entries safely. They will not be backfilled; Pi history is unchanged.");
@@ -112,7 +114,7 @@ export function createArchiveExtensionFactory(
 				if (requested === "current") return "project";
 				return params.sessionId !== undefined && params.sessionId !== ctx.sessionManager.getSessionId() ? "project" : "session";
 			};
-			const refusal = (reach: Reach) => `Wider archive reach (${reach === "all" ? "all projects" : "other sessions of this project"}) was not approved, so nothing was executed. The default reach is this session; ask the user before going wider, or have them run /jarvis-archive model-search on.`;
+			const refusal = (reach: Reach) => `Wider archive reach (${reach === "all" ? "all projects" : "other sessions of this project"}) was not approved, so nothing was executed. The default reach is this session; ask the user before going wider, or have them run /noodle-archive model-search on.`;
 			const gate = async (ctx: ExtensionContext, signal: AbortSignal | undefined, reach: Reach, detail: string): Promise<boolean> => {
 				if (reach === "session" || currentPolicy.modelWideSearch) return true;
 				const title = reach === "all" ? "Allow archive access to all projects?" : "Allow archive access beyond this session?";
@@ -125,7 +127,7 @@ export function createArchiveExtensionFactory(
 				return false;
 			};
 			pi.registerTool({
-				name: "jarvis_archive_search", label: "Search session archive", exposure, annotations,
+				name: "noodle_archive_search", label: "Search session archive", exposure, annotations,
 				description: `Search the optional local full-session archive with literal words/phrases and bounded paged excerpts, defaulting to this session; useful for recovering details said earlier (paths, decisions, commands) that are no longer in your context. ${caution}`,
 				parameters: Type.Object({ query: Type.String({ minLength: 1, maxLength: 512 }), scope,
 					sessionId: Type.Optional(Type.String({ minLength: 1 })), offset, limit }),
@@ -140,7 +142,7 @@ export function createArchiveExtensionFactory(
 				},
 			});
 			pi.registerTool({
-				name: "jarvis_archive_read", label: "Read archived entry", exposure, annotations,
+				name: "noodle_archive_read", label: "Read archived entry", exposure, annotations,
 				description: `Read complete raw JSON through pages, or choose part metadata for exact provenance when summaries are abbreviated. Offset/limit count Unicode codepoints; follow nextOffset for more. Default reach is this session; reading an entry from another session or project is a wider, approval-gated reach. ${caution}`,
 				parameters: Type.Object({ id: Type.String({ minLength: 1, maxLength: 128 }), scope, offset,
 					part: Type.Optional(Type.Union([Type.Literal("entry"), Type.Literal("metadata")])),
@@ -156,7 +158,7 @@ export function createArchiveExtensionFactory(
 				},
 			});
 			pi.registerTool({
-				name: "jarvis_archive_session", label: "List archived session", exposure, annotations,
+				name: "noodle_archive_session", label: "List archived session", exposure, annotations,
 				description: `List paged archived entry summaries for one session, including entries on abandoned branches; without a session ID this lists the current session. An explicit other session is a wider, approval-gated reach. ${caution}`,
 				parameters: Type.Object({ sessionId: Type.Optional(Type.String({ minLength: 1 })), scope, offset, limit }),
 				async execute(_id, params, signal, _update, ctx) {

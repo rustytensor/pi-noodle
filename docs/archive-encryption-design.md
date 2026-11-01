@@ -1,6 +1,6 @@
 # Archive encryption design and operating contract — 1.10.0
 
-Password-based archive encryption is **optional and OFF by default**, independently of archive enablement, capture, model access, shared memory, Repo tools and bridge permissions. It is agent-wide within the active Pi agent directory, shared by main Pi and Jarvis. Installation does not change user controls, encrypt an existing archive or import history. Public/private-key unlocking is deferred.
+Password-based archive encryption is **optional and OFF by default**, independently of archive enablement, capture, model access, shared memory, Repo tools and bridge permissions. It is agent-wide within the active Pi agent directory, shared by main Pi and Noodle. Installation does not change user controls, encrypt an existing archive or import history. Public/private-key unlocking is deferred.
 
 This document describes the password-based feature and its operating/security boundaries. It is **not an independent cryptographic audit, official/vendor-audited SQLCipher, FIPS certification, sandbox or forensic-erasure claim**.
 
@@ -9,10 +9,10 @@ This document describes the password-based feature and its operating/security bo
 These controls are explicit human choices, not authorization for an agent/extension to change settings automatically.
 
 1. Start Pi yourself with **`pi --tui-mode regular`**. Stop all other Pi instances using the agent directory, including older versions, before migration, recovery or cleanup. Check free space for both source and target; migration retains the source.
-2. Review `/jarvis-archive status`: configured/effective enabled, capture and model-access fields, trust, errors and global/project paths. Project fields override global defaults, except explicit global enabled=false is master-off. Repair malformed settings manually without dropping privacy controls.
-3. **If avoiding new plaintext archive captures, pause CAPTURE before enabling or migrating.** For the current project, explicitly choose `/jarvis-archive --project capture off` and verify effective capture off. Global capture off does not defeat project capture on; review all intended scopes. Do not begin sensitive work before verifying the pause. Pi's original transcripts and shared memory still follow their own behavior/controls.
-4. Enable only the intended archive scope in a trusted project, keeping capture/model access off unless separately intended. For example, `/jarvis-archive --project on --confirm-sensitive` cannot override a global master-off; any global enablement must be a deliberate user choice recognizing other projects' exposure. Unlock, migration and cleanup require enabled/trusted archive policy, **not capture or model access**.
-5. Run `encryption on --confirm-sensitive --confirm-stopped` through `/jarvis-archive`, enter the new password twice, and freshly verify each submission. Inspect encryption status and manually verify the active archive while capture remains off. Successful encryption grants a session unlock; it does not change capture settings or import old Pi history.
+2. Review `/noodle-archive status`: configured/effective enabled, capture and model-access fields, trust, errors and global/project paths. Project fields override global defaults, except explicit global enabled=false is master-off. Repair malformed settings manually without dropping privacy controls.
+3. **If avoiding new plaintext archive captures, pause CAPTURE before enabling or migrating.** For the current project, explicitly choose `/noodle-archive --project capture off` and verify effective capture off. Global capture off does not defeat project capture on; review all intended scopes. Do not begin sensitive work before verifying the pause. Pi's original transcripts and shared memory still follow their own behavior/controls.
+4. Enable only the intended archive scope in a trusted project, keeping capture/model access off unless separately intended. For example, `/noodle-archive --project on --confirm-sensitive` cannot override a global master-off; any global enablement must be a deliberate user choice recognizing other projects' exposure. Unlock, migration and cleanup require enabled/trusted archive policy, **not capture or model access**.
+5. Run `encryption on --confirm-sensitive --confirm-stopped` through `/noodle-archive`, enter the new password twice, and freshly verify each submission. Inspect encryption status and manually verify the active archive while capture remains off. Successful encryption grants a session unlock; it does not change capture settings or import old Pi history.
 6. If removing plaintext remnants, verify the encrypted active archive is usable first, then explicitly run `encryption cleanup --confirm-sensitive --confirm-stopped` with a live unlock. Cleanup ends the local grant; unlock again, inspect status/retired plaintext counts and any partial-cleanup report. Outside backups/original transcripts are untouched. Do not describe retained plaintext copies as encrypted.
 7. **Resume capture explicitly only when ready**, at the scope you paused, and check effective status again. Paused/locked periods are not backfilled. Model access remains a separate sensitive opt-in.
 
@@ -28,7 +28,7 @@ These controls are explicit human choices, not authorization for an agent/extens
 
 ## Password input and ownership
 
-Use public `ctx.ui.custom` in the main editor area, not a nested overlay. Passwords never enter command arguments, environment variables, ordinary editors/history, model tools, session entries, notifications or logs. The public Input component sees masks, not secret undo/history. Password entry explicitly revokes Jarvis's transient permissions before closing/yielding to the main editor area. This is separate from ordinary overlay close, which preserves same-owner background work and grants; the private-input boundary never inherits those grants.
+Use public `ctx.ui.custom` in the main editor area, not a nested overlay. Passwords never enter command arguments, environment variables, ordinary editors/history, model tools, session entries, notifications or logs. The public Input component sees masks, not secret undo/history. Password entry explicitly revokes Noodle's transient permissions before closing/yielding to the main editor area. This is separate from ordinary overlay close, which preserves same-owner background work and grants; the private-input boundary never inherits those grants.
 
 **Only Pi regular TUI is supported:** the user explicitly starts `pi --tui-mode regular`. Non-TUI, fullscreen, missing and unknown renderer modes refuse password entry. There is no ordinary-editor/RPC/CLI/environment fallback and no automatic renderer-setting change. Stock fullscreen can process its search shortcut before a focused component and cannot provide this boundary.
 
@@ -36,7 +36,7 @@ Use public `ctx.ui.custom` in the main editor area, not a nested overlay. Passwo
 
 Backend cancellation and UI lifetime are separate. Observed policy/trust/cancellation changes immediately revoke backend authorization and wipe owned secret references. They retain a **cancel-only private input sink** until a fresh post-cancellation code is verified. Backend resolution alone must not restore the ordinary editor into a buffered paste tail.
 
-Private-input ownership is reserved **synchronously before** closing Jarvis or yielding for its public lifecycle. That owner spans preparation, deferred factory/mount, verification, cancellation sink and public custom completion. Jarvis, its model picker and main-memory deletion review share the admission gate; an already-open ordinary dialog causes refusal rather than overlapping mounting. Failed preparation safely releases only its own reservation without restoring an unrelated editor. Late callbacks cannot release a newer owner. Cancellable main switch/fork/tree navigation is refused while ownership remains; complete verified exit, then retry.
+Private-input ownership is reserved **synchronously before** closing Noodle or yielding for its public lifecycle. That owner spans preparation, deferred factory/mount, verification, cancellation sink and public custom completion. Noodle, its model picker and main-memory deletion review share the admission gate; an already-open ordinary dialog causes refusal rather than overlapping mounting. Failed preparation safely releases only its own reservation without restoring an unrelated editor. Late callbacks cannot release a newer owner. Cancellable main switch/fork/tree navigation is refused while ownership remains; complete verified exit, then retry.
 
 **Unsupported quarantine boundaries:** forced host reload/quit or trusted external focus replacement can restore/replace the editor before extension shutdown. Abandonment wipes/revokes owned state without stale `done()` or waiting for an unfocused sink, but cannot preserve input ownership after host/process teardown. Other trusted code with screen/input/process access is not isolated. Bytes after genuine human-verified release or host/process teardown are not quarantined. **Do not force reload/exit during password entry; use the displayed verified cancellation.**
 
@@ -45,25 +45,25 @@ Private-input ownership is reserved **synchronously before** closing Jarvis or y
 These commands are local, agent-wide and human-only, not project-scoped settings or model tools. No password/key/path/scope arguments are accepted. Overlay `/archive …` interception remains local and does not boot a side model.
 
 ```text
-/jarvis-archive encryption [status]
-/jarvis-archive encryption on|off|cleanup --confirm-sensitive --confirm-stopped
-/jarvis-archive encryption recover --rollback --confirm-sensitive --confirm-stopped
-/jarvis-archive encryption break-lock --confirm-sensitive --confirm-stopped
-/jarvis-archive unlock [session|process|remember|for MINUTES|idle MINUTES]
-/jarvis-archive lock
-/jarvis-archive password
-/jarvis-archive startup manual|prompt|remember
+/noodle-archive encryption [status]
+/noodle-archive encryption on|off|cleanup --confirm-sensitive --confirm-stopped
+/noodle-archive encryption recover --rollback --confirm-sensitive --confirm-stopped
+/noodle-archive encryption break-lock --confirm-sensitive --confirm-stopped
+/noodle-archive unlock [session|process|remember|for MINUTES|idle MINUTES]
+/noodle-archive lock
+/noodle-archive password
+/noodle-archive startup manual|prompt|remember
 ```
 
 - `encryption on` migrates the active archive to an encrypted generation. It does not enable recording/model access or change capture settings. Success unlocks for the current main session.
-- `encryption off` converts the active archive to plaintext; it **does not turn recording off**. Conversely, ordinary `/jarvis-archive off` pauses archive access/capture without decrypting or deleting retained files. Neither setting disables Pi's original transcripts or shared memory.
+- `encryption off` converts the active archive to plaintext; it **does not turn recording off**. Conversely, ordinary `/noodle-archive off` pauses archive access/capture without decrypting or deleting retained files. Neither setting disables Pi's original transcripts or shared memory.
 - Enabled/trusted archive policy is required for unlocking, migration, cleanup, rollback recovery and normal data operations. Capture/model access can remain off for human administration/inspection. Encryption status and explicit lock remain available while archive data access is paused.
 - `lock` revokes locally first, then attempts durable remembered-authorization revocation and best-effort credential deletion. Failure can leave remembered authorization/key material; report it honestly rather than silently repair. Status inspection is not a record read.
 - Minutes are integers **1–10080**; default unlock is `session`. The confirmation flags are human acknowledgments of sensitivity and stopping other Pi instances, not commands that stop processes themselves.
 
 ## Unlock lifetimes and startup
 
-- **Session:** owned by the main-session identity and shared with Jarvis. Side `/new` and overlay close do not end it; replacing the main session does.
+- **Session:** owned by the main-session identity and shared with Noodle. Side `/new` and overlay close do not end it; replacing the main session does.
 - **Process:** process-local grant survives supported main `new`/`resume`/`fork` factory recreation, but not extension reload, quit or actual process restart. Old callbacks/context detach and native connections close before handoff.
 - **Fixed duration (`for`):** original deadline is preserved through supported handoff, never renewed by status/access.
 - **Idle (`idle`):** refresh only on successful archive data operations, never status/policy checks. Supported handoff preserves the current deadline. Timed grants use monotonic and wall-clock checks; expiry is enforced at operation boundaries even after suspend/delayed timers. No immediate key erasure during OS sleep is promised. Timers are lazy, bounded and unreferenced.
@@ -73,7 +73,7 @@ These commands are local, agent-wide and human-only, not project-scoped settings
 - **Startup remember:** restores the explicitly remembered key on later permitted main startup, authenticating the existing database before granting access. Missing/corrupt/denied key/service stays locked, without an automatic password or backend fallback.
 - **Forget/revoke semantics:** an explicit nonremember unlock clears prior remembered authorization (remembered startup becomes manual). Explicit lock rotates/clears durable authorization before best-effort native deletion; failed deletion may leave a key in the OS store, but successful durable revocation no longer authorizes that grant. Password rewrap clears remembered authorization and ends the local grant. Cleanup also ends the local grant; it does not necessarily clear an existing startup-remember choice.
 
-Startup runs only from **main lifecycle**, never Jarvis boot. Archive full-off, untrusted/malformed policy and restart-required storage suppress prompts, credential work and database authentication. Restoring trust does not silently reuse a revoked local grant. Explicit lock, observed policy/trust failure, durable revision changes and unsafe storage can revoke any local grant.
+Startup runs only from **main lifecycle**, never Noodle boot. Archive full-off, untrusted/malformed policy and restart-required storage suppress prompts, credential work and database authentication. Restoring trust does not silently reuse a revoked local grant. Explicit lock, observed policy/trust failure, durable revision changes and unsafe storage can revoke any local grant.
 
 Locked, transitional, invalid or restart-required vaults block record reads, capture, imports and ordinary deletion. Reset capture baselines; never queue plaintext for later recording or backfill after unlock. Cancel previews/imports and reject stale tools. Every observed trust denial, including a throwing trust getter, reaches the shared vault, not merely one lane's tool visibility. Restoring permission cannot revive an observed revoked grant. Recheck authorization after idle activity handling as well as after data operations; touching a lease can itself observe expiry. Import counts retain only acknowledged append outcomes even if a later guard/lock release fails; uncertain commits are not inferred or replayed. Cross-process durable revisions are observed at operation boundaries, **not instantaneous key erasure or push notification**.
 
@@ -83,7 +83,7 @@ Async prompts/KDF/keychain results bind to owner, revision, live policy and canc
 
 - Fixed root: `<agentDir>/extensions/pi-jarvis-archive`. Plaintext defaults to `archive.sqlite`; managed storage uses strict bounded `archive.vault.json`, cooperative `archive.vault.lock` and generations `vaults/<UUID>/archive.sqlite`. No project-selected key/database paths.
 - Metadata is at most **64 KiB**: versioned Ready or non-nested Transition, strict envelopes/identities, active generation, startup grant and at most **eight distinct retired generations**. Further migration requires explicit cleanup when at capacity. Ready `active=legacy` with no envelope is reserved for explicit initial rollback. Unknown fields, duplicate JSON members and unsupported metadata are rejected, not automatically repaired.
-- Canonicalize only the selected agent root. Appended owned paths retain no-follow, ownership, identity and privacy checks. The managed marker makes older strict-layout Jarvis code refuse rather than silently write plaintext. This is a cooperative boundary, not a hostile-filesystem/same-user sandbox.
+- Canonicalize only the selected agent root. Appended owned paths retain no-follow, ownership, identity and privacy checks. The managed marker makes older strict-layout Noodle code refuse rather than silently write plaintext. This is a cooperative boundary, not a hostile-filesystem/same-user sandbox.
 - Serialize managed operations under a bounded cooperative lock with same-directory fsync/rename publication. No automatic stale-lock stealing, uncertain-write replay or unsafe deletion. Explicit break-lock requires a demonstrably dead local PID on the same host and identity/token rechecks; live/unknown locks are refused. Stop **all other Pi instances**, including old versions, before migration/recovery/cleanup.
 - Source/active-file observations use stat-only identity, ownership, type, permission and link checks. Never open and close another database/SHM descriptor to inspect a live SQLite file: POSIX close can release that process's native transaction locks. These checks preserve locks, not an immutable filesystem snapshot.
 - Migration records Transition before creating a fresh target. Hold a stable source transaction; stream exact stored raw JSON spelling, index text, provenance, row IDs and tombstones; verify typed hashes/counts and FTS integrity. Checkpoint, close and fsync the target before Ready publication. Preserve noncanonical valid raw JSON spelling; do not parse/stringify or renormalize accepted raw/index text during transfer. This preserves logical data/index semantics, not identical physical database bytes.

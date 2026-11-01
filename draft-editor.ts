@@ -6,7 +6,7 @@ import {
 
 export const MAX_DRAFT_BYTES = 64 * 1024;
 
-export interface JarvisDraftEditorCallbacks {
+export interface NoodleDraftEditorCallbacks {
 	onSubmit: (text: string) => void;
 	onChange: (text: string) => void;
 	/** Without a handler, rejected text raises an explicit error instead. */
@@ -39,7 +39,7 @@ function delimiterTail(text: string, delimiter: string): number {
 }
 
 /** A content-only, bounded viewport around Pi's public multiline Editor. */
-export class JarvisDraftEditor implements Focusable {
+export class NoodleDraftEditor implements Focusable {
 	private readonly editor: Editor;
 	private disposed = false;
 	private submitted = false;
@@ -53,7 +53,7 @@ export class JarvisDraftEditor implements Focusable {
 	constructor(
 		private readonly tui: TUI,
 		theme: Theme,
-		private readonly callbacks: JarvisDraftEditorCallbacks,
+		private readonly callbacks: NoodleDraftEditorCallbacks,
 		initialText = "",
 	) {
 		this.editor = new Editor(tui, {
@@ -150,7 +150,7 @@ export class JarvisDraftEditor implements Focusable {
 	}
 
 	/** Carry only framing across a thread reset, discarding all old paste text. */
-	inheritPasteDrain(previous: JarvisDraftEditor): void {
+	inheritPasteDrain(previous: NoodleDraftEditor): void {
 		this.resetPaste();
 		this.inPaste = previous.inPaste;
 		this.startTail = previous.startTail;

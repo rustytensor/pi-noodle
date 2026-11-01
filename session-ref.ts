@@ -1,6 +1,8 @@
-export const JARVIS_SESSION_REF_CUSTOM_TYPE = "jarvis.session-ref";
+import { migratedSideReference } from "./storage-layout.js";
 
-export interface JarvisSessionRef {
+export const NOODLE_SESSION_REF_CUSTOM_TYPE = "jarvis.session-ref"; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
+
+export interface NoodleSessionRef {
 	version: 1;
 	file: string;
 }
@@ -11,19 +13,20 @@ type BranchEntryLike = {
 	data?: unknown;
 };
 
-export function readJarvisSessionRef(entries: readonly BranchEntryLike[]): JarvisSessionRef | undefined {
+export function readNoodleSessionRef(entries: readonly BranchEntryLike[], agentDir?: string): NoodleSessionRef | undefined {
 	for (let i = entries.length - 1; i >= 0; i--) {
 		const entry = entries[i];
-		if (entry.type !== "custom" || entry.customType !== JARVIS_SESSION_REF_CUSTOM_TYPE) {
+		if (entry.type !== "custom" || entry.customType !== NOODLE_SESSION_REF_CUSTOM_TYPE) {
 			continue;
 		}
-		return parseJarvisSessionRef(entry.data);
+		const ref = parseNoodleSessionRef(entry.data);
+		return ref && agentDir ? { ...ref, file: migratedSideReference(agentDir, ref.file) } : ref;
 	}
 	return undefined;
 }
 
 
-export function createJarvisSessionRef(file: string): JarvisSessionRef {
+export function createNoodleSessionRef(file: string): NoodleSessionRef {
 	return {
 		version: 1,
 		file,
@@ -31,7 +34,7 @@ export function createJarvisSessionRef(file: string): JarvisSessionRef {
 }
 
 
-function parseJarvisSessionRef(data: unknown): JarvisSessionRef | undefined {
+function parseNoodleSessionRef(data: unknown): NoodleSessionRef | undefined {
 	if (!data || typeof data !== "object") {
 		return undefined;
 	}

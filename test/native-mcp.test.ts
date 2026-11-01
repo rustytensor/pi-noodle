@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { AgentSession, type ExtensionToolContext } from "@earendil-works/pi-coding-agent";
-import { JarvisSideSessionRuntime } from "../side-session.js";
+import { NoodleSideSessionRuntime } from "../side-session.js";
 import { bounded, delay, fixture, sessionOf, until, type Call, type CreateOptions } from "./fixtures/native-mcp-harness.js";
 
 const direct = "mcp__fixture__direct_echo", deferred = "mcp__fixture__deferred_echo", code = "mcp__fixture__code_echo";
@@ -13,11 +13,11 @@ const call = (name: string, value: string, id?: string): Call => ({ name, argume
 const script = (source: string, id?: string): Call => ({ name: "codemode", arguments: { code: `// @options: {"timeout_ms": 3000}\n${source}` }, ...(id ? { id } : {}) });
 const search = (): Call => ({ name: "tool_search", arguments: { query: "deferred_echo", limit: 1 } });
 const repoTool = (name: string) => name.startsWith("mcp__") || ["codemode", "tool_search", "list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource"].includes(name);
-async function connected(runtime: JarvisSideSessionRuntime, name = direct) {
+async function connected(runtime: NoodleSideSessionRuntime, name = direct) {
 	await bounded(runtime.waitForToolAccessChange(), "native lifecycle transition");
 	await until(() => sessionOf(runtime).getActiveToolNames().includes(name), `native tool ${name} connected`);
 }
-async function disposeRuntime(runtime: JarvisSideSessionRuntime) {
+async function disposeRuntime(runtime: NoodleSideSessionRuntime) {
 	runtime.dispose();
 	await bounded(runtime.waitForDisposal(), "owned native shutdown dispatch");
 }
@@ -355,13 +355,13 @@ test("stale side initialization cannot return ready or leak native child after d
 	await fixture(async ({ bridge, server, globalConfig, create }) => {
 		const local = server(); globalConfig({ fixture: local.config() });
 		// Own runtime probe plus public SDK lifecycle method, consistent with side-runtime tests.
-		const prototype = JarvisSideSessionRuntime.prototype as unknown as { initialize(options: CreateOptions): Promise<void> };
+		const prototype = NoodleSideSessionRuntime.prototype as unknown as { initialize(options: CreateOptions): Promise<void> };
 		const originalInitialize = prototype.initialize, originalBind = AgentSession.prototype.bindExtensions;
-		let captured: JarvisSideSessionRuntime | undefined, release!: () => void;
+		let captured: NoodleSideSessionRuntime | undefined, release!: () => void;
 		const barrier = new Promise<void>((resolve) => { release = resolve; });
-		prototype.initialize = function (options) { captured = this as unknown as JarvisSideSessionRuntime; return originalInitialize.call(this, options); };
+		prototype.initialize = function (options) { captured = this as unknown as NoodleSideSessionRuntime; return originalInitialize.call(this, options); };
 		AgentSession.prototype.bindExtensions = async function (options) { await originalBind.call(this, options); await barrier; };
-		let pending: Promise<JarvisSideSessionRuntime> | undefined;
+		let pending: Promise<NoodleSideSessionRuntime> | undefined;
 		try {
 			pending = create({ toolAccessProvider: () => true });
 			const rejected = assert.rejects(pending, /disposed|stale|cancelled|initializ|lifetime/i);

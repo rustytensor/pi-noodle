@@ -1,6 +1,6 @@
 /** Shared, local memory contracts. No runtime/provider dependencies. */
 export type MemoryScope = "global" | "project";
-export type MemoryLane = "main" | "jarvis" | "manual";
+export type MemoryLane = "main" | "jarvis" | "manual"; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 export type MemoryKind = "note" | "conversation";
 export type MemoryCategory = "user" | "feedback" | "project" | "reference";
 export interface MemoryPolicy { enabled: boolean; capture: boolean; recall: boolean }

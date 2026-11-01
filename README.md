@@ -2,65 +2,43 @@ pi-noodle: your Pi agent's inner voice and memory.
 
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-neon-skull.png" alt="Noodle neon skull and ramen bowl" width="720">
+<picture>
+  <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-hero-compact.svg">
+  <img src="https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-hero.svg" alt="pi-noodle — Pi / your agent's inner voice" width="960">
+</picture>
 
-<img src="https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-dark-512.png" alt="pi-noodle icon" width="96">
+## Memory that lasts. Space to think.
 
-**Pi / your agent's inner voice**
-
-## Remember more. Wait less. Stay in control.
-
-**Memory you can edit. A second lane of thought. Watchers that wake an idle agent. A searchable past.**
-
-Your main Pi session stays on the job. **Noodle gives you room to investigate, remember and act**—without turning every side question into a change of plan. Open a polished conversation overlay, choose its model and thinking level, and let assigned work continue when you close the window.
-
-**The payoff compounds across sessions.** Main Pi and Noodle share saved preferences, corrections and project decisions—even if you never open the overlay. **Now you can open the [curated memory editor](#edit-what-pi-remembers), inspect the saved facts and correct them yourself.** Add the optional history archive to search recorded conversations and tool activity, import existing Pi chats after review, and optionally encrypt the active archive.
-
-**Stop babysitting slow work.** Set an optional [watcher](#main-session-watchers) for a file, a shell predicate, or a path going quiet, then let main Pi finish its turn. When the condition is met—or the wait times out or fails—the extension wakes the agent with the result and its own next-step note. **No model polling while it waits.**
-
-**Power is explicit:** opt-in watchers, local tools + native MCP, quiet notes to main, and redirects that require your confirmation. [See the whole toolkit](#at-a-glance) · [Try memory in a minute](#memory-in-60-seconds).
-
-**Know the defaults:** shared memory is **on in trusted projects**, stored in **local plaintext**, and recalled facts can reach your active model. Watchers, the separate archive, archive encryption and three tool/bridge grants start **off**. Memory retrieval needs no embeddings or background model jobs. [Privacy and controls](#two-complementary-memory-features).
-
-[![CI](https://img.shields.io/github/actions/workflow/status/rustytensor/pi-noodle/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/rustytensor/pi-noodle/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/pi-noodle?style=for-the-badge&color=7c3aed)](https://www.npmjs.com/package/pi-noodle)
-[![license](https://img.shields.io/badge/license-MIT-111827?style=for-the-badge)](./LICENSE)
-[![Pi extension](https://img.shields.io/badge/Pi-extension-06b6d4?style=for-the-badge)](https://github.com/rustytensor/pi-noodle)
-[![TypeScript](https://img.shields.io/badge/TypeScript-powered-2563eb?style=for-the-badge)](./package.json)
-
-<p><strong>Current version:</strong> 1.15.1</p>
+A shared memory and a private side conversation for your Pi agent.<br>
+Keep the main session moving without losing the thread.
 
 ```bash
 pi install npm:pi-noodle
 ```
 
-[Install](#quick-start) · [Watchers](#main-session-watchers) · [Memory editor](#edit-what-pi-remembers) · [Shared memory](#shared-memory) · [Search & import](#full-session-archive) · [Encryption](#optional-archive-encryption) · [TUI controls](#overlay-controls) · [Native MCP](#native-mcp)
+[Shared memory](#shared-memory) · [Side session](#overlay-controls) · [Archive](#full-session-archive) · [Watchers](#main-session-watchers) · [Quick start](#quick-start)
 
-<p>
-  <strong>Shared persistent memory</strong> ·
-  <strong>Curated memory editor</strong> ·
-  <strong>Optional indexed session archive</strong> ·
-  <strong>Optional password encryption</strong> ·
-  <strong>Confirmed bulk history import</strong> ·
-  <strong>Persistent side session</strong> ·
-  <strong>Live main-session context</strong> ·
-  <strong>Background task continuity</strong> ·
-  <strong>Idle-agent wake-up watchers</strong> ·
-  <strong>In-window model + thinking selection</strong> ·
-  <strong>Opt-in local tools + native MCP</strong> ·
-  <strong>Confirmed redirects</strong>
-</p>
+<p><strong>Current version:</strong> 1.15.2</p>
 
 </div>
 
+**Know the defaults:** memory is **on in trusted projects**, stored in **local plaintext**, and recalled facts can reach your active model. Archive, encryption, watchers and tool/bridge grants start **off**. [Privacy and controls](#two-complementary-memory-features).
+
 ## Renamed from pi-jarvis
 
-Version **1.15.0** introduces **pi-noodle**. Install with `pi install npm:pi-noodle`.
+Old commands and tools still work. Saved memory, archives and watchers carry over unchanged.
+
+<details>
+<summary>Upgrade details and optional storage migration</summary>
+
+Version **1.15.0** introduced **pi-noodle**. Install with `pi install npm:pi-noodle`.
 Use `/noodle`, `/noodle-model`, `/noodle-thinking`, `/noodle-memory`, `/noodle-archive` and `/noodle-watchers`; the old `/jarvis` command family and `jarvis_*` tools remain compatibility aliases for their `noodle_*` counterparts.
 
 Saved memory, archives, watcher state and session references are untouched by the rename. Existing settings and stores keep their legacy paths, including `extensions/pi-jarvis.json`, `.pi/jarvis.json`, their archive/watchers equivalents, `pi-jarvis-memory`, `extensions/pi-jarvis-archive` and `jarvis-sessions/`. No automatic data move or privacy/default change occurs. The GitHub repository is now `rustytensor/pi-noodle`.
 
 Optional: the [offline storage migration utility](docs/storage-migration.md) can move copies to noodle-named paths after every Pi instance is stopped. It requires explicit review, retains originals, and does not rewrite historical text or authenticated format tags. No migration is needed to install the renamed extension.
+
+</details>
 
 ## Main-session watchers
 

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 > Historical note: releases before the `pi-jarvis` 1.x line refer to the project's earlier `pi-btw` and `/btw` naming. Those entries are preserved as historical release records and do not describe the current product name or command surface.
 
+## [1.15.2] - 2026-11-01
+
+### GitHub presentation
+- Replace the stacked raster header with one responsive SVG composition using the supplied neon skull mark and vector neon lettering. Keep attribution and use a dedicated compact layout on narrow screens.
+- Simplify the opening copy and navigation while keeping privacy/default controls visible. No runtime or stored-data changes.
+
 ## [1.15.1] - 2026-11-01
 
 ### GitHub repository rename

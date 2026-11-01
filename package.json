@@ -1,6 +1,6 @@
 {
   "name": "pi-noodle",
-  "version": "1.15.1",
+  "version": "1.15.2",
   "engines": {
     "node": ">=22.19.0"
   },
@@ -71,6 +71,7 @@
     "test:watchers": "node --import tsx --test test/watchers-config.test.ts test/watchers-check.test.ts test/watchers-service.test.ts test/watchers-extension.test.ts",
     "verify:release": "node --import tsx test/release-verification.test.ts",
     "check:tags": "node scripts/check-tags.mjs",
+    "render:hero": "node scripts/render-readme-hero.mjs",
     "render:branding": "npm run build && node scripts/render-branding.mjs",
     "render:memory-editor": "npm run build && node scripts/render-memory-editor.mjs",
     "render:showcase": "node scripts/render-showcase.mjs",

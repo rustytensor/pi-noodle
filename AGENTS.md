@@ -44,6 +44,11 @@
 - `noodle-branding.ts` owns the original wordmark. `npm run render:branding` regenerates README SVGs with local renderer fixtures, not live provider/session data. Label fixture previews honestly.
 - `npm run render:showcase` generates self-contained conceptual workspace/history/access SVGs; `npm run check:showcase` optionally uses an existing Playwright installation for loopback-only desktop/narrow/light/dark screenshots and text-bound checks. Keep browser dependencies out of the runtime package, distinguish conceptual diagrams from live UI, and preserve truthful defaults/privacy/close-versus-stop labels.
 
+## GitHub visual identity (1.15.2)
+- Use the supplied `docs/assets/noodle-neon.svg` mark and vector letter paths in `noodle-neon-wordmark.svg` for the README identity. Do not substitute the terminal ASCII intro or stack the old PNG banner and icon.
+- `npm run render:hero` regenerates the self-contained desktop and compact SVG heroes. README uses a GitHub-compatible picture element; no external fonts, raster embeds, scripts or animation in the heroes. Preserve the supplied art credit and visible privacy/default disclosures.
+- Preview documentation changes on desktop and narrow screens, with synthetic local content only. Keep presentation work separate from runtime behavior.
+
 ## Native MCP (1.6.0)
 - Use Pi's root-exported native factories, not private registry/runtime/transport internals. Noodle owns separate configured-server connections; main-only extension registrations are not inherited.
 - No native startup/credential expansion while initially off. Respect project trust, enabled states, native tool exposures, and live Repo tools permission for direct/deferred/codemode/resource execution.

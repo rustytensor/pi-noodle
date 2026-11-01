@@ -1,6 +1,6 @@
 {
   "name": "pi-noodle",
-  "version": "1.15.0",
+  "version": "1.15.1",
   "engines": {
     "node": ">=22.19.0"
   },
@@ -28,11 +28,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rustytensor/pi-jarvis.git"
+    "url": "git+https://github.com/rustytensor/pi-noodle.git"
   },
-  "homepage": "https://github.com/rustytensor/pi-jarvis#readme",
+  "homepage": "https://github.com/rustytensor/pi-noodle#readme",
   "bugs": {
-    "url": "https://github.com/rustytensor/pi-jarvis/issues"
+    "url": "https://github.com/rustytensor/pi-noodle/issues"
   },
   "keywords": [
     "pi",

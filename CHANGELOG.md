@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 > Historical note: releases before the `pi-jarvis` 1.x line refer to the project's earlier `pi-btw` and `/btw` naming. Those entries are preserved as historical release records and do not describe the current product name or command surface.
 
+## [1.15.1] - 2026-11-01
+
+### GitHub repository rename
+- Rename the GitHub repository to `rustytensor/pi-noodle` and update current repository, issue, badge and image links. Prior release records remain unchanged.
+- No runtime, stored-data, command or tool behavior changes. npm publication remains manual.
+
 ## [1.15.0] - 2026-11-01
 
 ### Renamed to pi-noodle

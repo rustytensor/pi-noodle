@@ -2,9 +2,9 @@ pi-noodle: your Pi agent's inner voice and memory.
 
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-neon-skull.png" alt="Noodle neon skull and ramen bowl" width="720">
+<img src="https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-neon-skull.png" alt="Noodle neon skull and ramen bowl" width="720">
 
-<img src="https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-dark-512.png" alt="pi-noodle icon" width="96">
+<img src="https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-dark-512.png" alt="pi-noodle icon" width="96">
 
 **Pi / your agent's inner voice**
 
@@ -22,13 +22,13 @@ Your main Pi session stays on the job. **Noodle gives you room to investigate, r
 
 **Know the defaults:** shared memory is **on in trusted projects**, stored in **local plaintext**, and recalled facts can reach your active model. Watchers, the separate archive, archive encryption and three tool/bridge grants start **off**. Memory retrieval needs no embeddings or background model jobs. [Privacy and controls](#two-complementary-memory-features).
 
-[![CI](https://img.shields.io/github/actions/workflow/status/rustytensor/pi-jarvis/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/rustytensor/pi-jarvis/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/rustytensor/pi-noodle/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/rustytensor/pi-noodle/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/pi-noodle?style=for-the-badge&color=7c3aed)](https://www.npmjs.com/package/pi-noodle)
 [![license](https://img.shields.io/badge/license-MIT-111827?style=for-the-badge)](./LICENSE)
-[![Pi extension](https://img.shields.io/badge/Pi-extension-06b6d4?style=for-the-badge)](https://github.com/rustytensor/pi-jarvis)
+[![Pi extension](https://img.shields.io/badge/Pi-extension-06b6d4?style=for-the-badge)](https://github.com/rustytensor/pi-noodle)
 [![TypeScript](https://img.shields.io/badge/TypeScript-powered-2563eb?style=for-the-badge)](./package.json)
 
-<p><strong>Current version:</strong> 1.15.0</p>
+<p><strong>Current version:</strong> 1.15.1</p>
 
 ```bash
 pi install npm:pi-noodle
@@ -58,7 +58,7 @@ pi install npm:pi-noodle
 Version **1.15.0** introduces **pi-noodle**. Install with `pi install npm:pi-noodle`.
 Use `/noodle`, `/noodle-model`, `/noodle-thinking`, `/noodle-memory`, `/noodle-archive` and `/noodle-watchers`; the old `/jarvis` command family and `jarvis_*` tools remain compatibility aliases for their `noodle_*` counterparts.
 
-Saved memory, archives, watcher state and session references are untouched by the rename. Existing settings and stores keep their legacy paths, including `extensions/pi-jarvis.json`, `.pi/jarvis.json`, their archive/watchers equivalents, `pi-jarvis-memory`, `extensions/pi-jarvis-archive` and `jarvis-sessions/`. No automatic data move or privacy/default change occurs. The GitHub repository remains `rustytensor/pi-jarvis`.
+Saved memory, archives, watcher state and session references are untouched by the rename. Existing settings and stores keep their legacy paths, including `extensions/pi-jarvis.json`, `.pi/jarvis.json`, their archive/watchers equivalents, `pi-jarvis-memory`, `extensions/pi-jarvis-archive` and `jarvis-sessions/`. No automatic data move or privacy/default change occurs. The GitHub repository is now `rustytensor/pi-noodle`.
 
 Optional: the [offline storage migration utility](docs/storage-migration.md) can move copies to noodle-named paths after every Pi instance is stopped. It requires explicit review, retains originals, and does not rewrite historical text or authenticated format tags. No migration is needed to install the renamed extension.
 
@@ -127,9 +127,9 @@ Version one mounts watcher tools **only in main**, never in Noodle. It does not 
 
 Inside Noodle, use **`/memory editor`**. No model call or side-session boot is required.
 
-![Curated memory editor, actual renderer with synthetic notes](https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-memory-editor.svg)
+![Curated memory editor, actual renderer with synthetic notes](https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-memory-editor.svg)
 
-*Actual component with synthetic notes and a custom palette—not a live memory database. [Open the full-size preview](https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-memory-editor.svg).*
+*Actual component with synthetic notes and a custom palette—not a live memory database. [Open the full-size preview](https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-memory-editor.svg).*
 
 | When you want to… | The editor lets you… |
 |---|---|
@@ -151,7 +151,7 @@ NOODLE
 Pi / your agent's inner voice
 ```
 
-![Noodle compact overlay, rendered with deterministic demo data](https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-overlay.svg)
+![Noodle compact overlay, rendered with deterministic demo data](https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-overlay.svg)
 
 *Actual renderer, deterministic demo conversation, custom dark palette—not a live provider session. Theme-aware panels, bounded reading width, visible access states and a distinct multiline prompt keep the discussion front and center.*
 
@@ -261,7 +261,7 @@ No perfect-recall promise, autonomous swarm claim or hidden permission escalatio
 
 ## How it fits into Pi
 
-<img src="https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-workspace.svg" alt="Main Pi and Noodle are separate conversation lanes. Main-session context flows to Noodle; both share local plaintext memory, on in trusted projects. Recalled facts may reach the model/provider. Archive and tool permissions remain separate." width="640">
+<img src="https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-workspace.svg" alt="Main Pi and Noodle are separate conversation lanes. Main-session context flows to Noodle; both share local plaintext memory, on in trusted projects. Recalled facts may reach the model/provider. Archive and tool permissions remain separate." width="640">
 
 *Architecture illustration—not a live session or a promise that every saved fact is recalled.*
 
@@ -446,7 +446,7 @@ Global accessibility is within the **same active Pi agent directory**, not cloud
 
 **Turn a pile of old chats into history you can query.** Preview first, confirm the reviewed set, then inspect what imported—and what did not.
 
-<img src="https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-history.svg" alt="Optional archive workflow: preview the selected history files, confirm the exact reviewed set, import with duplicate skipping and per-file reporting, then search recorded entries. Archive and model access are off by default. Content defaults to unredacted plaintext and may hold secrets; model reads can reach the provider even with encryption. Encryption protects only the active archive." width="640">
+<img src="https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-history.svg" alt="Optional archive workflow: preview the selected history files, confirm the exact reviewed set, import with duplicate skipping and per-file reporting, then search recorded entries. Archive and model access are off by default. Content defaults to unredacted plaintext and may hold secrets; model reads can reach the provider even with encryption. Encryption protects only the active archive." width="640">
 
 *Workflow illustration, not automatic setup. Recording must be explicitly enabled; read [safe encryption setup](#safe-initial-setup) before capturing/importing if avoiding new plaintext archive copies.*
 
@@ -773,7 +773,7 @@ Scrollback follows new output until you scroll up. To bound rendering work, the 
 
 ### Permission flow
 
-<img src="https://raw.githubusercontent.com/rustytensor/pi-jarvis/main/docs/assets/noodle-access.svg" alt="A fresh owner starts with Repo tools, Note main and Redirect off. Each is a separate opt-in; Redirect requires visible per-send confirmation. Ordinary close preserves same-owner work and grants. Explicit stop and access-off remain available." width="640">
+<img src="https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-access.svg" alt="A fresh owner starts with Repo tools, Note main and Redirect off. Each is a separate opt-in; Redirect requires visible per-send confirmation. Ordinary close preserves same-owner work and grants. Explicit stop and access-off remain available." width="640">
 
 *Permission/lifecycle illustration. Memory and archive controls are independent. Closing is not revocation; an incompatible model can still disable bridge controls.*
 
@@ -932,7 +932,7 @@ GitHub Actions validate branch pushes and pull requests on Node 22.19.0 and 24. 
 
 A matching annotated **`vX.Y.Z`** tag runs exact-tag validation and creates a GitHub release with the validated npm tarball. **npm publication stays manual**; no npm publishing token is configured. Existing assets are verified, never overwritten with different bytes.
 
-CI reports violations; protected-branch/tag rules must be configured separately for enforcement. See [RELEASING.md](https://github.com/rustytensor/pi-jarvis/blob/main/RELEASING.md) for atomic tagged pushes, fork/merge handling, reruns, and manual npm publication.
+CI reports violations; protected-branch/tag rules must be configured separately for enforcement. See [RELEASING.md](https://github.com/rustytensor/pi-noodle/blob/main/RELEASING.md) for atomic tagged pushes, fork/merge handling, reruns, and manual npm publication.
 
 ---
 

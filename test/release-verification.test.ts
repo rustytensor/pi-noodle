@@ -91,7 +91,7 @@ function main(): void {
 	assert.equal(packed.name, manifest.name);
 	assert.equal(packed.version, manifest.version);
 	const packedPaths = new Set((packed.files ?? []).map((entry) => normalizeManifestEntry(entry.path)));
-	for (const path of ["package.json", "README.md", "AGENTS.md", "LICENSE", "docs/archive-encryption-design.md", "docs/watchers-host-investigation.md", "docs/storage-migration.md", ...[
+	for (const path of ["package.json", "README.md", "AGENTS.md", "LICENSE", "docs/archive-encryption-design.md", "docs/watchers-host-investigation.md", "docs/storage-migration.md", "docs/user-guide.md", ...[
 		"index", "noodle-config", "main-context", "main-session-state", "model-picker", "overlay", "session-ref", "side-session",
 		"draft-editor", "overlay-layout", "transcript-viewport", "native-mcp", "noodle-branding",
 		"memory-types", "memory-config", "memory-content", "memory-store", "memory-service", "memory-extension",
@@ -111,7 +111,7 @@ function main(): void {
 	for (const path of packedPaths) {
 		assert.ok(!/(^|\/)(test|tmp|prompts|coord|node_modules|\.pi|\.git)\//.test(path), `forbidden payload path: ${path}`);
 		assert.ok(!path.endsWith(".tgz"), `archive must not be repacked: ${path}`);
-		assert.ok(path.startsWith("dist/") || ["package.json", "README.md", "AGENTS.md", "LICENSE", "docs/archive-encryption-design.md", "docs/watchers-host-investigation.md", "docs/storage-migration.md"].includes(path), `unexpected source artifact: ${path}`);
+		assert.ok(path.startsWith("dist/") || ["package.json", "README.md", "AGENTS.md", "LICENSE", "docs/archive-encryption-design.md", "docs/watchers-host-investigation.md", "docs/storage-migration.md", "docs/user-guide.md"].includes(path), `unexpected source artifact: ${path}`);
 		assert.ok(!path.startsWith("dist/mcp-policy."), `stale removed artifact: ${path}`);
 	}
 	console.log("release verification passed");

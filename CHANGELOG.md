@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 > Historical note: releases before the `pi-jarvis` 1.x line refer to the project's earlier `pi-btw` and `/btw` naming. Those entries are preserved as historical release records and do not describe the current product name or command surface.
 
+## [1.15.3] - 2026-11-02
+
+### Memory-first GitHub page and editable neon identity
+- Rebuild the landing page around shared memory, optional archive encryption and side chat, with responsive explanatory SVG diagrams. Preserve the full operating reference in `docs/user-guide.md`.
+- Adapt the supplied neon-skull PNG reference into a 14-layer editable SVG using its matching vector geometry. Export raster-free desktop/compact banners; keep the PNG in a hidden reference layer only.
+- Correct the GitHub About homepage and refresh description/topics for `rustytensor/pi-noodle`. Keep encryption boundaries and defaults explicit. No runtime or saved-data changes.
+
 ## [1.15.2] - 2026-11-01
 
 ### GitHub presentation

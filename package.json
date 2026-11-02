@@ -1,10 +1,10 @@
 {
   "name": "pi-noodle",
-  "version": "1.15.2",
+  "version": "1.15.3",
   "engines": {
     "node": ">=22.19.0"
   },
-  "description": "Pi / your agent's inner voice. Shared memory, a private side session, searchable archives, optional encryption, watchers, and explicit tool/bridge controls.",
+  "description": "Shared memory for Pi, optional archive encryption, and a side chat for your agent's inner voice. Edit useful facts, search saved history, and control what gets shared.",
   "type": "module",
   "main": "./dist/index.js",
   "bin": { "pi-noodle-migrate": "./dist/storage-migration.js" },
@@ -22,6 +22,7 @@
     "AGENTS.md",
     "docs/archive-encryption-design.md",
     "docs/storage-migration.md",
+    "docs/user-guide.md",
     "docs/watchers-host-investigation.md",
     "LICENSE"
   ],
@@ -71,6 +72,7 @@
     "test:watchers": "node --import tsx --test test/watchers-config.test.ts test/watchers-check.test.ts test/watchers-service.test.ts test/watchers-extension.test.ts",
     "verify:release": "node --import tsx test/release-verification.test.ts",
     "check:tags": "node scripts/check-tags.mjs",
+    "render:overview": "node scripts/render-overview.mjs",
     "render:hero": "node scripts/render-readme-hero.mjs",
     "render:branding": "npm run build && node scripts/render-branding.mjs",
     "render:memory-editor": "npm run build && node scripts/render-memory-editor.mjs",

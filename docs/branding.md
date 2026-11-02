@@ -1,22 +1,40 @@
-# GitHub artwork
+# Editable logo and page graphics
 
-The README uses one responsive vector composition, not a stack of raster logos.
+The visual reference is the supplied `noodle-neon-skull.png`: the neon-outline
+skull bowl, rose chopsticks, gold noodles, voice wave and neon lettering—not the
+white-filled icon variant.
 
-- `assets/noodle-neon.svg` is the supplied neon skull mark, copied unchanged.
-- `assets/noodle-neon-wordmark.svg` contains the six letter paths from the supplied
-  `neon-sign.html`. The letters use uniform illumination in the static header.
-- `npm run render:hero` composes those vectors into `noodle-hero.svg` and
-  `noodle-hero-compact.svg`. The compact version is selected below 600 px.
-- Both heroes are self-contained SVGs: no raster embeds, external fonts, scripts,
-  animation or network dependencies. The terminal ASCII intro is separate.
+## Edit the logo
 
-The duplicate PNG header images were removed from the README, not deleted from
-history. The supplied logo attribution remains at the bottom of the page.
+Open [`assets/noodle-logo-editable.svg`](assets/noodle-logo-editable.svg) in an SVG
+editor. It has **14 named Inkscape-compatible layers**, including nested skull
+layers: wall, grid/rain, reflected light, skull, chopsticks, noodles, bowl, face,
+voice wave, letter paths, tagline, badge, signature and reference image.
 
-Validation used a disposable Chromium profile and a local GitHub-like Markdown
-preview, with all HTTP requests blocked. Desktop/dark and mobile/light layouts
-loaded the correct SVG, showed one image, and had no horizontal overflow. A planted
-oversized image was rejected. The install command and privacy/default notice stayed
-visible. These previews are not captures of the live GitHub site.
+- Visible artwork is vector geometry from the matching supplied `neon-skull.html`.
+  The lettering is editable paths; the tagline and badge are editable text.
+- The supplied PNG is a hidden comparison layer, not the visible artwork. Keep
+  `noodle-neon-skull.png` beside the master if you want to toggle that reference.
+- The decorative “OPEN 24/7” badge becomes “LOCAL MEMORY”: the extension is not an
+  always-running daemon. Nothing animates or flashes.
+- Regenerate web exports with `npm run render:hero`. The desktop and compact
+  exports remove the PNG reference layer and use no raster embeds, external fonts,
+  scripts or network dependencies. Preserve layer IDs when editing.
+
+## Explain the product
+
+`npm run render:overview` creates desktop and compact diagrams for **memory,
+archive encryption and side chat**, in that order. They share the logo palette,
+use real text and descriptive alt text, and are explicitly conceptual—not live UI.
+The complete command/operating reference lives in [user-guide.md](user-guide.md).
+
+The encryption diagram keeps shared memory, original Pi transcripts and retained
+plaintext copies outside the encrypted boundary. Memory stays plaintext; archive,
+encryption and model access are separate opt-ins. Closing side chat is not stopping
+it. Keep these facts visible when changing copy or artwork.
+
+Web previews use local content in a disposable browser profile with external
+requests blocked. Check the whole page on desktop and narrow screens, not just the
+banner. The old PNG assets remain available as references, not competing headers.
 
 Logo adapted from 'Death Ramen Skull Bowl Logo' by gagavastard (Envato Elements).

@@ -1,49 +1,43 @@
-// Documentation art only. Uses the supplied SVG mark and supplied vector letter paths.
-// No runtime dependencies, network requests, fonts, scripts or raster embeds in the output.
+// Export the editable layered neon master for GitHub. No runtime dependencies.
 import { readFileSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-const directory = new URL("../docs/assets/", import.meta.url);
-function source(name) {
-	const text = readFileSync(new URL(name, directory), "utf8");
-	const match = /<svg\b([^>]*)>([\s\S]*)<\/svg>\s*$/.exec(text);
-	const viewBox = /\bviewBox="([^"]+)"/.exec(match?.[1] ?? "")?.[1];
-	if (!match || !viewBox || /<(?:script|image|foreignObject|animate|set)\b|\b(?:href|src|on[a-z]+)\s*=|@import/i.test(text)) throw new Error(`Expected self-contained static vector: ${name}`);
-	return { viewBox, body: match[2].replace(/<title>[\s\S]*?<\/title>/g, "") };
+const assets = new URL("../docs/assets/", import.meta.url);
+const master = readFileSync(new URL("noodle-logo-editable.svg", assets), "utf8");
+// The supplied master uses ordinary SVG groups; balance nested groups, not a
+// non-greedy regex that would silently cut off a nested editing layer.
+function layer(xml, id) {
+	const start = new RegExp(`<g\\b[^>]*\\bid="${id}"[^>]*>`).exec(xml);
+	if (!start) throw new Error(`Missing editable layer: ${id}`);
+	const tags = /<\/?g\b[^>]*>/g; tags.lastIndex = start.index;
+	let depth = 0;
+	for (let token; (token = tags.exec(xml));) {
+		depth += token[0].startsWith("</") ? -1 : 1;
+		if (!depth) return xml.slice(start.index, tags.lastIndex);
+	}
+	throw new Error(`Unclosed editable layer: ${id}`);
 }
-const mark = source("noodle-neon.svg"), wordmark = source("noodle-neon-wordmark.svg");
-const embed = (source, x, y, width, height, extra = "") => `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="${source.viewBox}" ${extra}>${source.body}</svg>`;
-function hero(compact) {
-	const w = compact ? 600 : 960, h = compact ? 500 : 320;
-	const line = Array.from({ length: 141 }, (_, i) => {
-		const t = i / 140, x = (compact ? 120 : 320) + t * (compact ? 360 : 550);
-		const y = (compact ? 462 : 274) + Math.sin(t * Math.PI * 20) * Math.sin(t * Math.PI) ** 2 * 5;
-		return `${i ? "L" : "M"}${x.toFixed(2)},${y.toFixed(2)}`;
-	}).join(" ");
-	return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-labelledby="title description">
-<title id="title">pi-noodle — Pi / your agent's inner voice</title>
-<desc id="description">The supplied neon skull-and-noodle mark beside the Noodle neon wordmark. Static decorative artwork, not a live activity indicator.</desc>
-<defs>
- <linearGradient id="wall" x2="1" y2="1"><stop stop-color="#090e18"/><stop offset="1" stop-color="#181024"/></linearGradient>
- <radialGradient id="aura"><stop stop-color="#7dd3c0" stop-opacity=".16"/><stop offset="1" stop-color="#7dd3c0" stop-opacity="0"/></radialGradient>
- <linearGradient id="edge"><stop stop-color="#7dd3c0" stop-opacity=".7"/><stop offset=".6" stop-color="#9c8ed0" stop-opacity=".14"/><stop offset="1" stop-color="#ff7a93" stop-opacity=".5"/></linearGradient>
- <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#fff" stroke-opacity=".025"/></pattern>
- <filter id="neon" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="2.2"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
- <clipPath id="frame"><rect width="${w}" height="${h}" rx="24"/></clipPath>
-</defs>
-<g clip-path="url(#frame)">
- <rect width="${w}" height="${h}" fill="url(#wall)"/>
- <rect width="${w}" height="${h}" fill="url(#grid)"/>
- <ellipse cx="${compact ? 300 : 160}" cy="${compact ? 146 : 160}" rx="190" ry="180" fill="url(#aura)"/>
- ${embed(mark, compact ? 190 : 38, compact ? 20 : 36, compact ? 220 : 242, compact ? 220 : 242)}
- ${compact ? "" : '<path d="M296 76V248" stroke="#7dd3c0" stroke-opacity=".16"/>'}
- ${embed(wordmark, compact ? 65 : 316, compact ? 267 : 72, compact ? 470 : 570, compact ? 127 : 154, 'filter="url(#neon)"')}
- <text x="${compact ? 300 : 330}" y="${compact ? 430 : 246}" ${compact ? 'text-anchor="middle"' : ""} fill="#d5c8fa" font-family="Verdana,Arial,sans-serif" font-size="${compact ? 24 : 23}">Pi / your agent's inner voice</text>
- <path d="${line}" fill="none" stroke="#ffd27a" stroke-opacity=".55" stroke-width="1.6"/>
-</g>
-<rect x=".75" y=".75" width="${w - 1.5}" height="${h - 1.5}" rx="23.25" fill="none" stroke="url(#edge)" stroke-width="1.5"/>
+const reference = layer(master, "layer-reference");
+const desktop = master.replace(reference, "").replace(/<metadata\b[^>]*>[\s\S]*?<\/metadata>/g, "")
+	.replace(/\s+inkscape:[\w-]+="[^"]*"/g, "");
+const defs = /<defs>[\s\S]*?<\/defs>/.exec(desktop)?.[0];
+if (!defs) throw new Error("Missing vector definitions");
+const embed = (id, box, x, y, width, height) => `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="${box}">${layer(desktop, id)}</svg>`;
+const compact = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="760" viewBox="0 0 640 760" role="img" aria-labelledby="title description">
+<title id="title">pi-noodle — neon skull and inner voice</title>
+<desc id="description">Compact arrangement of the supplied neon skull reference, with editable vector geometry shared with the desktop logo.</desc>
+${defs}
+<rect width="640" height="760" rx="20" fill="#0a0714"/>
+<rect width="640" height="760" rx="20" fill="url(#wall-grid)"/>
+<ellipse cx="320" cy="240" rx="260" ry="230" fill="url(#mint-wall)"/>
+<ellipse cx="320" cy="490" rx="290" ry="180" fill="url(#pink-wall)"/>
+${embed("layer-skull", "60 40 440 490", 128, 8, 360, 400)}
+${embed("layer-wordmark", "510 218 460 124", 45, 420, 550, 148)}
+<text x="320" y="610" text-anchor="middle" font-family="ui-monospace,Consolas,Liberation Mono,monospace" font-size="26" letter-spacing=".9" fill="#c9b8ff" filter="url(#g)">Pi / your agent's inner voice</text>
+${embed("layer-voice", "390 120 490 64", 70, 630, 500, 40)}
+<g filter="url(#g)"><rect x="210" y="688" width="220" height="42" rx="6" fill="none" stroke="#7dd3c0" stroke-width="2.5"/>
+<text x="320" y="716" text-anchor="middle" font-family="ui-monospace,Consolas,Liberation Mono,monospace" font-size="20" letter-spacing="2" fill="#7dd3c0">LOCAL MEMORY</text></g>
 </svg>\n`;
-}
-for (const [name, compact] of [["noodle-hero.svg", false], ["noodle-hero-compact.svg", true]]) {
-	writeFileSync(new URL(name, directory), hero(compact).replace(/[ \t]+$/gm, ""));
-	console.log(`Rendered ${fileURLToPath(new URL(name, directory))}`);
+for (const [name, svg] of [["noodle-hero.svg", desktop], ["noodle-hero-compact.svg", compact]]) {
+	if (/<(?:image|script|foreignObject|animate)\b|\b(?:href|src|on[a-z]+)\s*=|@font-face|@import/i.test(svg)) throw new Error(`Web export contains an active or external resource: ${name}`);
+	writeFileSync(new URL(name, assets), svg.replace(/[ \t]+$/gm, ""));
+	console.log(`Rendered ${name}`);
 }

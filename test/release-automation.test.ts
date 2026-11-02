@@ -304,7 +304,7 @@ test("prepare CLI packs actual validated bytes, skips scripts, and preserves exi
 });
 
 test("release payload permits only named archive and watcher documents, not arbitrary docs", async (t) => {
-	for (const name of ["archive-encryption-design.md", "watchers-host-investigation.md", "private-notes.md"]) await t.test(name, t => {
+	for (const name of ["archive-encryption-design.md", "watchers-host-investigation.md", "storage-migration.md", "user-guide.md", "private-notes.md"]) await t.test(name, t => {
 		const r = repo(t), path = `docs/${name}`;
 		const pkg = JSON.parse(readFileSync(join(r.cwd, "package.json"), "utf8"));
 		pkg.files.push(path);
@@ -314,7 +314,7 @@ test("release payload permits only named archive and watcher documents, not arbi
 		annotate(r.cwd, commit(r.cwd), "v1.5.0");
 		const out = join(r.root, "bundle");
 		const result = cli(r.cwd, "prepare-release.mjs", ["--baseline", r.baseline, "--tag", "v1.5.0", "--out-dir", out]);
-		if (name === "archive-encryption-design.md" || name === "watchers-host-investigation.md") ok(result);
+		if (name === "archive-encryption-design.md" || name === "watchers-host-investigation.md" || name === "storage-migration.md" || name === "user-guide.md") ok(result);
 		else { fails(result, /Forbidden packaged path/); assert.equal(existsSync(out), false); }
 	});
 });

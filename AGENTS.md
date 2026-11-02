@@ -44,10 +44,11 @@
 - `noodle-branding.ts` owns the original wordmark. `npm run render:branding` regenerates README SVGs with local renderer fixtures, not live provider/session data. Label fixture previews honestly.
 - `npm run render:showcase` generates self-contained conceptual workspace/history/access SVGs; `npm run check:showcase` optionally uses an existing Playwright installation for loopback-only desktop/narrow/light/dark screenshots and text-bound checks. Keep browser dependencies out of the runtime package, distinguish conceptual diagrams from live UI, and preserve truthful defaults/privacy/close-versus-stop labels.
 
-## GitHub visual identity (1.15.2)
-- Use the supplied `docs/assets/noodle-neon.svg` mark and vector letter paths in `noodle-neon-wordmark.svg` for the README identity. Do not substitute the terminal ASCII intro or stack the old PNG banner and icon.
-- `npm run render:hero` regenerates the self-contained desktop and compact SVG heroes. README uses a GitHub-compatible picture element; no external fonts, raster embeds, scripts or animation in the heroes. Preserve the supplied art credit and visible privacy/default disclosures.
-- Preview documentation changes on desktop and narrow screens, with synthetic local content only. Keep presentation work separate from runtime behavior.
+## GitHub visual identity and feature priority (1.15.3)
+- Marc selects `noodle-neon-skull.png` as the visual reference: neon-outline skull, noodles and wordmark, not the white-filled icon variant. `docs/assets/noodle-logo-editable.svg` is the 14-layer vector master; its PNG comparison layer is hidden. Letter paths and live tagline/badge text stay editable.
+- `npm run render:hero` removes that reference layer from the web exports and generates responsive heroes. `npm run render:overview` generates the explanatory diagrams. Web graphics have no raster embeds, external fonts, scripts or animation. Preserve the supplied art credit.
+- Lead the landing page and GitHub About with memory, optional archive encryption, then side chat. Put detailed commands and limits in `docs/user-guide.md`. Keep plaintext memory, archive-only encryption, separate access controls and close-versus-stop visible; never imply encryption of original transcripts or an always-running daemon.
+- Current owner/repository links use `rustytensor/pi-noodle`, including About homepage, description and topics. Preserve historical changelog/fixture text and frozen data identifiers. Check the whole page on desktop and narrow screens with local synthetic content; presentation work must not alter runtime behavior.
 
 ## Native MCP (1.6.0)
 - Use Pi's root-exported native factories, not private registry/runtime/transport internals. Noodle owns separate configured-server connections; main-only extension registrations are not inherited.
@@ -144,6 +145,8 @@
 
 ## Docs To Keep In Sync
 - `README.md`
+- `docs/user-guide.md` (complete controls, limits and privacy boundaries)
+- `docs/branding.md` when artwork or page presentation changes
 - `CHANGELOG.md`
 - `package.json` version
 - this `AGENTS.md` when command/config behavior changes

@@ -60,8 +60,10 @@ test("ASCII frames stay bounded and README uses the licensed replacement banner"
 	assert.equal(stripTerminalSequences(renderNoodleIntro(theme, 80, 12, 0)[6]!),
 		" ".repeat(Math.floor((80 - NOODLE_TAGLINE.length) / 2)) + NOODLE_TAGLINE, "caption is centered, not padded to width before centering");
 	const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
-	assert.ok(readme.includes("noodle-hero.svg"), "README uses the supplied vectors in one hero");
-	assert.ok(readme.includes("noodle-hero-compact.svg"), "narrow screens have a dedicated composition");
+	assert.ok(readme.includes("pi-noodle-neon.gif"), "README uses the supplied animated logo");
+	assert.ok(readme.includes("(prefers-reduced-motion: reduce)"), "static alternatives respect reduced motion");
+	assert.ok(readme.includes("noodle-hero.svg"), "desktop static fallback remains available");
+	assert.ok(readme.includes("noodle-hero-compact.svg"), "narrow static fallback remains available");
 	assert.doesNotMatch(readme, /noodle-neon-skull\.png|noodle-dark-512\.png/, "no competing raster header images");
 	assert.ok(readme.includes("Logo adapted from 'Death Ramen Skull Bowl Logo' by gagavastard (Envato Elements)."));
 });

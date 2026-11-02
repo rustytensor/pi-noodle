@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 > Historical note: releases before the `pi-jarvis` 1.x line refer to the project's earlier `pi-btw` and `/btw` naming. Those entries are preserved as historical release records and do not describe the current product name or command surface.
 
+## [1.15.4] - 2026-11-02
+
+### Animated GitHub logo
+- Use the supplied `pi-noodle-neon.gif` unchanged as the README logo, with desktop/compact static SVG fallbacks for reduced motion. Keep the editable vector master and explanatory diagrams.
+- Align dev with the already-released main history after preserving its old tip locally. No runtime or saved-data changes.
+
 ## [1.15.3] - 2026-11-02
 
 ### Memory-first GitHub page and editable neon identity

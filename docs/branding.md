@@ -4,6 +4,14 @@ The visual reference is the supplied `noodle-neon-skull.png`: the neon-outline
 skull bowl, rose chopsticks, gold noodles, voice wave and neon lettering—not the
 white-filled icon variant.
 
+## Animated page logo
+
+The README now uses the supplied `assets/pi-noodle-neon.gif` unchanged: a
+3-second, 75-frame loop. Browser reduced-motion preferences select the static
+SVG instead, with a compact static composition on narrow screens. The SVG master
+and diagrams remain available; `render:hero` does not regenerate or re-encode
+the supplied GIF. This affects the GitHub page, not Pi's terminal animation.
+
 ## Edit the logo
 
 Open [`assets/noodle-logo-editable.svg`](assets/noodle-logo-editable.svg) in an SVG
@@ -16,7 +24,7 @@ voice wave, letter paths, tagline, badge, signature and reference image.
 - The supplied PNG is a hidden comparison layer, not the visible artwork. Keep
   `noodle-neon-skull.png` beside the master if you want to toggle that reference.
 - The decorative “OPEN 24/7” badge becomes “LOCAL MEMORY”: the extension is not an
-  always-running daemon. Nothing animates or flashes.
+  always-running daemon. The SVG exports remain static.
 - Regenerate web exports with `npm run render:hero`. The desktop and compact
   exports remove the PNG reference layer and use no raster embeds, external fonts,
   scripts or network dependencies. Preserve layer IDs when editing.

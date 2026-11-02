@@ -3,8 +3,9 @@ pi-noodle: your Pi agent's inner voice and memory.
 <div align="center">
 
 <picture>
-  <source media="(max-width: 760px)" srcset="https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-hero-compact.svg">
-  <img src="https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-hero.svg" alt="pi-noodle: a neon skull bowl, noodles becoming a voice, and the Noodle wordmark" width="880">
+  <source media="(prefers-reduced-motion: reduce) and (max-width: 760px)" srcset="https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-hero-compact.svg">
+  <source media="(prefers-reduced-motion: reduce)" srcset="https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-hero.svg">
+  <img src="https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/pi-noodle-neon.gif" alt="pi-noodle: a neon skull bowl, noodles becoming a voice, and the Noodle wordmark" width="880">
 </picture>
 
 ## Remember what matters. Keep your train of thought.
@@ -17,7 +18,7 @@ pi-noodle: your Pi agent's inner voice and memory.
 pi install npm:pi-noodle
 ```
 
-<p><strong>Current version:</strong> 1.15.3</p>
+<p><strong>Current version:</strong> 1.15.4</p>
 
 [Editable SVG logo](docs/assets/noodle-logo-editable.svg) · [Releases](https://github.com/rustytensor/pi-noodle/releases) · [Issues](https://github.com/rustytensor/pi-noodle/issues)
 

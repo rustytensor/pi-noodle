@@ -44,9 +44,10 @@
 - `noodle-branding.ts` owns the original wordmark. `npm run render:branding` regenerates README SVGs with local renderer fixtures, not live provider/session data. Label fixture previews honestly.
 - `npm run render:showcase` generates self-contained conceptual workspace/history/access SVGs; `npm run check:showcase` optionally uses an existing Playwright installation for loopback-only desktop/narrow/light/dark screenshots and text-bound checks. Keep browser dependencies out of the runtime package, distinguish conceptual diagrams from live UI, and preserve truthful defaults/privacy/close-versus-stop labels.
 
-## GitHub visual identity and feature priority (1.15.3)
+## GitHub visual identity and feature priority (1.15.4)
+- The README logo is Marc's supplied `docs/assets/pi-noodle-neon.gif`, copied unchanged. Respect browser reduced-motion preferences with static desktop/compact SVG fallbacks. Keep the editable vector master and feature diagrams; this is not a change to the terminal intro.
 - Marc selects `noodle-neon-skull.png` as the visual reference: neon-outline skull, noodles and wordmark, not the white-filled icon variant. `docs/assets/noodle-logo-editable.svg` is the 14-layer vector master; its PNG comparison layer is hidden. Letter paths and live tagline/badge text stay editable.
-- `npm run render:hero` removes that reference layer from the web exports and generates responsive heroes. `npm run render:overview` generates the explanatory diagrams. Web graphics have no raster embeds, external fonts, scripts or animation. Preserve the supplied art credit.
+- `npm run render:hero` removes that reference layer from the web exports and generates responsive heroes. `npm run render:overview` generates the explanatory diagrams. SVG exports have no raster embeds, external fonts, scripts or animation; the supplied GIF is the explicit animated header exception. Preserve the supplied art credit.
 - Lead the landing page and GitHub About with memory, optional archive encryption, then side chat. Put detailed commands and limits in `docs/user-guide.md`. Keep plaintext memory, archive-only encryption, separate access controls and close-versus-stop visible; never imply encryption of original transcripts or an always-running daemon.
 - Current owner/repository links use `rustytensor/pi-noodle`, including About homepage, description and topics. Preserve historical changelog/fixture text and frozen data identifiers. Check the whole page on desktop and narrow screens with local synthetic content; presentation work must not alter runtime behavior.
 

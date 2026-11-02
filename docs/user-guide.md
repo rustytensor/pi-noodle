@@ -865,7 +865,8 @@ Check the mandatory annotated **version-number** tag policy for committed histor
 npm run check:tags
 ```
 
-Regenerate the website logo and its memory/encryption/side-chat diagrams:
+Regenerate the static logo fallbacks and memory/encryption/side-chat diagrams
+(the separately supplied animated GIF is kept unchanged):
 
 ```bash
 npm run render:hero

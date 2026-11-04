@@ -1,6 +1,6 @@
 {
   "name": "pi-noodle",
-  "version": "1.15.6",
+  "version": "1.15.7",
   "engines": {
     "node": ">=22.19.0"
   },

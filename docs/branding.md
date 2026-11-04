@@ -29,6 +29,16 @@ voice wave, letter paths, tagline, badge, signature and reference image.
   exports remove the PNG reference layer and use no raster embeds, external fonts,
   scripts or network dependencies. Preserve layer IDs when editing.
 
+## Memory editor preview
+
+The README's **Edit what Pi remembers** section embeds
+[`assets/noodle-memory-editor.svg`](assets/noodle-memory-editor.svg). Generate it
+with `npm run render:memory-editor`: it uses the real component renderer with
+synthetic notes and a demonstration palette, never a user's database or screenshot.
+Keep that label and a full-size link visible, especially on narrow screens.
+Describe fullscreen-only mouse support and keyboard-only review approvals accurately.
+This is a UI preview, unlike the conceptual product diagrams below.
+
 ## Explain the product
 
 `npm run render:overview` creates desktop and compact diagrams for **memory,

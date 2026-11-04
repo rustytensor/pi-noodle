@@ -12,13 +12,13 @@ pi-noodle: your Pi agent's inner voice and memory.
 
 **Shared memory. Optional archive encryption. A side chat beside your main task.**
 
-[Memory](#shared-memory) · [Encryption](#optional-archive-encryption) · [Side chat](#side-chat) · [Install](#quick-start) · [Full guide](docs/user-guide.md)
+[Memory](#shared-memory) · [Memory editor](#edit-what-pi-remembers) · [Encryption](#optional-archive-encryption) · [Side chat](#side-chat) · [Install](#quick-start) · [Full guide](docs/user-guide.md)
 
 ```bash
 pi install npm:pi-noodle
 ```
 
-<p><strong>Current version:</strong> 1.15.6</p>
+<p><strong>Current version:</strong> 1.15.7</p>
 
 [Editable SVG logo](docs/assets/noodle-logo-editable.svg) · [Releases](https://github.com/rustytensor/pi-noodle/releases) · [Issues](https://github.com/rustytensor/pi-noodle/issues)
 
@@ -52,9 +52,23 @@ Try a synthetic project note:
 /noodle-memory editor
 ```
 
-The editor has a padded border, named panes and a clear selection highlight. **Tab** switches sections; arrow keys choose controls and **Enter** uses them: **Search → Edit → Review and save**. Fullscreen mode also supports clicks and pane scrolling; regular mode stays keyboard-friendly. Review approvals remain keyboard-only.
+Memory is **reference material, not higher-priority instructions**. Recall is bounded, not perfect; do not store passwords or tokens in it. [Memory controls and privacy](docs/user-guide.md#shared-memory).
 
-Memory is **reference material, not higher-priority instructions**. Recall is bounded, not perfect; do not store passwords or tokens in it. [Memory controls and privacy](docs/user-guide.md#shared-memory) · [Synthetic editor preview](docs/assets/noodle-memory-editor.svg)
+### Edit what Pi remembers
+
+**Keep useful facts. Correct the rest.** Open `/noodle-memory editor` to search saved notes, read them beside the list, and review changes before saving. Inside Noodle, use `/memory editor`.
+
+<a href="docs/assets/noodle-memory-editor.svg">
+  <img src="https://raw.githubusercontent.com/rustytensor/pi-noodle/main/docs/assets/noodle-memory-editor.svg" alt="Bordered memory editor with Your memories and Preview panes, a highlighted note, visible search and editing controls, and keyboard navigation hints." width="960">
+</a>
+
+*Actual editor renderer with synthetic notes and a demonstration palette—not a user database. [Open the full-size preview](docs/assets/noodle-memory-editor.svg).*
+
+- **Find → read → edit:** Search narrows the list; moving between notes updates the preview. Choose **Edit**, then **Review and save**.
+- **Keyboard first, mouse when supported:** Tab switches sections, arrows navigate, Enter activates. Fullscreen mode adds row/button clicks, double-click details and pane scrolling. Regular mode stays keyboard-only; no Pi settings are changed.
+- **Stay in control:** choose project or global scope, review deletions, and get a warning before discarding unsaved edits. Save/delete/discard approvals remain keyboard-only after every review page is displayed.
+
+The editor manages **curated notes**, not captured conversations or the separate archive. Memory remains **local plaintext** and can reach your active model independently of Repo tools. [Editor controls and limits](docs/user-guide.md#curated-memory-editor).
 
 <a id="full-session-archive"></a>
 

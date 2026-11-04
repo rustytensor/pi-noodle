@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 > Historical note: releases before the `pi-jarvis` 1.x line refer to the project's earlier `pi-btw` and `/btw` naming. Those entries are preserved as historical release records and do not describe the current product name or command surface.
 
+## [1.15.7] - 2026-11-04
+
+### Show the memory editor on the GitHub page
+- Add a prominent editor section and navigation link with the updated synthetic preview, a short find/read/edit walkthrough, and a full-size image link.
+- Keep curated-notes scope, plaintext storage, independent memory access, fullscreen-only mouse support and keyboard-only review approvals visible. No runtime changes.
+
 ## [1.15.6] - 2026-11-04
 
 ### Memory editor ergonomics

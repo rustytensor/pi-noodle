@@ -7,7 +7,7 @@ import { test, type TestContext } from "node:test";
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import {
 	CURSOR_MARKER, Input, KeybindingsManager, StdinBuffer, TUI_KEYBINDINGS, TuiMainScreen,
-	stripTerminalSequences, visibleWidth, type Terminal, type TUI, type TuiMouseEvent,
+	stripTerminalSequences, sliceByColumn, visibleWidth, type Terminal, type TUI, type TuiMouseEvent,
 } from "@earendil-works/pi-tui";
 import { MemoryEditorOverlay } from "../memory-editor.js";
 import type { MemoryEditorBackend, MemoryEditorQuery, MemoryEditorScope, MemoryNoteDraft } from "../memory-editor-types.js";
@@ -81,7 +81,12 @@ function fixture(t: TestContext, count = 3, options: { promised?: boolean; colum
 	ui.focused = true;
 	if (options.real) tui.setFocus(ui);
 	t.after(() => ui.dispose());
-	const lines = (width = terminal.columns, height?: number) => ui.render(width, height);
+	// Content assertions ignore the new outer chrome; frame bounds get their own real-render check below.
+	const lines = (width = terminal.columns, height?: number) => {
+		const rendered = ui.render(width, height);
+		return stripTerminalSequences(rendered[0] ?? "").startsWith("╭")
+			? rendered.slice(1, -1).map((line) => sliceByColumn(line, 2, width - 4, true)) : rendered;
+	};
 	return { ui, tui, kb, backend, records, calls, project, agent, terminal, theme, lines, screen: () => plain(lines()),
 		renders: () => renders, closed: () => closed, deny: () => { allowed = false; }, allow: () => { allowed = true; }, notify: () => listener?.(),
 		input: (data: string) => { assert.ok(onInput); onInput(data); }, onClose: (callback: () => void) => { closePresentation = callback; } };
@@ -131,9 +136,10 @@ function bounds(lines: string[], width: number, height: number) {
 
 // Approved UI contract: controls are reachable by Tab, without shortcut knowledge.
 async function focusButton(f: Fixture, label: string) {
-	for (let i = 0; i < 12; i++) {
-		if (f.screen().includes(`>[ ${label} ]`)) return;
-		await key(f, "\t");
+	for (let i = 0; i < 25; i++) {
+		const screen = f.screen();
+		if (screen.includes(`>[ ${label} ]`)) return;
+		await key(f, /Focus: (new|edit|more|clear) ·/.test(screen) ? RIGHT : "\t");
 	}
 	assert.fail(`Visible button not reachable: ${label}`);
 }
@@ -180,6 +186,65 @@ test("friendly buttons stay visible on narrow screens and cancel or delete only 
 	assert.equal(f.records.length, 1); bounds(f.lines(), 40, 21);
 	await focusButton(f, "Close"); await key(f, paste("\r")); assert.equal(f.closed(), 0);
 	await key(f, "\r"); assert.equal(f.closed(), 1);
+});
+
+function pointer(f: Fixture, text: string, extra: Partial<TuiMouseEvent> = {}): TuiMouseEvent {
+	const lines = f.ui.render(f.terminal.columns).map(stripTerminalSequences);
+	const y = lines.findIndex((line) => line.includes(text)); assert.ok(y >= 0, text);
+	return { type: "click", button: "left", x: lines[y]!.indexOf(text) + 1, y, screenX: 0, screenY: 0,
+		width: f.terminal.columns, height: lines.length, shift: false, alt: false, ctrl: false, clickCount: 1, ...extra };
+}
+
+test("ergonomic frame caps height, pads every row and names keyboard sections", async (t) => {
+	const f = fixture(t, 3, { rows: 80 }); await settle();
+	if (process.env.PI_NOODLE_FRAME_GATE_FAULT === "1") {
+		const render = f.ui.render.bind(f.ui); f.ui.render = (...args) => render(...args).slice(1, -1);
+	}
+	const raw = f.ui.render(120), lines = raw.map(stripTerminalSequences);
+	bounds(raw, 120, 32); assert.equal(raw.length, 32);
+	assert.ok(lines[0]!.startsWith("╭─ Memories ")); assert.ok(lines.at(-1)!.endsWith("╯"));
+	for (const line of lines.slice(1, -1)) { assert.ok(line.startsWith("│ ")); assert.ok(line.endsWith(" │")); assert.equal(visibleWidth(line), 120); }
+	assert.match(plain(raw), /Your memories.*Preview/);
+	assert.ok(raw.some((line) => line.includes("Note 002") && line.includes("\x1b[7m")), "selected row uses reverse video, not color alone");
+	await key(f, "\t"); assert.match(f.screen(), /Focus: search/);
+	await key(f, "\t"); assert.match(f.screen(), /Focus: scope/);
+	await key(f, DOWN); assert.match(f.screen(), /Focus: category/);
+	await key(f, "\t"); assert.match(f.screen(), /Focus: new/);
+	await key(f, RIGHT); assert.match(f.screen(), /Focus: edit/);
+	await key(f, "\t"); assert.match(f.screen(), /Focus: preview/);
+	for (const [width, height] of [[40, 21], [28, 16], [24, 10], [120, 32]]) bounds(f.ui.render(width!, height!), width!, height!);
+});
+
+test("ergonomic fullscreen clicks edit a known note but cannot approve or bypass paste and stale geometry", async (t) => {
+	const f = fixture(t, 3); await settle();
+	const row = pointer(f, "Note 000");
+	assert.equal(f.ui.handleMouse(row), undefined, "regular mode belongs to the terminal");
+	Object.defineProperty(f.tui, "mode", { value: "fullscreen" });
+	const original = structuredClone(f.records[0]!);
+	assert.equal(f.ui.handleMouse(row)?.handled, true); await settle(); assert.match(f.screen(), /Body 0/);
+	const editClick = pointer(f, "[ Edit ]");
+	f.ui.invalidate(); assert.equal(f.ui.handleMouse(editClick)?.render, false);
+	const resized = pointer(f, "[ Edit ]"); f.terminal.columns = 121;
+	assert.equal(f.ui.handleMouse(resized)?.render, false); f.terminal.columns = 120;
+	const pasteClick = pointer(f, "[ Edit ]"); await key(f, "\x1b[200~");
+	assert.equal(f.ui.handleMouse(pasteClick)?.render, false); await key(f, "\x1b[201~");
+	f.ui.handleMouse(pointer(f, "[ Edit ]")); await settle(); assert.match(f.screen(), /Edit note/);
+	await key(f, paste(" revised"));
+	f.ui.handleMouse(pointer(f, "[ Review and save ]")); await settle(); assert.match(f.screen(), /SAVE REVIEW/);
+	assert.equal(f.calls.updates.length, 0);
+	f.ui.handleMouse(pointer(f, "SAVE REVIEW")); assert.equal(f.calls.updates.length, 0, "clicks never approve reviews");
+	await reviewAll(f); await key(f, "y");
+	assert.equal(f.records[0]!.title, "Note 000 revised");
+	assert.equal(f.records[0]!.text, original.text); assert.deepEqual(f.records[0]!.source, original.source);
+});
+
+test("ergonomic preview wheel scrolls cached text without moving the selected note", async (t) => {
+	const f = fixture(t, 1); f.records[0]!.text = Array.from({ length: 60 }, (_, i) => `Line ${String(i + 1).padStart(2, "0")}`).join("\n");
+	await settle(); Object.defineProperty(f.tui, "mode", { value: "fullscreen" });
+	const event = pointer(f, "Line 01", { type: "wheel", button: "none", wheelDelta: 3 });
+	const gets = f.calls.gets.length;
+	f.ui.handleMouse(event); assert.match(f.screen(), /Line 04/); assert.ok(!f.screen().includes("Line 01"));
+	assert.equal(f.calls.gets.length, gets);
 });
 
 test("cached note-only browser uses exact API, pagination and explicit refresh; no render reads", async (t) => {
@@ -649,9 +714,9 @@ test("narrow browser shows the key legend and close gesture early, and names the
 		assert.match(stripTerminalSequences(lines.at(-2)!), /^↑↓ move .*Esc, then Enter close\s*$/, `width ${width}`);
 		assert.match(stripTerminalSequences(lines.at(-3)!), /Selected 0 of 50 · Space select/, `width ${width}`);
 	}
-	for (const label of ["scope", "category", "source", "sort", "search", "new", "edit", "more", "clear", "close", "notes"]) {
+	for (const label of ["search", "scope", "new", "preview", "notes"]) {
 		await key(f, "\t");
-		assert.ok(stripTerminalSequences(f.lines(24)[2]!).includes(`Enter changes ${label}`), label);
+		assert.ok(stripTerminalSequences(f.lines(24)[2]!).includes(`Focus: ${label}`), label);
 	}
 	assert.equal(f.calls.lists.length, 1); assert.equal(f.calls.gets.length, 1, "Tab never reads");
 	assert.ok(f.lines(80).at(-3)!.includes("Space select"));
@@ -665,7 +730,9 @@ test("moving the cursor previews the highlighted note; Enter still opens the ful
 	assert.equal(f.calls.gets.length, 2);
 	// The right pane switched to the older note's body and metadata.
 	assert.match(f.screen(), /Body 0/); assert.ok(!f.screen().includes("Body 1"), "the preview pane switches rows");
-	assert.match(f.screen(), /Scope: project · Category: project · 24 bytes/);
+	// Padding narrows the preview: preserve the complete expected text across wrapped rows.
+	const preview = f.lines().map(stripTerminalSequences).map((line) => line.split(" │ ")[1]?.trim() ?? "").join(" ");
+	assert.match(preview, /Scope: project · Category: project · 24 bytes/);
 	assert.match(f.screen(), /Origin: noodle · session-0/);
 	assert.match(f.screen(), /Enter opens the full note/);
 	// Enter opens the complete provenance view with exactly one further read.
@@ -688,9 +755,9 @@ test("list rows align scope word and short date, and truncate titles with a word
 	assert.equal(rows.length, 2, plain(f.lines()));
 	// Sorted by last update; checkbox first, title with most width (~47 at 120 cols),
 	// scope word and date right-aligned. A short-enough title is not ellipsized.
-	assert.equal(stripTerminalSequences(rows[0]!).slice(0, 72), "> [ ] Deploy uses staged builds from dev branches      global 2026-09-28");
+	assert.equal(stripTerminalSequences(rows[0]!).slice(0, 70), "> [ ] " + "Deploy uses staged builds from dev branches".padEnd(45) + "  global 2026-09-28");
 	// No space near the cut: a plain ellipsis instead of a mid-word cut.
-	assert.equal(stripTerminalSequences(rows[1]!).slice(0, 72), "  [ ] One-word-title-that-is-long-enough-to-need-tru… project 2026-08-15");
+	assert.equal(stripTerminalSequences(rows[1]!).slice(0, 70), "  [ ] " + "One-word-title-that-is-long-enough-to-need-truncation-without-any-space-near-the-cut".slice(0, 44) + "… project 2026-08-15");
 });
 
 test("header says counts and sort in plain words and shows only active filters", async (t) => {
@@ -698,7 +765,7 @@ test("header says counts and sort in plain words and shows only active filters",
 	for (const record of f.records) record.updatedAt = new Date(2026, 8, 30, 9, 5).getTime();
 	await key(f, "r");
 	assert.equal(stripTerminalSequences(f.lines()[2]!).trimEnd(), "3 notes · showing 1–3 · sorted by last update · F1 all keys");
-	assert.equal(stripTerminalSequences(f.lines()[5]!).slice(0, 72), "> [ ] Note 000                                        project 2026-09-30");
+	assert.equal(stripTerminalSequences(f.lines()[6]!).slice(0, 70), "> [ ] " + "Note 000".padEnd(45) + " project 2026-09-30");
 	await key(f, "\x1bOQ"); // F2: scope — this project only
 	assert.equal(stripTerminalSequences(f.lines()[3]!).trimEnd(), "Filters — scope: this project only");
 	await key(f, "\x1bOR"); // F3: category user — no note matches
@@ -715,7 +782,7 @@ test("footer is a grouped plain-word legend; Escape shows a clear close banner",
 	const f = fixture(t, 1); await settle();
 	assert.equal(stripTerminalSequences(f.lines().at(-3)!).trimEnd(), "Selected 0 of 50 · Space select");
 	assert.equal(stripTerminalSequences(f.lines().at(-2)!).trimEnd(),
-		"↑↓ move · Tab controls · Enter open · Ctrl+F search · F1 help · Esc, then Enter close");
+		"↑↓ move · Tab sections · Enter open · Ctrl+F search · F1 help · Esc, then Enter close");
 	await key(f, "\x1b");
 	assert.equal(stripTerminalSequences(f.lines().at(-2)!).trimEnd(), "Press Enter to close, any other key to stay");
 	await key(f, "x"); // Any other key cancels the pending close.

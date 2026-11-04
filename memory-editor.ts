@@ -17,7 +17,9 @@ const CATEGORIES: MemoryCategory[] = ["user", "feedback", "project", "reference"
 const SCOPES: MemoryEditorScope[] = ["current", "project", "global", "all"];
 const LANES: (MemoryLane | undefined)[] = [undefined, "main", "jarvis", "manual"]; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
 type Mode = "browse" | "inspect" | "form" | "search" | "help" | "review" | "paused" | "actions";
-const BROWSER_FIELDS = ["notes", "scope", "category", "source", "sort", "search", "new", "edit", "more", "clear", "close"];
+const BROWSER_FIELDS = ["notes", "scope", "category", "source", "sort", "search", "new", "edit", "more", "clear", "close", "preview"];
+const BROWSER_SECTIONS = [0, 5, 1, 6, 11];
+type HitRegion = { x: number; y: number; width: number; height: number; kind: "control" | "row" | "preview" | "form" | "action"; id: number };
 const ACTIONS = ["Duplicate memory", "Delete memories…", "Refresh list", "Keyboard help", "Back to memories"];
 type Review = {
 	kind: "save" | "delete" | "discard";
@@ -57,6 +59,9 @@ export class MemoryEditorOverlay implements Component, Focusable {
 	private browserFocusUsed = false;
 	private actionIndex = 0;
 	private actionsBack: "browse" | "inspect" = "browse";
+	private hits: HitRegion[] = [];
+	private presentationFits = false;
+	private mouseFrame?: { revision: number; columns: number; rows: number; width: number; height: number };
 	private previewSeq = 0;
 	private record?: MemoryRecord;
 	private inspectScroll = 0;
@@ -110,7 +115,7 @@ export class MemoryEditorOverlay implements Component, Focusable {
 	set focused(value: boolean) {
 		this._focused = !this.disposed && value;
 		if (!this._focused) this.backArmed = false; // Retain possible framing, not a stale exit gesture.
-		this.frame = undefined;
+		this.frame = undefined; this.mouseFrame = undefined;
 		this.focusChildren();
 	}
 
@@ -170,7 +175,7 @@ export class MemoryEditorOverlay implements Component, Focusable {
 	}
 
 	private changed(): void {
-		this.revision++; this.frame = undefined; this.focusChildren();
+		this.revision++; this.frame = undefined; this.mouseFrame = undefined; this.focusChildren();
 		if (!this.disposed) this.tui.requestRender();
 	}
 
@@ -432,8 +437,20 @@ export class MemoryEditorOverlay implements Component, Focusable {
 		if (matchesKey(data, "delete") || matchesKey(data, "ctrl+d")) { this.beginDelete(); return; }
 		if (matchesKey(data, "ctrl+delete")) { this.beginDelete(true); return; }
 		if (matchesKey(data, "tab") || matchesKey(data, "shift+tab")) {
-			this.browserFocus = (this.browserFocus + (matchesKey(data, "tab") ? 1 : BROWSER_FIELDS.length - 1)) % BROWSER_FIELDS.length;
+			const section = this.browserFocus >= 1 && this.browserFocus <= 4 ? 1 : this.browserFocus >= 6 && this.browserFocus <= 10 ? 6 : this.browserFocus;
+			this.browserFocus = cycle(BROWSER_SECTIONS, section, matchesKey(data, "tab") ? 1 : -1);
 			this.browserFocusUsed = true; this.changed(); return;
+		}
+		if (this.browserFocus >= 1 && this.browserFocus <= 4 && (matchesKey(data, "up") || matchesKey(data, "down"))) {
+			this.browserFocus = cycle([1, 2, 3, 4], this.browserFocus, matchesKey(data, "up") ? -1 : 1); this.changed(); return;
+		}
+		if (this.browserFocus >= 6 && this.browserFocus <= 10 && (matchesKey(data, "left") || matchesKey(data, "right"))) {
+			this.browserFocus = cycle([6, 7, 8, 9, 10], this.browserFocus, matchesKey(data, "left") ? -1 : 1); this.changed(); return;
+		}
+		if (this.browserFocus === 11) {
+			if (matchesKey(data, "enter")) { this.browserFocus = 0; this.load("inspect"); }
+			else this.scrollInput(data);
+			return;
 		}
 		const filter = ["f2", "f3", "f4", "f5"].findIndex((key) => matchesKey(data, key as "f2"));
 		if (filter >= 0) { this.cycleFilter(filter + 1); return; }
@@ -478,11 +495,17 @@ export class MemoryEditorOverlay implements Component, Focusable {
 	}
 
 	/** Keep the focused control visible even when a whole toolbar cannot fit. */
-	private controls(items: { id: number; label: string }[], focus: number, width: number): string {
+	private controls(items: { id: number; label: string }[], focus: number, width: number, row: number, kind: "control" | "form" = "control"): string {
 		let start = Math.max(0, items.findIndex((item) => item.id === focus));
 		const label = (item: { id: number; label: string }) => `${item.id === focus ? ">" : ""}[ ${item.label} ]`;
 		while (start > 0 && visibleWidth(items.slice(start - 1).map(label).join(" ")) <= width) start--;
-		const text = items.slice(start).map((item) => this.theme.fg(item.id === focus ? "accent" : "muted", label(item))).join(" ");
+		let x = 0;
+		const text = items.slice(start).map((item) => {
+			const text = label(item), size = visibleWidth(text);
+			if (x + size <= width) this.hits.push({ x, y: row, width: size, height: 1, kind, id: item.id });
+			x += size + 1;
+			return this.theme.fg(item.id === focus ? "accent" : "text", item.id === focus && this.focused ? `\x1b[7m${text}\x1b[27m` : text);
+		}).join(" ");
 		return truncateToWidth(text, width, "…", true);
 	}
 
@@ -580,8 +603,25 @@ export class MemoryEditorOverlay implements Component, Focusable {
 		return "consumed";
 	}
 
-	// Match the host's public overlay maxHeight:"90%" so approval hints are never host-cropped.
-	render(width: number, height = Math.floor(this.tui.terminal.rows * 0.9)): string[] {
+	// Cap normal presentation at 32 rows; never change the host's renderer settings.
+	render(width: number, height = Math.min(32, Math.floor(this.tui.terminal.rows * 0.9))): string[] {
+		width = dimension(width); height = Math.min(dimension(height), dimension(this.tui.terminal.rows));
+		this.hits = []; this.mouseFrame = undefined;
+		this.presentationFits = width <= this.tui.terminal.columns && height <= Math.floor(this.tui.terminal.rows * 0.9);
+		const framed = width >= 28 && height >= 16;
+		const content = this.renderContent(framed ? width - 4 : width, framed ? height - 2 : height);
+		if (!content.length) return content;
+		const border = (text: string) => noodleSurface(this.theme, this.theme.fg("borderAccent", text), "chrome");
+		const heading = " Memories ";
+		const result = framed ? [border("╭─" + heading + "─".repeat(Math.max(0, width - visibleWidth(heading) - 3)) + "╮"),
+			...content.map((line) => border("│ ") + line + " ".repeat(Math.max(0, width - 4 - visibleWidth(line))) + border(" │")),
+			border("╰" + "─".repeat(width - 2) + "╯")] : content;
+		this.hits = this.hits.filter((hit) => hit.y >= 0 && hit.y + hit.height <= content.length).map((hit) => ({ ...hit, x: hit.x + (framed ? 2 : 0), y: hit.y + (framed ? 1 : 0) }));
+		this.mouseFrame = { revision: this.revision, columns: this.tui.terminal.columns, rows: this.tui.terminal.rows, width, height: result.length };
+		return result;
+	}
+
+	private renderContent(width: number, height: number): string[] {
 		width = dimension(width); height = Math.min(dimension(height), dimension(this.tui.terminal.rows));
 		this.frame = undefined;
 		if (this.disposed || !width || !height) return [];
@@ -597,7 +637,7 @@ export class MemoryEditorOverlay implements Component, Focusable {
 		if (height < 7 || width < 24) {
 			return this.fit(["Curated notes — enlarge to review", this.backArmed ? "Press Enter to close, any other key to stay" : this.busy || this.notice || "F1 help · Esc, then Enter closes"], width, height);
 		}
-		if ((this.mode === "browse" || this.mode === "inspect") && height < 10) {
+		if ((this.mode === "browse" || this.mode === "inspect") && height < 11) {
 			return this.fit(["Your memories — enlarge for the full list", `Focus: ${BROWSER_FIELDS[this.browserFocus]} · Tab moves · Enter opens`,
 				this.busy || this.notice || `${this.page.total} notes`, this.hint(width)], width, height);
 		}
@@ -612,7 +652,11 @@ export class MemoryEditorOverlay implements Component, Focusable {
 		} else if (this.mode === "actions") {
 			lines.push("More actions · ↑↓ choose · Enter opens · Esc, then Enter returns");
 			const available = Math.max(1, contentHeight - 1), start = Math.max(0, this.actionIndex - available + 1);
-			lines.push(...ACTIONS.slice(start, start + available).map((label, i) => this.theme.fg(start + i === this.actionIndex ? "accent" : "text", `${start + i === this.actionIndex ? ">" : " "} ${label}`)));
+			const top = lines.length;
+			lines.push(...ACTIONS.slice(start, start + available).map((label, i) => {
+				this.hits.push({ x: 0, y: top + i, width, height: 1, kind: "action", id: start + i });
+				return this.theme.fg(start + i === this.actionIndex ? "accent" : "text", `${start + i === this.actionIndex ? ">" : " "} ${label}`);
+			}));
 		} else if (this.mode === "help") this.renderDocument(lines, helpText(this.keybindings), width, contentHeight);
 		else this.renderBrowser(lines, width, contentHeight);
 		while (lines.length < height - 3) lines.push("");
@@ -621,10 +665,10 @@ export class MemoryEditorOverlay implements Component, Focusable {
 		lines.push(this.theme.fg(this.busy ? "accent" : this.notice ? "warning" : "dim",
 			status ? `${status}${this.busy ? "" : count}` : `Selected ${this.selected.size} of 50 · Space select`));
 		lines.push(this.theme.fg("muted", this.hint(width)));
-		lines.push(this.theme.fg("borderMuted", "─".repeat(width)));
+		lines.push("");
 		const result = this.fit(lines, width, height);
 		if (this.mode === "review" && width >= 30 && width <= this.tui.terminal.columns && height >= 10
-			&& height <= Math.floor(this.tui.terminal.rows * 0.9) && this.focused && !this.busy && this.review) {
+			&& height <= Math.floor(this.tui.terminal.rows * 0.9) && this.presentationFits && this.focused && !this.busy && this.review) {
 			this.review.seen.add(this.review.page);
 			this.frame = { revision: this.revision, columns: this.tui.terminal.columns, rows: this.tui.terminal.rows, review: this.review, page: this.review.page };
 		}
@@ -662,13 +706,16 @@ export class MemoryEditorOverlay implements Component, Focusable {
 
 	private renderForm(lines: string[], width: number, height: number): void {
 		const field = ["Title", "Memory text", "Category", "Scope", "Review and save", "Cancel editing"][this.formFocus];
+		this.hits.push({ x: 0, y: lines.length + 2, width, height: 1, kind: "form", id: 0 });
 		lines.push(`${this.expected ? "Edit" : "Create"} note ${this.isDirty() ? "[UNSAVED]" : ""} • Focus: ${field} • Tab changes field`,
 			`Title (${[...this.title.getValue()].length}/${TITLE_POINTS} Unicode points):`, ...this.renderInput(this.title, width));
-		lines.push(`${this.formFocus === 2 ? "> " : ""}Category: ${this.category}  ${this.formFocus === 3 ? "> " : ""}Scope: ${this.scope} (Enter/←→ on field)`);
+		lines.push(this.controls([{ id: 2, label: `Category: ${this.category}` }, { id: 3, label: `Scope: ${this.scope}` }], this.formFocus, width, lines.length, "form"));
 		lines.push(truncateToWidth(`Destination: ${this.destination(this.draft())}`, width, "", true));
 		lines.push(`Body (${Buffer.byteLength(this.body.getExpandedText(), "utf8")}/${BODY_BYTES} UTF-8 bytes) • Enter inserts newline`);
-		lines.push(...this.renderBody(width, Math.max(1, height - 8)));
-		lines.push(this.controls([{ id: 4, label: "Review and save" }, { id: 5, label: "Cancel editing" }], this.formFocus, width));
+		const body = this.renderBody(width, Math.max(1, height - 8));
+		this.hits.push({ x: 0, y: lines.length, width, height: body.length, kind: "form", id: 1 });
+		lines.push(...body);
+		lines.push(this.controls([{ id: 4, label: "Review and save" }, { id: 5, label: "Cancel editing" }], this.formFocus, width, lines.length, "form"));
 		lines.push(this.scope === "global" ? "Global: this memory may be recalled in every project." : "Project: this memory stays scoped to the destination above.");
 	}
 
@@ -699,22 +746,29 @@ export class MemoryEditorOverlay implements Component, Focusable {
 		// Plain counts and sort always; filters only when something is active. The Tab
 		// target leads the line so a narrow viewport still shows which filter Enter changes.
 		const shown = this.page.records.length ? `${this.page.offset + 1}–${this.page.offset + this.page.records.length}` : "0";
-		const focus = this.browserFocusUsed ? `Enter changes ${fieldNames[this.browserFocus]} · ` : "";
+		const focus = this.browserFocusUsed ? `Focus: ${fieldNames[this.browserFocus]} · ` : "";
 		lines.push(truncateToWidth(`${focus}${this.page.total} ${this.page.total === 1 ? "note" : "notes"} · showing ${shown} · sorted by ${sortWord}${width >= 100 ? " · F1 all keys" : ""}`, width, "", true));
 		if (filtered) lines.push(truncateToWidth(`Filters — ${active.join(" · ")}`, width, "", true));
 		lines.push(this.controls([
 			{ id: 1, label: `Scope: ${scopeWords(this.query.scope)}` }, { id: 2, label: `Category: ${this.query.category ?? "all"}` },
 			{ id: 3, label: `Source: ${this.query.lane ? laneLabel(this.query.lane) : "all"}` }, { id: 4, label: `Sort: ${sortWord}` },
-		], this.browserFocus, width));
+		], this.browserFocus, width, lines.length));
 		lines.push(this.controls([
 			{ id: 5, label: "Search" }, { id: 6, label: "New memory" }, { id: 7, label: "Edit" },
 			{ id: 8, label: "More actions" }, { id: 9, label: "Clear filters" }, { id: 10, label: "Close" },
-		], this.browserFocus, width));
-		const available = Math.max(1, height - (filtered ? 4 : 3));
-		if (this.mode === "inspect" && width < 90) { this.renderDocument(lines, this.record ? recordText(this.record) : ["Choose a note with Enter."], width, available); return; }
+		], this.browserFocus, width, lines.length));
+		const available = Math.max(1, height - (filtered ? 5 : 4));
+		if (this.mode === "inspect" && width < 90) {
+			lines.push(this.theme.fg("accent", "Memory details"));
+			this.hits.push({ x: 0, y: lines.length, width, height: available, kind: "preview", id: 11 });
+			this.renderDocument(lines, this.record ? recordText(this.record) : ["Choose a note with Enter."], width, available); return;
+		}
 		// Wide terminals: ~60% list / ~40% preview (preview never under 44 columns)
 		// so titles get roughly 50 characters; scope and date stay right-aligned.
 		const listWidth = width >= 90 ? Math.max(0, width - Math.max(44, Math.floor(width * 0.4))) : width;
+		const leftHeading = `${this.browserFocus === 0 ? "> " : ""}Your memories`;
+		lines.push(this.theme.fg("accent", width >= 90 ? leftHeading.padEnd(listWidth) + " │ " + `${this.browserFocus === 11 ? "> " : ""}Preview` : leftHeading));
+		const listRow = lines.length;
 		this.listHeight = available;
 		this.listTop = Math.max(0, Math.min(this.listTop, this.index));
 		if (this.index >= this.listTop + available) this.listTop = this.index - available + 1;
@@ -724,7 +778,9 @@ export class MemoryEditorOverlay implements Component, Focusable {
 			const titleWidth = Math.max(0, listWidth - 25);
 			const title = ellipsize(display(record.title), titleWidth);
 			const text = `${current ? ">" : " "} ${this.selected.has(record.id) ? "[x]" : "[ ]"} ${title}${" ".repeat(Math.max(0, titleWidth - visibleWidth(title)))} ${(record.scope === "global" ? "global" : "project").padStart(7)} ${dayStamp(record.updatedAt).padStart(10)}`;
-			return this.theme.fg(current ? "accent" : "text", truncateToWidth(text, listWidth, "", true));
+			this.hits.push({ x: 0, y: listRow + i, width: listWidth, height: 1, kind: "row", id: this.listTop + i });
+			const row = truncateToWidth(text, listWidth, "", true);
+			return this.theme.fg(current ? "accent" : "text", current && this.browserFocus === 0 && this.focused ? `\x1b[7m${row}\x1b[27m` : row);
 		});
 		if (!list.length) list.push(...(this.page.total
 			? ["No notes on this page — [ shows the previous page."]
@@ -733,6 +789,7 @@ export class MemoryEditorOverlay implements Component, Focusable {
 				: ["No curated notes here yet.", "Press N to write your first note · F1 help."]));
 		if (width < 90) { lines.push(...list); return; }
 		const rightWidth = width - listWidth - 3;
+		this.hits.push({ x: listWidth + 3, y: listRow, width: rightWidth, height: available, kind: "preview", id: 11 });
 		const doc = wrap(this.record
 			? (this.mode === "browse" ? previewText(this.record) : recordText(this.record))
 			: ["Move over a note to preview it here.", "Enter opens the full note with its provenance.", "No conversations or archive entries."], rightWidth);
@@ -762,7 +819,10 @@ export class MemoryEditorOverlay implements Component, Focusable {
 		if (this.mode === "inspect") return "Tab controls · ↑↓/PgUp/PgDn scroll · E edit · Ctrl+O more · Esc, then Enter back";
 		// Grouped plain-word legend. The close gesture always survives; middle
 		// groups are dropped one at a time until the line fits the terminal.
-		const groups = ["↑↓ move", "Tab controls", "Enter open", "Ctrl+F search", "F1 help"];
+		if (this.browserFocus >= 1 && this.browserFocus <= 4) return "Filters: ↑↓ field · ←→/Enter change · Tab next section";
+		if (this.browserFocus >= 6 && this.browserFocus <= 10) return "Actions: ←→ choose · Enter use · Tab next section";
+		if (this.browserFocus === 11) return "Preview: ↑↓/PgUp/PgDn scroll · Enter details · Tab next section";
+		const groups = ["↑↓ move", "Tab sections", "Enter open", "Ctrl+F search", "F1 help"];
 		const close = "Esc, then Enter close";
 		let legend = [...groups, close];
 		while (visibleWidth(legend.join(" · ")) > width && legend.length > 2) legend.splice(1, legend.length === 3 ? 1 : 2);
@@ -774,12 +834,38 @@ export class MemoryEditorOverlay implements Component, Focusable {
 	}
 
 	handleMouse(event: TuiMouseEvent): TuiMouseEventResult | undefined {
-		if (event.type !== "wheel" || this.tui.mode !== "fullscreen") return undefined;
+		if (this.tui.mode !== "fullscreen") return undefined;
+		if (event.type === "click" && event.button === "left" && !event.ctrl && !event.alt && !event.shift) {
+			const frame = this.mouseFrame;
+			if (this.inPaste || this.startTail || this.disposed || this.paused || this.busy || !this.focused || !frame
+				|| frame.revision !== this.revision || frame.columns !== this.tui.terminal.columns || frame.rows !== this.tui.terminal.rows
+				|| event.width !== frame.width || event.height !== frame.height || !this.presentationFits) return { handled: true, render: false };
+			if (!this.active()) return { handled: true, render: true };
+			const hit = this.hits.find((hit) => event.x >= hit.x && event.x < hit.x + hit.width && event.y >= hit.y && event.y < hit.y + hit.height);
+			if (!hit) return undefined;
+			if (hit.kind === "row" && (this.mode === "browse" || this.mode === "inspect")) {
+				if (!this.page.records[hit.id]) return { handled: true, render: false };
+				this.index = hit.id; this.browserFocus = 0; this.browserFocusUsed = true; this.mode = "browse";
+				this.changed(); this.preview();
+				if ((event.clickCount ?? 1) >= 2) this.load("inspect");
+			} else if (hit.kind === "preview") { this.browserFocus = 11; this.browserFocusUsed = true; this.changed(); }
+			else if (hit.kind === "control" && (this.mode === "browse" || this.mode === "inspect")) {
+				this.browserFocus = hit.id; this.browserFocusUsed = true; this.changed(); this.handleInput("\r");
+			} else if (hit.kind === "form" && this.mode === "form") {
+				this.formFocus = hit.id; this.changed();
+				if (hit.id >= 2) this.handleInput("\r");
+			} else if (hit.kind === "action" && this.mode === "actions") {
+				this.actionIndex = hit.id; this.changed(); this.handleInput("\r");
+			}
+			return { handled: true, render: true };
+		}
+		if (event.type !== "wheel") return undefined;
 		if (this.inPaste || this.startTail || this.disposed || this.paused || this.busy || !this.focused) return { handled: true, render: false };
 		if (!this.active()) return { handled: true, render: true };
 		const delta = event.wheelDelta ?? 0;
 		if (!Number.isFinite(delta) || !delta) return { handled: true, render: false };
-		if (this.mode === "inspect" || this.mode === "help") {
+		const overPreview = this.mouseFrame?.revision === this.revision && this.hits.some((hit) => hit.kind === "preview" && event.x >= hit.x && event.x < hit.x + hit.width && event.y >= hit.y && event.y < hit.y + hit.height);
+		if (this.mode === "inspect" || this.mode === "help" || (this.mode === "browse" && overPreview)) {
 			this.inspectScroll = Math.max(0, Math.min(this.inspectScroll + Math.sign(delta) * Math.min(10, Math.ceil(Math.abs(delta))), Math.max(0, this.inspectLines - this.viewport)));
 		} else if (this.mode === "review") this.reviewPage(Math.sign(delta));
 		else if (this.mode === "browse") { this.index = Math.max(0, Math.min(this.page.records.length - 1, this.index + Math.sign(delta))); this.preview(); }
@@ -788,7 +874,7 @@ export class MemoryEditorOverlay implements Component, Focusable {
 	}
 
 	invalidate(): void {
-		this.frame = undefined;
+		this.frame = undefined; this.mouseFrame = undefined;
 		if (this.review) { this.review.geometry = undefined; this.review.seen.clear(); }
 		this.title.invalidate(); this.search.invalidate(); this.body.invalidate();
 	}
@@ -902,7 +988,10 @@ function helpText(kb: KeybindingsManager): string[] {
 		"Delete/Ctrl+D: review selected batch, or current note if none selected • Ctrl+Delete: current note only",
 		"F2 scope: this project + global (default) · this project only · global only · all projects",
 		"F3 category • F4 source lane • F5 sort updated/created/title • Ctrl+F literal search",
-		"Tab/Shift+Tab: filters, Search, New memory, Edit, More actions, Clear filters, Close, then notes.",
+		"Tab/Shift+Tab switches sections: notes → Search → filters → actions → preview.",
+		"Filters: ↑↓ chooses a field; ←→/Enter changes its value. Actions: ←→ chooses a button; Enter activates it.",
+		"Fullscreen mouse: click a row to preview, double-click for details; click controls or form fields; wheel over either pane.",
+		"Regular mode leaves mouse input to the terminal. Review approval is keyboard-only in both modes.",
 		"Enter/←→ changes the focused filter; Enter activates a button. Clear filters restores this project + global and newest first.",
 		"Ctrl+O opens More actions: duplicate, reviewed deletion, refresh, help or back. No action writes without its usual review.",
 		"Inspector: ↑↓/PgUp/PgDn/Home/End scroll complete text and original provenance. Esc, then Enter returns to the list.",

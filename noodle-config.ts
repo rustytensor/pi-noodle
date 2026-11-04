@@ -1,4 +1,4 @@
-import { closeSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, fchmodSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
@@ -168,7 +168,7 @@ function readExistingNoodleConfigFileForWrite(path: string): NoodleConfigFile {
 
 function writeNoodleConfigFile(path: string, config: NoodleConfigFile): void {
 	mkdirSync(dirname(path), { recursive: true });
-	let mode = 0o600;
+	let mode: number | undefined;
 	try {
 		mode = statSync(path).mode & 0o777;
 	} catch (error) {
@@ -178,9 +178,12 @@ function writeNoodleConfigFile(path: string, config: NoodleConfigFile): void {
 	let fd: number | undefined;
 	let created = false;
 	try {
-		fd = openSync(temporaryPath, "wx", mode);
+		fd = openSync(temporaryPath, "wx", 0o600);
 		created = true;
 		writeFileSync(fd, `${JSON.stringify(config, null, "\t")}\n`, "utf-8");
+		// Creation modes are filtered by umask. Restore existing POSIX permissions on
+		// our open descriptor before publication; new files retain the private default.
+		if (mode !== undefined && process.platform !== "win32") fchmodSync(fd, mode);
 		fsyncSync(fd);
 		closeSync(fd);
 		fd = undefined;

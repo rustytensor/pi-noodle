@@ -36,22 +36,20 @@ const editor = new MemoryEditorOverlay(tui, theme, getKeybindings(), backend, ()
 try {
 	editor.focused = true;
 	await new Promise(resolve => setImmediate(resolve));
-	editor.render(140);
-	editor.handleInput("\r");
-	await new Promise(resolve => setImmediate(resolve));
 	const lines = editor.render(140);
 	const cell = 7.8, rowHeight = 19, padding = 24;
 	const width = 140 * cell + padding * 2, height = lines.length * rowHeight + padding * 2;
 	const nodes = [];
 	for (const [row, raw] of lines.entries()) {
 		const line = raw.replaceAll(CURSOR_MARKER, "");
-		let column = 0, offset = 0, fg = "#e4e9f5", bg = "#0b1221", bold = false;
+		let column = 0, offset = 0, fg = "#e4e9f5", bg = "#0b1221", bold = false, inverse = false;
 		const paint = text => {
 			if (!text) return;
 			const count = visibleWidth(text), x = padding + column * cell, y = padding + row * rowHeight;
-			if (bg !== "#0b1221") nodes.push(`<rect x="${x}" y="${y - 14}" width="${count * cell}" height="${rowHeight}" fill="${bg}"/>`);
+			const ink = inverse ? bg : fg, fill = inverse ? fg : bg;
+			if (fill !== "#0b1221") nodes.push(`<rect x="${x}" y="${y - 14}" width="${count * cell}" height="${rowHeight}" fill="${fill}"/>`);
 			for (const char of text) {
-				if (char !== " ") nodes.push(`<text x="${padding + column * cell}" y="${y}" fill="${fg}"${bold ? ' font-weight="bold"' : ""}>${escapeXml(char)}</text>`);
+				if (char !== " ") nodes.push(`<text x="${padding + column * cell}" y="${y}" fill="${ink}"${bold ? ' font-weight="bold"' : ""}>${escapeXml(char)}</text>`);
 				column += visibleWidth(char);
 			}
 		};
@@ -60,7 +58,9 @@ try {
 			const codes = (match[1] || "0").split(";").map(Number);
 			for (let i = 0; i < codes.length; i++) {
 				const code = codes[i];
-				if (code === 0) { fg = "#e4e9f5"; bg = "#0b1221"; bold = false; }
+				if (code === 0) { fg = "#e4e9f5"; bg = "#0b1221"; bold = false; inverse = false; }
+				if (code === 7) inverse = true;
+				if (code === 27) inverse = false;
 				if (code === 1) bold = true;
 				if (code === 22) bold = false;
 				if (code === 39) fg = "#e4e9f5";
@@ -76,6 +76,6 @@ try {
 		paint(line.slice(offset));
 	}
 	mkdirSync("docs/assets", { recursive: true });
-	writeFileSync("docs/assets/noodle-memory-editor.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title desc"><title id="title">Curated memory editor — renderer fixture</title><desc id="desc">Actual memory-editor component with three synthetic notes and a custom dark palette. Not a live user database or provider session. Browser, full note inspection and independent human editing controls.</desc><rect width="${width}" height="${height}" rx="12" fill="#0b1221"/><g font-family="'DejaVu Sans Mono',Consolas,monospace" font-size="13" xml:space="preserve">${nodes.join("\n")}</g></svg>\n`);
+	writeFileSync("docs/assets/noodle-memory-editor.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title desc"><title id="title">Curated memory editor — renderer fixture</title><desc id="desc">Actual memory-editor component with three synthetic notes and a custom dark palette. Not a live user database or provider session. Bordered browser, note preview, section navigation and independent human editing controls.</desc><rect width="${width}" height="${height}" rx="12" fill="#0b1221"/><g font-family="'DejaVu Sans Mono',Consolas,monospace" font-size="13" xml:space="preserve">${nodes.join("\n")}</g></svg>\n`);
 	console.log("Generated docs/assets/noodle-memory-editor.svg from synthetic notes only.");
 } finally { editor.dispose(); }

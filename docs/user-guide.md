@@ -55,7 +55,9 @@ Place this in `<agentDir>/extensions/pi-jarvis.json` to disable memory before in
 
 A dedicated TUI overlay for **the useful facts you and your models save**—not the full-session archive and not automatic conversation captures. New in **1.12.0**. Inside Noodle, `/memory editor` opens the same editor locally without a model call or waiting for queued side work.
 
-**Start without memorizing shortcuts:** press **Tab** to focus a visible control, **Shift+Tab** to go back, and **Enter** to use it. These are keyboard controls; regular terminal mode does not provide mouse clicks.
+**Start without memorizing shortcuts:** **Tab / Shift+Tab** switches sections: notes → Search → filters → actions → preview. In filters, ↑/↓ picks a field and ←/→ or Enter changes it. In actions, ←/→ picks a button and Enter uses it. In the preview, ↑/↓ and PgUp/PgDn scroll the note. The focused section and selection are visibly highlighted.
+
+**Fullscreen mouse:** click a note to preview it, double-click to open details, click buttons or form fields, and use the wheel over the list or preview. Clicking a text field focuses it; use the keyboard to position its caret. Save, delete and discard **approvals remain keyboard-only** after all review pages are displayed. Regular terminal mode leaves mouse input to your terminal; every action also has a keyboard path. Noodle never changes your renderer settings.
 
 1. Choose **Search**, type a few words, and press Enter. Use ↑/↓ to preview the matching notes.
 2. Choose **Edit**. Tab moves between the title, memory text, category and scope. Enter in the memory text adds a line.
@@ -70,7 +72,7 @@ A dedicated TUI overlay for **the useful facts you and your models save**—not 
 | In the memory editor | Key |
 |---|---|
 | Move (live preview of the highlighted note) | ↑ / ↓ |
-| Move between controls / activate a button | Tab / Shift+Tab / Enter |
+| Switch sections / choose an action / activate | Tab or Shift+Tab / ← or → / Enter |
 | Search notes | Search button or Ctrl+F |
 | More actions (duplicate, reviewed deletion, refresh, help) | More actions button or Ctrl+O |
 | Scope / category / origin lane / sort | F2 / F3 / F4 / F5 |
@@ -83,7 +85,7 @@ A dedicated TUI overlay for **the useful facts you and your models save**—not 
 
 Escape deliberately arms back/close rather than immediately releasing the window: a lone Escape can be the first byte of a slowly arriving paste. When armed, a clear banner shows: **“Press Enter to close, any other key to stay”**. The next Enter confirms that navigation gesture; a second Escape does not close. Dirty drafts still require a separate discard review. Save/delete approvals require freshly visible review pages, and pasted input cannot approve them.
 
-[See the editor preview and workflow overview above](#edit-what-pi-remembers) (earlier layout; the new controls are described here). Initial window width is capped at 144 columns; Pi clamps smaller terminals, and reopening recalculates the width. Narrow toolbars scroll to keep the focused control visible. Very small windows ask you to enlarge them; review approval still requires a valid layout.
+[See the editor preview](assets/noodle-memory-editor.svg), rendered with synthetic notes, not user data. The padded window has a visible border and named list/preview panes. Initial width is capped at 144 columns and normal height at 32 rows (or 90% of a smaller terminal). Narrow toolbars keep the focused control visible. Very small windows use a compact borderless fallback; review approval still requires a valid, fully displayed layout.
 
 The editor is **human-only and TUI-only**, independent of Repo tools and archive access. It works with capture or recall paused, but full memory off, denied project trust or invalid configuration blocks record access; it never enables memory for you. Opening it from Noodle closes only Noodle's presentation, preserving assigned work and grants. Private archive input, model pickers and memory reviews cannot overlap the editor's modal ownership.
 

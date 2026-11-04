@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 > Historical note: releases before the `pi-jarvis` 1.x line refer to the project's earlier `pi-btw` and `/btw` naming. Those entries are preserved as historical release records and do not describe the current product name or command surface.
 
+## [1.15.6] - 2026-11-04
+
+### Memory editor ergonomics
+- Add a padded border, named list/preview panes, reverse-video selection and focus, and a 32-row default height cap.
+- Navigate by sections with Tab, then arrows within filters, actions and preview. Preserve existing shortcuts and form traversal.
+- Support fullscreen row/button/form-field clicks, double-click inspection and preview-pane wheel scrolling. Reject stale click maps and pasted activation; review approval remains keyboard-only. Regular mode and renderer settings are unchanged.
+- Refresh the documentation preview using synthetic notes only.
+- Preserve existing POSIX model/thinking settings-file permissions across atomic replacement even under a restrictive shell mask; keep new files private.
+
 ## [1.15.5] - 2026-11-04
 
 ### Easier memory editing

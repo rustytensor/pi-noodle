@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 > Historical note: releases before the `pi-jarvis` 1.x line refer to the project's earlier `pi-btw` and `/btw` naming. Those entries are preserved as historical release records and do not describe the current product name or command surface.
 
+## [1.15.5] - 2026-11-04
+
+### Easier memory editing
+- Add visible keyboard controls for search, new memory, edit, more actions, clear filters and close. Tab/Shift+Tab selects controls; Enter activates them. Keep the focused control visible on narrow screens.
+- Add Review and save / Cancel editing buttons and plain-language project/global scope guidance. Keep duplicate, reviewed deletion, refresh and help in More actions.
+- Preserve paste-first input handling, full-page reviews, exact-version conflict checks, privacy controls and existing shortcuts. No storage format changes.
+- Make the unsafe-lock test explicitly set its fixture permissions, so restrictive shell masks cannot turn the deliberately unsafe file into a safe one. Runtime checks and expected results are unchanged.
+
 ## [1.15.4] - 2026-11-02
 
 ### Animated GitHub logo

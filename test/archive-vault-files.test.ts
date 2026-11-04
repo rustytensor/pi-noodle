@@ -369,7 +369,9 @@ test("unsafe lock links and permissions reject immediately without waiting or un
 	const f = fixture(t); f.save(); fs.symlinkSync(f.state, f.lock);
 	fails(() => f.files.withLock(() => {}), "UNSAFE_STORAGE"); assert.ok(fs.lstatSync(f.lock).isSymbolicLink()); fs.unlinkSync(f.lock);
 	fs.linkSync(f.state, f.lock); fails(() => f.files.withLock(() => {}), "UNSAFE_STORAGE"); fs.unlinkSync(f.lock);
-	fs.writeFileSync(f.lock, "fixture", { mode: 0o644 }); fails(() => f.files.withLock(() => {}), "UNSAFE_STORAGE");
+	fs.writeFileSync(f.lock, "fixture", { mode: 0o600 });
+	// Creation modes are filtered by umask; explicitly plant the unsafe permission.
+	fs.chmodSync(f.lock, 0o644); fails(() => f.files.withLock(() => {}), "UNSAFE_STORAGE");
 	assert.equal(fs.readFileSync(f.lock, "utf8"), "fixture");
 });
 

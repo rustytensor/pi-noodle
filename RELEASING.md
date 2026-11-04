@@ -37,6 +37,8 @@ npm run check:tags
 
 The tag check examines committed history, not uncommitted work. Tests use isolated configuration and local test MCP servers; they must never start a contributor's real MCP servers or call paid providers.
 
+Archive fixtures exercise the real filesystem safety checks. `TMPDIR` needs safe canonical ancestry: a group/other-writable ancestor without the sticky bit is rejected, even when the fixture itself is private. Do not weaken runtime checks or change shared-directory permissions to run tests. A temporary private mount namespace can expose a private scratch directory on the intended data drive beneath a safe path; run tests as the ordinary user and discard the namespace afterward. Permission-fault fixtures must use explicit `chmod` rather than assume the caller's umask.
+
 ## GitHub release and manual npm publication
 
 Every pushed `vX.Y.Z` tag triggers release automation, including tags on intermediate commits. The workflow checks out the exact tag, verifies its annotation, matching versions, and all post-baseline commits, runs validation, packs the npm archive, and creates the GitHub release with the package attached. Reserve unique versions when working across branches or forks.

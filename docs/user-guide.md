@@ -55,7 +55,14 @@ Place this in `<agentDir>/extensions/pi-jarvis.json` to disable memory before in
 
 A dedicated TUI overlay for **the useful facts you and your models save**—not the full-session archive and not automatic conversation captures. New in **1.12.0**. Inside Noodle, `/memory editor` opens the same editor locally without a model call or waiting for queued side work.
 
-- **Find the right note:** paged browsing, keyword search, this-project/global/all-projects scope, category and origin-lane filters, and sorting. The header says what is filtered in plain words, and only when something is.
+**Start without memorizing shortcuts:** press **Tab** to focus a visible control, **Shift+Tab** to go back, and **Enter** to use it. These are keyboard controls; regular terminal mode does not provide mouse clicks.
+
+1. Choose **Search**, type a few words, and press Enter. Use ↑/↓ to preview the matching notes.
+2. Choose **Edit**. Tab moves between the title, memory text, category and scope. Enter in the memory text adds a line.
+3. Choose **Review and save**. Read every review page (PgUp/PgDn), then Enter approves. **Cancel editing** asks before discarding changes.
+4. Choose **Close** when finished. **More actions** contains duplicate, reviewed deletion, refresh and keyboard help.
+
+- **Find the right note:** visible scope, category, source and sort controls; Enter or ←/→ cycles the focused filter. Search counts show how many notes matched. **Clear filters** restores this project + global, newest first, and clears selections—it does not change privacy settings or stored notes.
 - **Read while you browse:** moving the cursor previews the highlighted note in the right pane (body first, then scope, dates and origin); Enter opens the full record with IDs and provenance. List rows show scope and last-updated date, aligned.
 - **Manage it deliberately:** create or duplicate notes; edit title, multiline body, category and scope; review saves and single/selected-note deletions.
 - **Keep your work:** dirty-draft discard checks and conflict detection protect against accidentally overwriting a concurrently changed note. Reload and review explicitly; failed or uncertain writes are not replayed automatically.
@@ -63,18 +70,20 @@ A dedicated TUI overlay for **the useful facts you and your models save**—not 
 | In the memory editor | Key |
 |---|---|
 | Move (live preview of the highlighted note) | ↑ / ↓ |
-| Search notes | Ctrl+F |
+| Move between controls / activate a button | Tab / Shift+Tab / Enter |
+| Search notes | Search button or Ctrl+F |
+| More actions (duplicate, reviewed deletion, refresh, help) | More actions button or Ctrl+O |
 | Scope / category / origin lane / sort | F2 / F3 / F4 / F5 |
 | Inspect / new / edit / duplicate | Enter / N / E / D |
 | Select notes / clear selections | Space / Ctrl+U |
 | Review selected deletion (up to 50), or the current note | Delete / Ctrl+D |
-| Review a save | Ctrl+S |
-| Back or close | **Escape, then Enter** (the footer shows the pending-close banner) |
+| Review a save | Review and save button or Ctrl+S |
+| Close from the browser / go back | Close button / **Escape, then Enter** (the footer shows the pending-close banner) |
 | Complete shortcut help | F1 |
 
 Escape deliberately arms back/close rather than immediately releasing the window: a lone Escape can be the first byte of a slowly arriving paste. When armed, a clear banner shows: **“Press Enter to close, any other key to stay”**. The next Enter confirms that navigation gesture; a second Escape does not close. Dirty drafts still require a separate discard review. Save/delete approvals require freshly visible review pages, and pasted input cannot approve them.
 
-[See the editor preview and workflow overview above](#edit-what-pi-remembers). Initial window width is capped at 144 columns; Pi clamps smaller terminals, and reopening recalculates the width.
+[See the editor preview and workflow overview above](#edit-what-pi-remembers) (earlier layout; the new controls are described here). Initial window width is capped at 144 columns; Pi clamps smaller terminals, and reopening recalculates the width. Narrow toolbars scroll to keep the focused control visible. Very small windows ask you to enlarge them; review approval still requires a valid layout.
 
 The editor is **human-only and TUI-only**, independent of Repo tools and archive access. It works with capture or recall paused, but full memory off, denied project trust or invalid configuration blocks record access; it never enables memory for you. Opening it from Noodle closes only Noodle's presentation, preserving assigned work and grants. Private archive input, model pickers and memory reviews cannot overlap the editor's modal ownership.
 

@@ -16,7 +16,9 @@ const START = "\x1b[200~", END = "\x1b[201~";
 const CATEGORIES: MemoryCategory[] = ["user", "feedback", "project", "reference"];
 const SCOPES: MemoryEditorScope[] = ["current", "project", "global", "all"];
 const LANES: (MemoryLane | undefined)[] = [undefined, "main", "jarvis", "manual"]; // Stored identifier from pi-jarvis: never rename (existing users' data and keys).
-type Mode = "browse" | "inspect" | "form" | "search" | "help" | "review" | "paused";
+type Mode = "browse" | "inspect" | "form" | "search" | "help" | "review" | "paused" | "actions";
+const BROWSER_FIELDS = ["notes", "scope", "category", "source", "sort", "search", "new", "edit", "more", "clear", "close"];
+const ACTIONS = ["Duplicate memory", "Delete memories…", "Refresh list", "Keyboard help", "Back to memories"];
 type Review = {
 	kind: "save" | "delete" | "discard";
 	back: Mode;
@@ -53,6 +55,8 @@ export class MemoryEditorOverlay implements Component, Focusable {
 	private listHeight = 1;
 	private browserFocus = 0;
 	private browserFocusUsed = false;
+	private actionIndex = 0;
+	private actionsBack: "browse" | "inspect" = "browse";
 	private previewSeq = 0;
 	private record?: MemoryRecord;
 	private inspectScroll = 0;
@@ -359,6 +363,20 @@ export class MemoryEditorOverlay implements Component, Focusable {
 			else if (matchesKey(data, "pageUp") || matchesKey(data, "left") || matchesKey(data, "up")) this.reviewPage(-1);
 			return;
 		}
+		if (this.mode === "actions") {
+			if (escape) { this.mode = this.actionsBack; this.changed(); }
+			else if (kb.matches(data, "tui.select.up") || kb.matches(data, "tui.select.down")) {
+				this.actionIndex = (this.actionIndex + (kb.matches(data, "tui.select.up") ? ACTIONS.length - 1 : 1)) % ACTIONS.length; this.changed();
+			} else if (matchesKey(data, "enter")) {
+				this.mode = this.actionsBack;
+				if (this.actionIndex === 0) this.load("duplicate", this.mode === "inspect" ? this.record?.id : undefined);
+				else if (this.actionIndex === 1) this.beginDelete();
+				else if (this.actionIndex === 2) this.refresh();
+				else if (this.actionIndex === 3) { this.helpBack = this.mode; this.mode = "help"; this.inspectScroll = 0; }
+				this.changed();
+			}
+			return;
+		}
 		if (this.mode === "help") {
 			if (escape || matchesKey(data, "f1")) { this.mode = this.helpBack; this.inspectScroll = 0; this.changed(); }
 			else this.scrollInput(data);
@@ -374,7 +392,15 @@ export class MemoryEditorOverlay implements Component, Focusable {
 				return;
 			}
 			if (matchesKey(data, "tab") || matchesKey(data, "shift+tab")) {
-				this.formFocus = (this.formFocus + (matchesKey(data, "tab") ? 1 : 3)) % 4; this.changed(); return;
+				this.formFocus = (this.formFocus + (matchesKey(data, "tab") ? 1 : 5)) % 6; this.changed(); return;
+			}
+			if (this.formFocus >= 4) {
+				if (matchesKey(data, "enter") || matchesKey(data, "space")) {
+					if (this.formFocus === 4) this.beginSave();
+					else if (this.isDirty()) this.discard("back");
+					else { this.clearForm(); this.mode = "browse"; this.changed(); }
+				}
+				return;
 			}
 			if (this.formFocus < 2) this.editInput(data, this.formFocus ? "body" : "title");
 			else if (matchesKey(data, "enter") || matchesKey(data, "space") || matchesKey(data, "right") || matchesKey(data, "left")) {
@@ -388,7 +414,7 @@ export class MemoryEditorOverlay implements Component, Focusable {
 			if (escape) { this.mode = "browse"; this.search = new Input({ prompt: "" }); this.changed(); }
 			else if (matchesKey(data, "enter") || kb.matches(data, "tui.input.submit")) {
 				this.query.query = this.search.getValue(); this.query.offset = 0; this.selected.clear(); this.record = undefined;
-				this.mode = "browse"; this.changed(); this.refresh(0);
+				this.mode = "browse"; this.browserFocus = 0; this.browserFocusUsed = false; this.changed(); this.refresh(0);
 			} else this.editInput(data, "search");
 			return;
 		}
@@ -397,24 +423,34 @@ export class MemoryEditorOverlay implements Component, Focusable {
 			else this.close();
 			return;
 		}
-		if (matchesKey(data, "ctrl+f")) {
-			this.search = new Input({ prompt: "" }); this.search.setValue(this.query.query ?? ""); this.search.handleInput("\x05");
-			this.mode = "search"; this.changed(); return;
-		}
+		if (matchesKey(data, "ctrl+f")) { this.openSearch(); return; }
+		if (matchesKey(data, "ctrl+o")) { this.openActions(); return; }
 		if (data === "r" || data === "R") { this.refresh(); return; }
 		if (data === "n" || data === "N") { this.startForm(); this.changed(); return; }
 		if (data === "e" || data === "E") { this.load("edit", this.mode === "inspect" ? this.record?.id : undefined); return; }
 		if (data === "d" || data === "D") { this.load("duplicate", this.mode === "inspect" ? this.record?.id : undefined); return; }
 		if (matchesKey(data, "delete") || matchesKey(data, "ctrl+d")) { this.beginDelete(); return; }
 		if (matchesKey(data, "ctrl+delete")) { this.beginDelete(true); return; }
-		if (this.mode === "inspect") { this.scrollInput(data); return; }
-		if (matchesKey(data, "tab") || matchesKey(data, "shift+tab")) { this.browserFocus = (this.browserFocus + (matchesKey(data, "tab") ? 1 : 5)) % 6; this.browserFocusUsed = true; this.changed(); return; }
+		if (matchesKey(data, "tab") || matchesKey(data, "shift+tab")) {
+			this.browserFocus = (this.browserFocus + (matchesKey(data, "tab") ? 1 : BROWSER_FIELDS.length - 1)) % BROWSER_FIELDS.length;
+			this.browserFocusUsed = true; this.changed(); return;
+		}
 		const filter = ["f2", "f3", "f4", "f5"].findIndex((key) => matchesKey(data, key as "f2"));
 		if (filter >= 0) { this.cycleFilter(filter + 1); return; }
 		if (this.browserFocus && (matchesKey(data, "enter") || matchesKey(data, "space") || matchesKey(data, "left") || matchesKey(data, "right"))) {
-			if (this.browserFocus === 5) { this.handleInput("\x06"); return; }
-			this.cycleFilter(this.browserFocus, matchesKey(data, "left") ? -1 : 1); return;
+			if (this.browserFocus <= 4) { this.cycleFilter(this.browserFocus, matchesKey(data, "left") ? -1 : 1); return; }
+			if (!matchesKey(data, "enter") && !matchesKey(data, "space")) return;
+			if (this.browserFocus === 5) this.openSearch();
+			else if (this.browserFocus === 6) { this.startForm(); this.changed(); }
+			else if (this.browserFocus === 7) this.load("edit", this.mode === "inspect" ? this.record?.id : undefined);
+			else if (this.browserFocus === 8) this.openActions();
+			else if (this.browserFocus === 9) {
+				this.query = { scope: "current", sort: "updated", offset: 0, limit: PAGE_SIZE };
+				this.selected.clear(); this.record = undefined; this.index = 0; this.mode = "browse"; this.refresh(0);
+			} else this.close();
+			return;
 		}
+		if (this.mode === "inspect") { this.scrollInput(data); return; }
 		if (data === "]" || kb.matches(data, "tui.select.pageDown")) { if (this.page.nextOffset !== null) this.refresh(this.page.nextOffset); return; }
 		if (data === "[" || kb.matches(data, "tui.select.pageUp")) { this.refresh(Math.max(0, this.page.offset - PAGE_SIZE)); return; }
 		if (kb.matches(data, "tui.select.up") || kb.matches(data, "tui.select.down")) {
@@ -431,12 +467,31 @@ export class MemoryEditorOverlay implements Component, Focusable {
 		else if (kb.matches(data, "tui.select.confirm")) this.load("inspect");
 	}
 
+	private openSearch(): void {
+		this.search = new Input({ prompt: "" }); this.search.setValue(this.query.query ?? ""); this.search.handleInput("\x05");
+		this.mode = "search"; this.changed();
+	}
+
+	private openActions(): void {
+		this.actionsBack = this.mode === "inspect" ? "inspect" : "browse";
+		this.actionIndex = 0; this.mode = "actions"; this.changed();
+	}
+
+	/** Keep the focused control visible even when a whole toolbar cannot fit. */
+	private controls(items: { id: number; label: string }[], focus: number, width: number): string {
+		let start = Math.max(0, items.findIndex((item) => item.id === focus));
+		const label = (item: { id: number; label: string }) => `${item.id === focus ? ">" : ""}[ ${item.label} ]`;
+		while (start > 0 && visibleWidth(items.slice(start - 1).map(label).join(" ")) <= width) start--;
+		const text = items.slice(start).map((item) => this.theme.fg(item.id === focus ? "accent" : "muted", label(item))).join(" ");
+		return truncateToWidth(text, width, "…", true);
+	}
+
 	private cycleFilter(field: number, direction = 1): void {
 		if (field === 1) this.query.scope = cycle(SCOPES, this.query.scope, direction);
 		else if (field === 2) this.query.category = cycle([undefined, ...CATEGORIES], this.query.category, direction);
 		else if (field === 3) this.query.lane = cycle(LANES, this.query.lane, direction);
 		else this.query.sort = cycle(["updated", "created", "title"] as const, this.query.sort ?? "updated", direction);
-		this.selected.clear(); this.record = undefined; this.index = 0; this.refresh(0);
+		this.selected.clear(); this.record = undefined; this.index = 0; this.mode = "browse"; this.refresh(0);
 	}
 
 	private scrollInput(data: string): void {
@@ -535,13 +590,18 @@ export class MemoryEditorOverlay implements Component, Focusable {
 		if (this.mode === "form" && (height < 14 || width < 24)) {
 			const input = this.formFocus === 1 ? this.renderBody(width, Math.max(1, height - 1))
 				: this.formFocus === 0 ? this.renderInput(this.title, width)
-					: [`${this.formFocus === 2 ? "Category: " + this.category : "Scope: " + this.scope} • Enter changes`];
+					: [this.formFocus >= 4 ? `[ ${this.formFocus === 4 ? "Review and save" : "Cancel editing"} ] • Enter`
+						: `${this.formFocus === 2 ? "Category: " + this.category : "Scope: " + this.scope} • Enter changes`];
 			return this.fit([...input, this.backArmed ? "Press Enter to go back, any other key to stay" : "Enlarge for review · Esc, then Enter goes back"], width, height);
 		}
 		if (height < 7 || width < 24) {
 			return this.fit(["Curated notes — enlarge to review", this.backArmed ? "Press Enter to close, any other key to stay" : this.busy || this.notice || "F1 help · Esc, then Enter closes"], width, height);
 		}
-		const lines = [this.theme.fg("accent", "Curated memory • notes only"),
+		if ((this.mode === "browse" || this.mode === "inspect") && height < 10) {
+			return this.fit(["Your memories — enlarge for the full list", `Focus: ${BROWSER_FIELDS[this.browserFocus]} · Tab moves · Enter opens`,
+				this.busy || this.notice || `${this.page.total} notes`, this.hint(width)], width, height);
+		}
+		const lines = [this.theme.fg("accent", "Your memories • saved notes only"),
 			this.theme.fg("muted", "Local plaintext, not a secret vault • may reach models • archive unaffected")];
 		const contentHeight = Math.max(1, height - 5);
 		if (this.mode === "review") this.renderReview(lines, width, contentHeight);
@@ -549,6 +609,10 @@ export class MemoryEditorOverlay implements Component, Focusable {
 		else if (this.mode === "search") {
 			lines.push("Type words to search · Enter applies · Esc, then Enter cancels", ...this.renderInput(this.search, width));
 			lines.push(`Scope: ${scopeWords(this.query.scope)} · A literal keyword search, not an instruction or an FTS expression.`);
+		} else if (this.mode === "actions") {
+			lines.push("More actions · ↑↓ choose · Enter opens · Esc, then Enter returns");
+			const available = Math.max(1, contentHeight - 1), start = Math.max(0, this.actionIndex - available + 1);
+			lines.push(...ACTIONS.slice(start, start + available).map((label, i) => this.theme.fg(start + i === this.actionIndex ? "accent" : "text", `${start + i === this.actionIndex ? ">" : " "} ${label}`)));
 		} else if (this.mode === "help") this.renderDocument(lines, helpText(this.keybindings), width, contentHeight);
 		else this.renderBrowser(lines, width, contentHeight);
 		while (lines.length < height - 3) lines.push("");
@@ -597,13 +661,15 @@ export class MemoryEditorOverlay implements Component, Focusable {
 	}
 
 	private renderForm(lines: string[], width: number, height: number): void {
-		const field = ["Title", "Body", "Category", "Scope"][this.formFocus];
+		const field = ["Title", "Memory text", "Category", "Scope", "Review and save", "Cancel editing"][this.formFocus];
 		lines.push(`${this.expected ? "Edit" : "Create"} note ${this.isDirty() ? "[UNSAVED]" : ""} • Focus: ${field} • Tab changes field`,
 			`Title (${[...this.title.getValue()].length}/${TITLE_POINTS} Unicode points):`, ...this.renderInput(this.title, width));
 		lines.push(`${this.formFocus === 2 ? "> " : ""}Category: ${this.category}  ${this.formFocus === 3 ? "> " : ""}Scope: ${this.scope} (Enter/←→ on field)`);
 		lines.push(truncateToWidth(`Destination: ${this.destination(this.draft())}`, width, "", true));
 		lines.push(`Body (${Buffer.byteLength(this.body.getExpandedText(), "utf8")}/${BODY_BYTES} UTF-8 bytes) • Enter inserts newline`);
-		lines.push(...this.renderBody(width, Math.max(1, height - 6)));
+		lines.push(...this.renderBody(width, Math.max(1, height - 8)));
+		lines.push(this.controls([{ id: 4, label: "Review and save" }, { id: 5, label: "Cancel editing" }], this.formFocus, width));
+		lines.push(this.scope === "global" ? "Global: this memory may be recalled in every project." : "Project: this memory stays scoped to the destination above.");
 	}
 
 	private renderInput(input: Input, width: number): string[] {
@@ -622,7 +688,7 @@ export class MemoryEditorOverlay implements Component, Focusable {
 	}
 
 	private renderBrowser(lines: string[], width: number, height: number): void {
-		const fieldNames = ["notes", "scope", "category", "source", "sort", "search"];
+		const fieldNames = BROWSER_FIELDS;
 		const sortWord = this.query.sort === "title" ? "title" : this.query.sort === "created" ? "created date" : "last update";
 		const active: string[] = [];
 		if (this.query.scope !== "current") active.push(`scope: ${scopeWords(this.query.scope)}`);
@@ -636,7 +702,15 @@ export class MemoryEditorOverlay implements Component, Focusable {
 		const focus = this.browserFocusUsed ? `Enter changes ${fieldNames[this.browserFocus]} · ` : "";
 		lines.push(truncateToWidth(`${focus}${this.page.total} ${this.page.total === 1 ? "note" : "notes"} · showing ${shown} · sorted by ${sortWord}${width >= 100 ? " · F1 all keys" : ""}`, width, "", true));
 		if (filtered) lines.push(truncateToWidth(`Filters — ${active.join(" · ")}`, width, "", true));
-		const available = Math.max(1, height - 2);
+		lines.push(this.controls([
+			{ id: 1, label: `Scope: ${scopeWords(this.query.scope)}` }, { id: 2, label: `Category: ${this.query.category ?? "all"}` },
+			{ id: 3, label: `Source: ${this.query.lane ? laneLabel(this.query.lane) : "all"}` }, { id: 4, label: `Sort: ${sortWord}` },
+		], this.browserFocus, width));
+		lines.push(this.controls([
+			{ id: 5, label: "Search" }, { id: 6, label: "New memory" }, { id: 7, label: "Edit" },
+			{ id: 8, label: "More actions" }, { id: 9, label: "Clear filters" }, { id: 10, label: "Close" },
+		], this.browserFocus, width));
+		const available = Math.max(1, height - (filtered ? 4 : 3));
 		if (this.mode === "inspect" && width < 90) { this.renderDocument(lines, this.record ? recordText(this.record) : ["Choose a note with Enter."], width, available); return; }
 		// Wide terminals: ~60% list / ~40% preview (preview never under 44 columns)
 		// so titles get roughly 50 characters; scope and date stay right-aligned.
@@ -681,13 +755,14 @@ export class MemoryEditorOverlay implements Component, Focusable {
 	private hint(width: number): string {
 		if (this.backArmed) return "Press Enter to close, any other key to stay";
 		if (this.mode === "review") return "Read every page: PgUp/PgDn · Approve: Y or Enter · Cancel: N or Esc, then Enter";
-		if (this.mode === "form") return "Fields: Tab · Save: Ctrl+S · Reload: Ctrl+R · Help: F1 · Discard: Esc, then Enter";
+		if (this.mode === "form") return "Tab: fields and buttons · Ctrl+S: review save · Esc, then Enter: back · F1: help";
+		if (this.mode === "actions") return "↑↓ choose · Enter opens action · Esc, then Enter returns";
 		if (this.mode === "search") return "Apply: Enter · Cancel: Esc, then Enter";
 		if (this.mode === "help") return "Scroll: ↑↓/PgUp/PgDn · Back: F1 or Esc, then Enter";
-		if (this.mode === "inspect") return "Scroll: ↑↓/PgUp/PgDn/Home/End · Edit: E · Duplicate: D · Help: F1 · Back: Esc, then Enter";
+		if (this.mode === "inspect") return "Tab controls · ↑↓/PgUp/PgDn scroll · E edit · Ctrl+O more · Esc, then Enter back";
 		// Grouped plain-word legend. The close gesture always survives; middle
 		// groups are dropped one at a time until the line fits the terminal.
-		const groups = ["↑↓ move", "Enter open", "[ ] pages", "N new", "E edit", "D duplicate", "Space select", "Del delete", "Ctrl+F search", "F1 help"];
+		const groups = ["↑↓ move", "Tab controls", "Enter open", "Ctrl+F search", "F1 help"];
 		const close = "Esc, then Enter close";
 		let legend = [...groups, close];
 		while (visibleWidth(legend.join(" · ")) > width && legend.length > 2) legend.splice(1, legend.length === 3 ? 1 : 2);
@@ -827,9 +902,12 @@ function helpText(kb: KeybindingsManager): string[] {
 		"Delete/Ctrl+D: review selected batch, or current note if none selected • Ctrl+Delete: current note only",
 		"F2 scope: this project + global (default) · this project only · global only · all projects",
 		"F3 category • F4 source lane • F5 sort updated/created/title • Ctrl+F literal search",
-		"Tab/Shift+Tab: named browser fields; Enter/←→ changes active filter. Selections clear on filter changes.",
+		"Tab/Shift+Tab: filters, Search, New memory, Edit, More actions, Clear filters, Close, then notes.",
+		"Enter/←→ changes the focused filter; Enter activates a button. Clear filters restores this project + global and newest first.",
+		"Ctrl+O opens More actions: duplicate, reviewed deletion, refresh, help or back. No action writes without its usual review.",
 		"Inspector: ↑↓/PgUp/PgDn/Home/End scroll complete text and original provenance. Esc, then Enter returns to the list.",
-		"Form: Tab/Shift+Tab Title → Body → Category → Scope. Letters always edit focused input, never actions.",
+		"Form: Tab/Shift+Tab Title → Body → Category → Scope → Review and save → Cancel editing.",
+		"Letters always edit focused input, never actions. Cancel editing reviews discarding a changed draft.",
 		"Body: Enter/Shift+Enter/Ctrl+J newline; indentation retained. Public Pi editor navigation/undo/yank.",
 		"Title: single-line, max 160 Unicode points • Body: max 16 KiB UTF-8 • Search: max 1 KiB",
 		"Ctrl+S opens save review, including target project/global warning and complete draft body.",

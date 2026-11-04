@@ -129,6 +129,59 @@ function bounds(lines: string[], width: number, height: number) {
 	for (const line of lines) { assert.ok(visibleWidth(line) <= width, `${visibleWidth(line)} > ${width}`); assert.ok(!/[\r\n\t]/.test(line)); }
 }
 
+// Approved UI contract: controls are reachable by Tab, without shortcut knowledge.
+async function focusButton(f: Fixture, label: string) {
+	for (let i = 0; i < 12; i++) {
+		if (f.screen().includes(`>[ ${label} ]`)) return;
+		await key(f, "\t");
+	}
+	assert.fail(`Visible button not reachable: ${label}`);
+}
+
+test("friendly editor finds, edits and saves an exact note through visible controls", async (t) => {
+	const f = fixture(t, 3); await settle();
+	const original = structuredClone(f.records[1]!);
+	if (process.env.PI_NOODLE_EDITOR_GATE_FAULT === "1") f.backend.update = (expected) => expected;
+	await focusButton(f, "Search"); await key(f, "\r");
+	await key(f, paste("Note 001")); await key(f, "\r");
+	assert.match(f.screen(), /1 note · showing 1–1/);
+	assert.match(f.screen(), /Body 1/);
+	await focusButton(f, "Edit"); await key(f, "\r");
+	await key(f, "\x01"); await key(f, "\x0b"); await key(f, paste("Travel checklist"));
+	await key(f, "\t"); await key(f, "\x1b[1;5F"); await key(f, paste("\nBring the carrier."));
+	await focusButton(f, "Review and save");
+	await key(f, paste("\r")); assert.equal(f.calls.updates.length, 0);
+	await key(f, "\r"); assert.match(f.screen(), /SAVE REVIEW/);
+	assert.equal(f.calls.updates.length, 0);
+	await reviewAll(f); await key(f, "\r");
+	const saved = f.records.find((record) => record.title === "Travel checklist");
+	assert.ok(saved, "reviewed edit must actually persist, not just report success");
+	assert.equal(saved.text, "  Body 1\n    second line\nBring the carrier.");
+	assert.equal(saved.scope, "project"); assert.equal(saved.category, "project");
+	assert.deepEqual(saved.source, original.source);
+	await back(f); await focusButton(f, "Clear filters"); await key(f, "\r");
+	assert.match(f.screen(), /3 notes · showing 1–3/);
+	assert.equal(f.calls.lists.at(-1)?.query, undefined);
+	assert.equal(f.calls.lists.at(-1)?.scope, "current");
+});
+
+test("friendly buttons stay visible on narrow screens and cancel or delete only after review", async (t) => {
+	const f = fixture(t, 1, { columns: 40, rows: 24 }); await settle();
+	await focusButton(f, "Edit"); await key(f, "\r");
+	await key(f, paste(" changed")); await focusButton(f, "Cancel editing");
+	assert.match(f.screen(), />\[ Cancel editing \]/);
+	await key(f, "\r"); assert.match(f.screen(), /DISCARD DRAFT/);
+	assert.equal(f.calls.updates.length, 0); await reviewAll(f); await key(f, "y");
+	assert.equal(f.records[0]!.title, "Note 000");
+	await focusButton(f, "More actions"); await key(f, "\r");
+	await key(f, DOWN); await key(f, paste("\r")); assert.equal(f.calls.deletes.length, 0);
+	await key(f, "\r"); assert.match(f.screen(), /DELETE REVIEW/);
+	assert.equal(f.calls.deletes.length, 0); await key(f, "n");
+	assert.equal(f.records.length, 1); bounds(f.lines(), 40, 21);
+	await focusButton(f, "Close"); await key(f, paste("\r")); assert.equal(f.closed(), 0);
+	await key(f, "\r"); assert.equal(f.closed(), 1);
+});
+
 test("cached note-only browser uses exact API, pagination and explicit refresh; no render reads", async (t) => {
 	const f = fixture(t, 45); await settle();
 	assert.equal(f.calls.lists.length, 1); assert.deepEqual(f.calls.lists[0], { scope: "current", sort: "updated", offset: 0, limit: 20 });
@@ -596,7 +649,7 @@ test("narrow browser shows the key legend and close gesture early, and names the
 		assert.match(stripTerminalSequences(lines.at(-2)!), /^↑↓ move .*Esc, then Enter close\s*$/, `width ${width}`);
 		assert.match(stripTerminalSequences(lines.at(-3)!), /Selected 0 of 50 · Space select/, `width ${width}`);
 	}
-	for (const label of ["scope", "category", "source", "sort", "search", "notes"]) {
+	for (const label of ["scope", "category", "source", "sort", "search", "new", "edit", "more", "clear", "close", "notes"]) {
 		await key(f, "\t");
 		assert.ok(stripTerminalSequences(f.lines(24)[2]!).includes(`Enter changes ${label}`), label);
 	}
@@ -645,7 +698,7 @@ test("header says counts and sort in plain words and shows only active filters",
 	for (const record of f.records) record.updatedAt = new Date(2026, 8, 30, 9, 5).getTime();
 	await key(f, "r");
 	assert.equal(stripTerminalSequences(f.lines()[2]!).trimEnd(), "3 notes · showing 1–3 · sorted by last update · F1 all keys");
-	assert.equal(stripTerminalSequences(f.lines()[3]!).slice(0, 72), "> [ ] Note 000                                        project 2026-09-30");
+	assert.equal(stripTerminalSequences(f.lines()[5]!).slice(0, 72), "> [ ] Note 000                                        project 2026-09-30");
 	await key(f, "\x1bOQ"); // F2: scope — this project only
 	assert.equal(stripTerminalSequences(f.lines()[3]!).trimEnd(), "Filters — scope: this project only");
 	await key(f, "\x1bOR"); // F3: category user — no note matches
@@ -662,7 +715,7 @@ test("footer is a grouped plain-word legend; Escape shows a clear close banner",
 	const f = fixture(t, 1); await settle();
 	assert.equal(stripTerminalSequences(f.lines().at(-3)!).trimEnd(), "Selected 0 of 50 · Space select");
 	assert.equal(stripTerminalSequences(f.lines().at(-2)!).trimEnd(),
-		"↑↓ move · N new · E edit · D duplicate · Space select · Del delete · Ctrl+F search · F1 help · Esc, then Enter close");
+		"↑↓ move · Tab controls · Enter open · Ctrl+F search · F1 help · Esc, then Enter close");
 	await key(f, "\x1b");
 	assert.equal(stripTerminalSequences(f.lines().at(-2)!).trimEnd(), "Press Enter to close, any other key to stay");
 	await key(f, "x"); // Any other key cancels the pending close.
